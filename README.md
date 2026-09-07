@@ -1,211 +1,295 @@
-# 🏥 RegulaHub - ERP para Saúde Pública
+# 🏥 RegulaHub - Sistema de Gestão Municipal de Saúde
 
-Sistema integrado de gestão para saúde pública, desenvolvido com Next.js 16 e React 19, integrando múltiplos módulos essenciais para a administração municipal.
-
-## 🎯 Módulos do Sistema
-
-- **💉 Regulação de Exames** - Gerenciamento de pedidos e regulação de procedimentos médicos
-- **💊 Farmácia Judicial** - Controle de medicamentos e dispensação por ordem judicial
-- **👨‍⚕️ Junta Médica** - Gestão de pacientes com deficiência e atendimentos especializados
-- **🐕 CCZ (Centro de Controle de Zoonoses)** - Controle de animais, tutores e doenças zoonóticas
-
-## 🚀 Quick Start
-
-```bash
-# 1. Instalar dependências
-npm install
-
-# 2. Configurar variáveis de ambiente
-# Copie .env.example para .env e preencha com suas credenciais
-
-# 3. Sincronizar banco de dados
-npx prisma db push
-
-# 4. Popular com dados iniciais
-npx prisma db seed
-
-# 5. Iniciar servidor de desenvolvimento
-npm run dev
-```
-
-Acesse [http://localhost:3000](http://localhost:3000) no navegador.
-
-## 📚 Documentação Completa
-
-### 🎯 Comece Aqui
-- **[INDEX_DOCUMENTACAO.md](./INDEX_DOCUMENTACAO.md)** - 📑 Índice geral (comece por aqui!)
-- **[RESUMO_ANALISE.md](./RESUMO_ANALISE.md)** - 📊 Visão executiva do projeto
-- **[GUIA_RAPIDO.md](./GUIA_RAPIDO.md)** - ⚡ Referência rápida para desenvolvimento
-
-### 📖 Documentação Detalhada
-- **[DOCUMENTACAO_PROJETO.md](./DOCUMENTACAO_PROJETO.md)** - 📘 Documentação completa (800+ linhas)
-- **[ARQUITETURA_SISTEMA.md](./ARQUITETURA_SISTEMA.md)** - 🏗️ Arquitetura e diagramas
-- **[ACOES_CORRETIVAS.md](./ACOES_CORRETIVAS.md)** - 🛠️ Plano de correções
-
-## 🛠️ Stack Tecnológico
-
-- **Framework:** Next.js 16.3.0 (App Router)
-- **UI:** React 19.2.8
-- **Linguagem:** JavaScript
-- **Banco de Dados:** PostgreSQL (via Supabase)
-- **ORM:** Prisma 7.9.1
-- **Autenticação:** JWT (jose) + bcryptjs
-- **Estilização:** CSS Modules
-
-## 📋 Scripts Disponíveis
-
-```bash
-npm run dev      # Servidor de desenvolvimento (porta 3000)
-npm run build    # Build de produção
-npm start        # Servidor de produção
-npm run lint     # Executar ESLint
-```
-
-### Scripts Prisma
-```bash
-npx prisma studio       # Interface visual do banco
-npx prisma generate     # Gerar Prisma Client
-npx prisma db push      # Sincronizar schema (dev)
-npx prisma migrate dev  # Criar migration
-npx prisma db seed      # Popular banco com dados
-```
-
-## 🔑 Perfis de Usuário
-
-| Role | Descrição | Módulos de Acesso |
-|------|-----------|-------------------|
-| `ADMIN` | Administrador Geral | Todos |
-| `ADMIN_REGULA` | Admin Regulação | Regulação (completo) |
-| `OPERADOR_REGULA` | Operador Regulação | Regulação (operacional) |
-| `VETERINARIO` | Veterinário | CCZ |
-| `ADMIN_JUNTA` | Admin Junta Médica | Junta Médica (completo) |
-| `OPERADOR_JUNTA` | Operador Junta | Junta Médica (operacional) |
-| `ADMIN_PROCESSO` | Admin Processos | Câmara Técnica/Processos |
-| `ADMIN_FARMACIA` | Admin Farmácia | Farmácia Judicial |
-
-## ⚠️ Problemas Conhecidos
-
-**Antes de começar a desenvolver, consulte [ACOES_CORRETIVAS.md](./ACOES_CORRETIVAS.md) para resolver:**
-
-1. 🔐 **Middleware de autenticação incompleto** (CRÍTICO)
-2. ❌ Pastas duplicadas (.claude/, .windsurf/)
-3. 📛 Inconsistência de nomenclatura (junta-reguladora)
-4. 🔄 Dependências duplicadas (bcrypt)
-
-## 🔒 Variáveis de Ambiente
-
-Crie um arquivo `.env` na raiz do projeto:
-
-```bash
-# Banco de Dados (obrigatório)
-DATABASE_URL="postgresql://user:pass@host:5432/db?pgbouncer=true"
-
-# JWT (obrigatório)
-JWT_SECRET="seu-secret-super-seguro-aqui"
-
-# Supabase (se usar)
-NEXT_PUBLIC_SUPABASE_URL="https://projeto.supabase.co"
-NEXT_PUBLIC_SUPABASE_ANON_KEY="sua-chave-aqui"
-SUPABASE_SERVICE_ROLE_KEY="sua-chave-service-role"
-
-# Ambiente
-NODE_ENV="development"
-```
-
-## 📁 Estrutura do Projeto
-
-```
-RegulaHub/
-├── prisma/              # Schema e migrations
-├── src/
-│   ├── app/            # Rotas e páginas (App Router)
-│   │   ├── actions/    # Server Actions
-│   │   ├── regulacao/  # Módulo Regulação
-│   │   ├── ccz/        # Módulo CCZ
-│   │   ├── junta-medica/ # Módulo Junta
-│   │   └── camara-tecnica/ # Câmara Técnica
-│   ├── components/     # Componentes React
-│   ├── lib/           # Bibliotecas (Prisma, Supabase)
-│   └── middleware.js  # Autenticação
-├── public/            # Assets estáticos
-└── .env              # Variáveis de ambiente
-```
-
-## 🧑‍💻 Desenvolvimento
-
-### Criar Nova Página
-```javascript
-// src/app/minha-rota/page.js
-export default function MinhaPage() {
-  return <h1>Minha Página</h1>;
-}
-```
-
-### Criar Server Action
-```javascript
-// src/app/actions/minhaAction.js
-'use server';
-import { prisma } from '@/lib/prisma';
-
-export async function minhaAction(formData) {
-  const data = await prisma.modelo.findMany();
-  return { success: true, data };
-}
-```
-
-Consulte [GUIA_RAPIDO.md](./GUIA_RAPIDO.md) para mais exemplos.
-
-## 🐛 Problemas Comuns
-
-### Erro: "Prisma Client not generated"
-```bash
-npx prisma generate
-```
-
-### Erro: "Port 3000 already in use"
-```powershell
-# Matar processo na porta 3000
-Get-Process -Id (Get-NetTCPConnection -LocalPort 3000).OwningProcess | Stop-Process
-```
-
-### Erro: "DATABASE_URL not found"
-```bash
-# Verificar se .env existe e está configurado
-```
-
-Mais soluções em [GUIA_RAPIDO.md](./GUIA_RAPIDO.md) → "Resolver Problemas Comuns"
-
-## 📖 Recursos de Aprendizado
-
-- [Next.js Documentation](https://nextjs.org/docs)
-- [Prisma Documentation](https://www.prisma.io/docs)
-- [Supabase Documentation](https://supabase.com/docs)
-- [React Documentation](https://react.dev)
-
-## 🤝 Como Contribuir
-
-1. Clone o repositório
-2. Leia [DOCUMENTACAO_PROJETO.md](./DOCUMENTACAO_PROJETO.md)
-3. Crie uma branch: `git checkout -b feature/minha-feature`
-4. Commit suas mudanças: `git commit -m 'feat: adiciona feature X'`
-5. Push para a branch: `git push origin feature/minha-feature`
-6. Abra um Pull Request
-
-## 📊 Status do Projeto
-
-- ✅ **Arquitetura:** Sólida e bem estruturada
-- ✅ **Banco de Dados:** Schema completo (26 tabelas)
-- ⚠️ **Segurança:** Middleware precisa ser completado
-- ✅ **Documentação:** Completa (~3.100 linhas)
-
-## 📞 Suporte
-
-- 📚 Consulte a [documentação completa](./INDEX_DOCUMENTACAO.md)
-- ⚡ Use o [guia rápido](./GUIA_RAPIDO.md) para referências
-- 🔧 Veja [ações corretivas](./ACOES_CORRETIVAS.md) para problemas conhecidos
+Sistema integrado para gerenciamento de regulação médica, farmácia judicial, junta reguladora e CCZ.
 
 ---
 
-**Versão:** 0.1.0  
-**Última atualização:** Setembro 2026  
-**Licença:** Privado
+## 📋 Estrutura do Projeto
+
+```
+RegulaHub/
+├── src/                    # Código-fonte da aplicação
+├── prisma/                 # Schema e migrations do banco de dados
+├── public/                 # Arquivos estáticos (imagens, ícones)
+├── scripts/                # Scripts utilitários
+└── node_modules/           # Dependências instaladas
+```
+
+---
+
+## 📁 Arquivos Principais
+
+### 🔧 Configuração
+
+| Arquivo | Descrição |
+|---------|-----------|
+| `package.json` | Dependências do projeto e scripts npm |
+| `next.config.mjs` | Configuração do Next.js (Turbopack, CORS, etc) |
+| `prisma.config.js` | Configuração do Prisma ORM |
+| `jsconfig.json` | Configuração do JavaScript (paths, aliases) |
+| `eslint.config.mjs` | Regras de linting do código |
+| `.gitignore` | Arquivos ignorados pelo Git |
+| `skills-lock.json` | Lock de skills do Kiro AI |
+
+### 🔐 Segurança
+
+| Arquivo | Descrição | Status |
+|---------|-----------|--------|
+| `.env` | **Variáveis de ambiente (PRIVADO)** | ❌ Não vai para Git |
+| `.env.example` | Template de variáveis de ambiente | ✅ Vai para Git |
+
+**⚠️ NUNCA commite o `.env` com credenciais reais!**
+
+### 📚 Documentação
+
+| Arquivo | Descrição |
+|---------|-----------|
+| `AGENTS.md` | Regras para agentes AI (Kiro) |
+| `DOCUMENTACAO_PROJETO.md` | Documentação completa do sistema |
+| `ARQUITETURA_SISTEMA.md` | Arquitetura e padrões |
+| `ESTRUTURA_CARGOS.md` | Sistema de roles e permissões |
+| `MIGRACAO_TURBOPACK.md` | Documentação da migração Webpack → Turbopack |
+| `SEGURANCA_CREDENCIAIS.md` | Guia de segurança |
+
+---
+
+## 🚀 Comandos Principais
+
+### Desenvolvimento
+```bash
+npm run dev          # Inicia servidor (Turbopack)
+npm run build        # Build de produção
+npm run start        # Inicia servidor de produção
+npm run lint         # Verifica código
+```
+
+### Banco de Dados
+```bash
+npm run db:studio    # Abre Prisma Studio (GUI)
+npm run db:push      # Sincroniza schema com banco
+npm run db:seed      # Popula banco com dados iniciais
+npm run db:generate  # Gera Prisma Client
+npm run db:migrate   # Cria migration
+npm run db:reset     # Reseta banco (CUIDADO!)
+```
+
+### Testes
+```bash
+npm run test:ccz     # Testa módulo CCZ
+```
+
+---
+
+## 🏗️ Stack Tecnológica
+
+| Tecnologia | Versão | Uso |
+|------------|--------|-----|
+| Next.js | 16.3.0 | Framework React (App Router) |
+| React | 19.2.8 | Biblioteca UI |
+| Prisma | 7.9.1 | ORM para PostgreSQL |
+| PostgreSQL | - | Banco de dados (Supabase) |
+| JWT (jose) | 6.2.10 | Autenticação |
+| bcryptjs | 3.0.3 | Hashing de senhas |
+| Turbopack | - | Bundler ultra-rápido |
+
+---
+
+## 🔐 Sistema de Autenticação
+
+- **Método:** JWT (JSON Web Token)
+- **Login:** CPF + Senha
+- **Sessão:** 8 horas
+- **Storage:** Cookie HTTP-only
+
+### Roles (12 cargos):
+```
+GESTOR              → Acesso total
+REGULACAO_ADMIN     → Admin Regulação (com financeiro)
+REGULACAO_COMUM     → Regulação sem financeiro
+FARMACIA_ADMIN      → Admin Farmácia Judicial
+PROCESSO_ADMIN      → Admin Processos
+JUNTA_ADMIN         → Admin Junta (tudo)
+JUNTA_CAEE          → Apenas CAEE
+JUNTA_EDUCACAO      → Apenas Educação
+JUNTA_SAUDE         → Apenas Saúde
+JUNTA_ASSISTENCIA   → Apenas Assistência Social
+CCZ_ADMIN           → Admin CCZ
+```
+
+---
+
+## 📂 Estrutura de Pastas
+
+Consulte o README em cada pasta para detalhes:
+
+- [`src/`](./src/README.md) - Código-fonte da aplicação
+- [`prisma/`](./prisma/README.md) - Schema e seeds do banco
+- [`public/`](./public/README.md) - Arquivos estáticos
+- [`scripts/`](./scripts/README.md) - Scripts auxiliares
+
+---
+
+## 🌐 URLs do Sistema
+
+### Desenvolvimento
+- **Local:** http://localhost:3000
+- **Rede:** http://0.0.0.0:3000
+
+### Principais Rotas
+```
+/login                    → Login
+/dashboard               → Dashboard principal
+/regulacao               → Módulo Regulação
+/regulacao/financeiro    → Financeiro (apenas admin)
+/camara-tecnica/farmacia → Farmácia Judicial
+/camara-tecnica/processos → Processos
+/junta-reguladora        → Junta Reguladora
+/ccz                     → Centro de Controle de Zoonoses
+/admin/usuarios          → Gestão de usuários
+```
+
+---
+
+## 🔒 Segurança
+
+### Variáveis Obrigatórias (`.env`):
+```bash
+DATABASE_URL          # Conexão PostgreSQL (pooler)
+DIRECT_URL            # Conexão direta (migrations)
+JWT_SECRET            # Chave para assinar tokens
+NODE_ENV              # Ambiente (development/production)
+GESTOR_CPF            # CPF do gestor (seed)
+GESTOR_NOME           # Nome do gestor (seed)
+GESTOR_SENHA          # Senha do gestor (seed)
+```
+
+### Proteções Ativas:
+- ✅ JWT assinado e validado
+- ✅ Middleware em todas as rotas protegidas
+- ✅ Senhas com hash bcrypt (custo 10)
+- ✅ Cookies HTTP-only (proteção XSS)
+- ✅ CORS configurado
+- ✅ `.env` no `.gitignore`
+
+---
+
+## 📊 Banco de Dados
+
+- **Provider:** PostgreSQL 15+
+- **Host:** Supabase
+- **ORM:** Prisma
+- **Migrations:** `prisma migrate`
+
+### Modelos Principais:
+```
+User              → Usuários do sistema
+Session           → Sessões ativas
+Pessoa            → Pessoas físicas
+Endereco          → Endereços
+PedidoExame       → Pedidos de exames (regulação)
+Medicamento       → Medicamentos (farmácia)
+PacienteJunta     → Pacientes junta reguladora
+Animal            → Animais (CCZ)
+```
+
+---
+
+## 🧪 Testes
+
+### Testar Login:
+1. Acesse http://localhost:3000/login
+2. **CPF:** `12912453674`
+3. **Senha:** `regula@saude_2026`
+4. Role: **GESTOR** (acesso total)
+
+### Criar Usuários de Teste:
+```bash
+npm run db:studio
+```
+
+Acesse Prisma Studio e crie usuários com diferentes roles para testar permissões.
+
+---
+
+## 📝 Contribuindo
+
+### 1. Clone o repositório
+```bash
+git clone <url-do-repo>
+cd RegulaHub
+```
+
+### 2. Instale dependências
+```bash
+npm install
+```
+
+### 3. Configure `.env`
+```bash
+cp .env.example .env
+# Edite .env com suas credenciais
+```
+
+### 4. Sincronize banco
+```bash
+npm run db:push
+npm run db:seed
+```
+
+### 5. Inicie servidor
+```bash
+npm run dev
+```
+
+---
+
+## 🐛 Troubleshooting
+
+### Erro: "JWT_SECRET não definido"
+```bash
+# Gere um secret:
+node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+# Adicione ao .env:
+JWT_SECRET="valor_gerado"
+```
+
+### Erro: "Prisma Client não gerado"
+```bash
+npm run db:generate
+```
+
+### Erro: "Banco fora de sincronia"
+```bash
+npm run db:push
+```
+
+### Hot Reload não funciona?
+```bash
+# Verifique se está usando Turbopack:
+npm run dev
+# Deve aparecer: ▲ Next.js 16.3.0 (Turbopack)
+```
+
+---
+
+## 📄 Licença
+
+Projeto proprietário - Prefeitura Municipal
+
+---
+
+## 👥 Contato
+
+- **Gestor:** Jefinny de Paula Dias Souza
+- **Sistema:** RegulaHub
+- **Versão:** 0.1.0
+
+---
+
+## 📚 Documentação Completa
+
+Para mais detalhes, consulte:
+- [Documentação do Projeto](./DOCUMENTACAO_PROJETO.md)
+- [Arquitetura do Sistema](./ARQUITETURA_SISTEMA.md)
+- [Estrutura de Cargos](./ESTRUTURA_CARGOS.md)
+- [Guia Rápido](./GUIA_RAPIDO.md)
