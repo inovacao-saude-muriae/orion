@@ -10,7 +10,7 @@ Componentes React compartilhados em todo o projeto.
 **Função:** Cabeçalho principal do sistema.
 
 **Exibe:**
-- 🏥 Logo/Título do RegulaHub
+- 🏥 Logo/Título do Orion
 - 👤 Nome do usuário logado
 - 🎯 Cargo/Role do usuário
 - 🚪 Botão de logout

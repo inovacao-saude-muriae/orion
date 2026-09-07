@@ -1,4 +1,4 @@
-# 📖 Referência Rápida - RegulaHub
+# 📖 Referência Rápida - Orion
 
 Guia de consulta rápida para encontrar documentação específica.
 
@@ -98,7 +98,7 @@ Guia de consulta rápida para encontrar documentação específica.
 ## 🏗️ Estrutura do Projeto
 
 ```
-RegulaHub/
+Orion/
 ├── src/
 │   ├── lib/              → Bibliotecas (Prisma, env)
 │   ├── components/       → Componentes React

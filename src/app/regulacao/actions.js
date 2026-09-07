@@ -1,5 +1,6 @@
 "use server";
 
+import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 
@@ -441,6 +442,7 @@ export async function updateProcedimento(id, data) {
 // 13. Buscar Tetos de Cotas Financeiras
 export async function getCotasFinanceiras() {
   try {
+    await requireRole(["GESTOR", "REGULACAO_ADMIN"]);
     const data = await prisma.cotaFinanceira.findMany();
     return data.map((c) => ({
       id: c.id,
@@ -458,6 +460,7 @@ export async function getCotasFinanceiras() {
 // 13. Salvar Teto de Cota
 export async function saveCotaFinanceira({ tipoCota, mes, ano, valorTeto }) {
   try {
+    await requireRole(["GESTOR", "REGULACAO_ADMIN"]);
     const record = await prisma.cotaFinanceira.upsert({
       where: {
         tipoCota_mes_ano: { tipoCota, mes, ano },
@@ -484,6 +487,7 @@ export async function saveCotaFinanceira({ tipoCota, mes, ano, valorTeto }) {
 // 14. Atualizar Data de Faturamento
 export async function updateBillingDate(idStr, dateStr) {
   try {
+    await requireRole(["GESTOR", "REGULACAO_ADMIN"]);
     const numericId = Number(String(idStr).replace(/\D/g, ""));
     await prisma.pedidoExame.update({
       where: { id: numericId },

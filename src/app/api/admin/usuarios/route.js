@@ -1,20 +1,14 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
+import { Role } from '@prisma/client';
+import { requireRole } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
 
-const ROLES_VALIDAS = [
-  'ADMIN',
-  'ADMIN_JUNTA',
-  'OPERADOR_JUNTA',
-  'ADMIN_REGULA',
-  'OPERADOR_REGULA',
-  'VETERINARIO',
-  'ADMIN_PROCESSO',
-  'ADMIN_FARMACIA',
-];
+const ROLES_VALIDAS = Object.values(Role);
 
 export async function POST(request) {
   try {
+    await requireRole(['GESTOR']);
     const body = await request.json();
     const { cpf, nomeCompleto, role, cargo, senha } = body;
 
@@ -58,7 +52,7 @@ export async function POST(request) {
       {
         message: 'Usuário do sistema criado com sucesso!',
         usuario: {
-          id: user.id,
+          id: user.cpf,
           cpf: user.cpf,
           nome: user.nome,
           role: user.role,
@@ -67,6 +61,9 @@ export async function POST(request) {
       { status: 201 }
     );
   } catch (error) {
+    if (error.status === 401 || error.status === 403) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error('Erro ao cadastrar usuário:', error);
     return NextResponse.json({ error: 'Erro interno ao salvar usuário.' }, { status: 500 });
   }

@@ -137,6 +137,9 @@ export async function middleware(request) {
     const { payload } = await jwtVerify(token, secret);
     
     const userRole = payload.role;
+    if (pathname === "/regulacao" && request.nextUrl.searchParams.get("tab") === "FINANCEIRO" && !["GESTOR", "REGULACAO_ADMIN"].includes(userRole)) {
+      return NextResponse.redirect(new URL("/acesso-negado", request.url));
+    }
     const userId = payload.userId;
     const userName = payload.nome || 'Usuário';
 

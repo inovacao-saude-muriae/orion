@@ -1,6 +1,6 @@
 # 📚 Documentação READMEs Criados
 
-Mapeamento de todos os READMEs criados no projeto RegulaHub.
+Mapeamento de todos os READMEs criados no projeto Orion.
 
 ---
 

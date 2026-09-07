@@ -2,7 +2,7 @@ import Link from 'next/link';
 import styles from './page.module.css';
 
 export const metadata = {
-  title: 'Acesso Negado - RegulaHub',
+  title: 'Acesso Negado - Orion',
   description: 'Você não tem permissão para acessar esta página',
 };
 

@@ -1,6 +1,6 @@
 # 📁 `/src/app/login` - Página de Login
 
-Página de autenticação do sistema. Primeira tela que o usuário vê ao acessar o RegulaHub.
+Página de autenticação do sistema. Primeira tela que o usuário vê ao acessar o Orion.
 
 **Rota:** `/login`  
 **Acesso:** Público (não requer autenticação)
@@ -171,7 +171,7 @@ else {
 <header className={styles.loginHeader}>
   <div className={styles.brand}>
     {/* SVG do logo (4 quadrados) */}
-    <span>RegulaHub</span>
+    <span>Orion</span>
   </div>
   <span className={styles.badge}>Acesso Restrito</span>
 </header>
@@ -541,7 +541,7 @@ else {
 ```
 ┌────────────────────────────────────────┐
 │  Header (60px, fundo escuro)           │
-│  [Logo] RegulaHub    Acesso Restrito  │
+│  [Logo] Orion    Acesso Restrito  │
 └────────────────────────────────────────┘
 │                                        │
 │         ┌────────────────┐             │

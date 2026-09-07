@@ -1,4 +1,4 @@
-# 🏥 RegulaHub - Sistema de Gestão Municipal de Saúde
+# 🏥 Orion - Sistema de Gestão Municipal de Saúde
 
 Sistema integrado para gerenciamento de regulação médica, farmácia judicial, junta reguladora e CCZ.
 
@@ -7,7 +7,7 @@ Sistema integrado para gerenciamento de regulação médica, farmácia judicial,
 ## 📋 Estrutura do Projeto
 
 ```
-RegulaHub/
+Orion/
 ├── src/                    # Código-fonte da aplicação
 ├── prisma/                 # Schema e migrations do banco de dados
 ├── public/                 # Arquivos estáticos (imagens, ícones)
@@ -216,7 +216,7 @@ Acesse Prisma Studio e crie usuários com diferentes roles para testar permissõ
 ### 1. Clone o repositório
 ```bash
 git clone <url-do-repo>
-cd RegulaHub
+cd Orion
 ```
 
 ### 2. Instale dependências
@@ -281,7 +281,7 @@ Projeto proprietário - Prefeitura Municipal
 ## 👥 Contato
 
 - **Gestor:** Jefinny de Paula Dias Souza
-- **Sistema:** RegulaHub
+- **Sistema:** Orion
 - **Versão:** 0.1.0
 
 ---

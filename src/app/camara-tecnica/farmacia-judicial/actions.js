@@ -1,5 +1,6 @@
 "use server";
 
+import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 
@@ -190,25 +191,44 @@ export async function createLoteMedicamento(data) {
 // ==========================================
 export async function registrarDispensacao(data) {
   try {
-    await prisma.$transaction(async (tx) => {
-      for (const item of data.itens) {
-        const obsFinal = `Responsável pela Entrega: ${data.responsavelEntrega}${data.observacao ? " | Obs: " + data.observacao : ""}`;
-
-        await tx.$executeRaw`
-          INSERT INTO public.farmacia_dispensacoes_medicamentos 
-            (paciente_pasta, lote_medicamento_id, qtd_entregue, data_dispensacao, observacao)
-          VALUES (
-            ${data.numeroPasta}, 
-            ${Number(item.loteId)}, 
-            ${Number(item.qtdEntregue)}, 
-            CURRENT_TIMESTAMP, 
-            ${obsFinal}
-          )
-        `;
+    await requireRole(["GESTOR", "FARMACIA_ADMIN"]);
+    if (!Array.isArray(data?.itens) || data.itens.length === 0) {
+      throw new Error("Informe os medicamentos da dispensação.");
+    }
+    const totais = new Map();
+    for (const item of data.itens) {
+      const id = Number(item.loteId);
+      const qtd = Number(item.qtdEntregue);
+      if (!Number.isSafeInteger(id) || id <= 0 || !Number.isSafeInteger(qtd) || qtd <= 0) {
+        throw new Error("Lote ou quantidade inválida.");
       }
-    });
-
-    revalidatePath("/farmacia");
+      totais.set(id, (totais.get(id) || 0) + qtd);
+    }
+    await prisma.$transaction(async (tx) => {
+      // Ordem estável evita deadlocks; a consulta seguinte vê entregas já confirmadas.
+      for (const [id, quantidade] of [...totais].sort(([a], [b]) => a - b)) {
+        const lotes = await tx.$queryRaw`
+          SELECT id, qtd_inicial AS "qtdInicial"
+          FROM public.farmacia_lotes_medicamentos WHERE id = ${id} FOR UPDATE
+        `;
+        if (!lotes.length) throw new Error("Lote não encontrado.");
+        const entregas = await tx.dispensacaoMedicamento.aggregate({
+          where: { loteMedicamentoId: id }, _sum: { qtdEntregue: true },
+        });
+        const saldo = lotes[0].qtdInicial - (entregas._sum.qtdEntregue || 0);
+        if (quantidade > saldo) throw new Error(`Saldo insuficiente no lote ${id}. Disponível: ${saldo}.`);
+      }
+      for (const [id, quantidade] of totais) {
+        await tx.dispensacaoMedicamento.create({ data: {
+          pacientePasta: data.numeroPasta,
+          loteMedicamentoId: id,
+          qtdEntregue: quantidade,
+          dataDispensacao: new Date(),
+          observacao: `Responsável pela Entrega: ${data.responsavelEntrega}${data.observacao ? " | Obs: " + data.observacao : ""}`,
+        } });
+      }
+    }, { isolationLevel: "ReadCommitted" });
+    revalidatePath("/camara-tecnica/farmacia-judicial");
     return { success: true };
   } catch (error) {
     console.error("Erro ao registrar dispensação:", error);

@@ -107,9 +107,12 @@ export default function TabDispensacao({
     );
     if (!lote) return;
 
-    if (Number(qtdEntregue) > lote.qtdAtual) {
+    const reservado = carrinhoDispensacao
+      .filter((item) => String(item.loteId) === String(lote.loteId))
+      .reduce((total, item) => total + item.qtdEntregue, 0);
+    if (!Number.isSafeInteger(Number(qtdEntregue)) || Number(qtdEntregue) + reservado > lote.qtdAtual) {
       return alert(
-        `Quantidade excede o saldo em estoque deste lote (${lote.qtdAtual} disp).`,
+        `Quantidade excede o saldo em estoque deste lote (${lote.qtdAtual - reservado} disp).`,
       );
     }
 
@@ -291,7 +294,7 @@ export default function TabDispensacao({
       setObservacao("");
     } catch (error) {
       console.error("Erro ao processar dispensação:", error);
-      alert("Ocorreu um erro ao registrar a dispensação.");
+      alert(error.message || "Ocorreu um erro ao registrar a dispensação.");
     } finally {
       setIsSubmitting(false);
     }

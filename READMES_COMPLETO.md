@@ -1,4 +1,4 @@
-# 📚 Índice Completo de READMEs - RegulaHub
+# 📚 Índice Completo de READMEs - Orion
 
 Mapa completo de toda a documentação do projeto.
 
@@ -379,5 +379,5 @@ Cobertura Total: ~95% ✅
 ---
 
 **Última atualização:** 03/09/2026  
-**Responsável:** Documentação RegulaHub  
+**Responsável:** Documentação Orion  
 **Status:** ✅ **COMPLETO**

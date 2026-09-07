@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { cookies } from "next/headers";
+import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 const ROLES_ADMINISTRATIVAS = [
@@ -13,19 +13,7 @@ const ROLES_ADMINISTRATIVAS = [
 
 export async function GET() {
   try {
-    const token = (await cookies()).get("session_token")?.value;
-    if (!token) {
-      return NextResponse.json({ error: "Não autorizado" }, { status: 401 });
-    }
-
-    const session = await prisma.session.findUnique({
-      where: { token },
-      include: { user: true },
-    });
-
-    if (!session?.user || !ROLES_ADMINISTRATIVAS.includes(session.user.role)) {
-      return NextResponse.json({ error: "Acesso negado" }, { status: 403 });
-    }
+    await requireRole(ROLES_ADMINISTRATIVAS);
 
     const [
       pessoas,
@@ -361,6 +349,9 @@ export async function GET() {
       ),
     });
   } catch (error) {
+    if (error.status === 401 || error.status === 403) {
+      return NextResponse.json({ error: error.message }, { status: error.status });
+    }
     console.error("Erro ao carregar relatório geral:", error);
     return NextResponse.json(
       { error: "Erro interno ao carregar relatório." },

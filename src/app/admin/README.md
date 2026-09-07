@@ -50,4 +50,4 @@ Cadastro e gerenciamento de usuários do sistema.
 
 ---
 
-**Resumo:** Módulo administrativo do RegulaHub, centraliza funcionalidades de gestão acessíveis apenas ao GESTOR.
+**Resumo:** Módulo administrativo do Orion, centraliza funcionalidades de gestão acessíveis apenas ao GESTOR.
