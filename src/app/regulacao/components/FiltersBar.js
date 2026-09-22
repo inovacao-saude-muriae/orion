@@ -10,8 +10,11 @@ export default function FiltersBar({
   clearFilters,
   showAdvancedFilters,
   setShowAdvancedFilters,
-  allProceduresList = []
+  allProceduresList = [],
+  filtrosFixos = false
 }) {
+  // Quando fixos, os filtros avançados ficam sempre abertos.
+  const filtrosAbertos = filtrosFixos || showAdvancedFilters;
   // Estado local para os filtros
   const [draftFilters, setDraftFilters] = useState(filters);
   const [prevFilters, setPrevFilters] = useState(filters);
@@ -73,15 +76,17 @@ export default function FiltersBar({
         </div>
 
         <div className={styles.filterActionsTop}>
-          <button
-            type="button"
-            className={`${styles.toggleFilterBtn} ${
-              showAdvancedFilters ? styles.activeToggle : ''
-            }`}
-            onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
-          >
-            {showAdvancedFilters ? 'Ocultar Filtros' : 'Filtros Avançados'}
-          </button>
+          {!filtrosFixos && (
+            <button
+              type="button"
+              className={`${styles.toggleFilterBtn} ${
+                showAdvancedFilters ? styles.activeToggle : ''
+              }`}
+              onClick={() => setShowAdvancedFilters(!showAdvancedFilters)}
+            >
+              {showAdvancedFilters ? 'Ocultar Filtros' : 'Filtros Avançados'}
+            </button>
+          )}
 
           <button
             type="button"
@@ -101,8 +106,8 @@ export default function FiltersBar({
         </div>
       </div>
 
-      {/* PAINEL EXPANSÍVEL DE FILTROS AVANÇADOS */}
-      {showAdvancedFilters && (
+      {/* PAINEL DE FILTROS AVANÇADOS (fixo na Lista de Espera) */}
+      {filtrosAbertos && (
         <div className={styles.advancedFiltersWrapper}>
           <div className={styles.filterSection}>
             <span className={styles.sectionTitle}>Filtros Gerais</span>

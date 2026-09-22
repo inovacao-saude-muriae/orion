@@ -15,48 +15,34 @@ const LOCAIS_DISPONIVEIS = [
   'Centro de Reabilitação',
 ];
 
+const TIPOS_DEFICIENCIA = ['Física', 'Intelectual', 'Visual', 'Auditiva'];
+
 export default function CadastroPacienteJunta({ onCadastrar }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
   const [showDropdown, setShowDropdown] = useState(false);
 
-  const [isReadOnly, setIsReadOnly] = useState(true);
-  const [editingId, setEditingId] = useState(null);
-  const [selectedPatient, setSelectedPatient] = useState(null);
-
-  const [form, setForm] = useState({
-    cpf: '',
-    nomeCompleto: '',
-    sexo: 'Masculino',
-    dataNascimento: '',
-    nomeMae: '',
-    telefone: '',
-    tipoDeficiencia: '',
-    cep: '',
-    logradouro: '',
-    numero: '',
-    complemento: '',
-    bairro: '',
-    cidade: 'Muriaé',
-    uf: 'MG',
-    locaisEncaminhados: [],
-  });
+  // Pessoa selecionada (cadastro em /pessoas). Aqui só se anexa dados da Junta.
+  const [pessoa, setPessoa] = useState(null);
+  const [tiposDeficiencia, setTiposDeficiencia] = useState([]);
+  const [locaisEncaminhados, setLocaisEncaminhados] = useState([]);
+  const [salvando, setSalvando] = useState(false);
 
   const formatCPF = (cpf) => {
     if (!cpf) return '';
-    const digits = cpf.replace(/\D/g, '');
-    return digits.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+    const d = cpf.replace(/\D/g, '');
+    return d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
   };
 
   const removeDuplicadosPorCPF = (lista) => {
     if (!Array.isArray(lista)) return [];
-    const cpfsVistos = new Set();
+    const vistos = new Set();
     return lista.filter((item) => {
-      const cpfLimpo = (item.cpf || '').replace(/\D/g, '');
-      if (!cpfLimpo) return true;
-      if (cpfsVistos.has(cpfLimpo)) return false;
-      cpfsVistos.add(cpfLimpo);
+      const cpf = (item.cpf || '').replace(/\D/g, '');
+      if (!cpf) return true;
+      if (vistos.has(cpf)) return false;
+      vistos.add(cpf);
       return true;
     });
   };
@@ -81,130 +67,79 @@ export default function CadastroPacienteJunta({ onCadastrar }) {
     }
   };
 
-  const handleSelectPessoa = (pessoa) => {
-    const nomeSelecionado = pessoa.nomeCompleto || pessoa.nome || '';
-
-    setSelectedPatient(pessoa);
-    setEditingId(pessoa.id || null);
-    
-    // Atualiza o input de busca para exibir o NOME do paciente selecionado
-    setSearchTerm(nomeSelecionado);
-
-    setForm({
-      cpf: pessoa.cpf || '',
-      nomeCompleto: nomeSelecionado,
-      sexo: pessoa.sexo || 'Masculino',
-      dataNascimento: pessoa.dataNascimento
-        ? new Date(pessoa.dataNascimento).toISOString().split('T')[0]
-        : '',
-      nomeMae: pessoa.nomeMae || '',
-      telefone: pessoa.telefone || '',
-      tipoDeficiencia: pessoa.tipoDeficiencia || '',
-      cep: pessoa.cep || '',
-      logradouro: pessoa.logradouro || '',
-      numero: pessoa.numero || '',
-      complemento: pessoa.complemento || '',
-      bairro: pessoa.bairro || '',
-      cidade: pessoa.cidade || 'Muriaé',
-      uf: pessoa.uf || 'MG',
-      locaisEncaminhados: pessoa.servicosAtivos || [],
-    });
-
+  const handleSelectPessoa = (p) => {
+    setPessoa(p);
+    setSearchTerm(`${p.nomeCompleto || p.nome} (${formatCPF(p.cpf)})`);
     setShowDropdown(false);
-    setIsReadOnly(true);
+    // Pré-carrega dados de Junta já existentes, se vierem na busca.
+    // tipoDeficiencia é salvo como string ("Física, Visual") — separa de volta.
+    const existentes = (p.tipoDeficiencia || '')
+      .split(',')
+      .map((t) => t.trim())
+      .filter(Boolean);
+    setTiposDeficiencia(existentes);
+    setLocaisEncaminhados(p.servicosAtivos || []);
   };
 
-  const handleEnableEdit = () => {
-    if (!selectedPatient && !form.cpf) return;
-    setIsReadOnly(false);
-  };
-
-  const handleClearAll = () => {
+  const handleClear = () => {
     setSearchTerm('');
-    setSelectedPatient(null);
-    setEditingId(null);
-    setForm({
-      cpf: '',
-      nomeCompleto: '',
-      sexo: 'Masculino',
-      dataNascimento: '',
-      nomeMae: '',
-      telefone: '',
-      tipoDeficiencia: '',
-      cep: '',
-      logradouro: '',
-      numero: '',
-      complemento: '',
-      bairro: '',
-      cidade: 'Muriaé',
-      uf: 'MG',
-      locaisEncaminhados: [],
-    });
-  };
-
-  const handleNewRegistration = () => {
-    handleClearAll();
-    setIsReadOnly(false);
-  };
-
-  const handleCancel = () => {
-    handleClearAll();
-    setIsReadOnly(true);
+    setPessoa(null);
+    setTiposDeficiencia([]);
+    setLocaisEncaminhados([]);
+    setSearchResults([]);
+    setShowDropdown(false);
   };
 
   const handleCheckboxChange = (local) => {
-    if (isReadOnly) return;
-    setForm((prev) => {
-      const exists = prev.locaisEncaminhados.includes(local);
-      return {
-        ...prev,
-        locaisEncaminhados: exists
-          ? prev.locaisEncaminhados.filter((l) => l !== local)
-          : [...prev.locaisEncaminhados, local],
-      };
-    });
+    setLocaisEncaminhados((prev) =>
+      prev.includes(local) ? prev.filter((l) => l !== local) : [...prev, local],
+    );
+  };
+
+  const handleTipoChange = (tipo) => {
+    setTiposDeficiencia((prev) =>
+      prev.includes(tipo) ? prev.filter((t) => t !== tipo) : [...prev, tipo],
+    );
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-    if (isReadOnly) return;
-
-    if (!form.cpf || !form.nomeCompleto || !form.tipoDeficiencia || !form.sexo) {
-      return alert('Preencha os campos obrigatórios (*).');
+    if (!pessoa) return alert('Busque e selecione a pessoa no banco primeiro.');
+    if (tiposDeficiencia.length === 0) {
+      return alert('Selecione ao menos um tipo de deficiência.');
     }
 
-    if (onCadastrar) {
-      await onCadastrar(form);
-    }
-
-    setIsReadOnly(true);
+    setSalvando(true);
+    const res = await onCadastrar({
+      cpf: pessoa.cpf,
+      tipoDeficiencia: tiposDeficiencia.join(', '),
+      locaisEncaminhados,
+    });
+    setSalvando(false);
+    if (res?.success !== false) handleClear();
   };
 
   return (
     <div className={styles.card}>
-      {/* CARD 1: BUSCA DO PACIENTE E BOTÕES DE AÇÃO */}
+      {/* BUSCA DA PESSOA */}
       <div className={styles.searchSectionContainer}>
         <div className={styles.fieldGroup} style={{ marginBottom: '0.5rem' }}>
-          <label>Buscar Paciente no Banco (CPF ou Nome)</label>
+          <label>Buscar Pessoa no Banco (CPF ou Nome)</label>
         </div>
 
         <div className={styles.searchActionRow}>
           <div className={styles.autocompleteWrapper}>
             <input
               type="text"
-              placeholder="Digite o CPF ou Nome do paciente..."
+              placeholder="Digite o CPF ou Nome..."
               value={searchTerm}
               onChange={(e) => handleInputChange(e.target.value)}
             />
-
             {showDropdown && searchResults.length > 0 && (
               <ul className={styles.suggestionsDropdown}>
-                {searchResults.map((pessoa, index) => (
-                  <li
-                    key={pessoa.cpf ? `${pessoa.cpf}-${index}` : index}
-                    onClick={() => handleSelectPessoa(pessoa)}
-                  >
-                    <strong>{pessoa.nomeCompleto || pessoa.nome}</strong> — CPF: {formatCPF(pessoa.cpf)}
+                {searchResults.map((p, index) => (
+                  <li key={p.cpf ? `${p.cpf}-${index}` : index} onClick={() => handleSelectPessoa(p)}>
+                    <strong>{p.nomeCompleto || p.nome}</strong> — CPF: {formatCPF(p.cpf)}
                   </li>
                 ))}
               </ul>
@@ -215,237 +150,99 @@ export default function CadastroPacienteJunta({ onCadastrar }) {
             <Image src="/img/icon/lupa.png" alt="Buscar" width={22} height={22} className={styles.iconImg} />
           </button>
 
-          {/* BOTÃO LÁPIS - ATIVA AO SELECIONAR PACIENTE */}
-          {selectedPatient && (
+          {pessoa && (
             <button
               type="button"
               className={`${styles.iconSquareBtn} ${styles.btnOrange}`}
-              onClick={handleEnableEdit}
-              title="Habilitar Edição"
+              title="Limpar"
+              onClick={handleClear}
             >
-              <Image src="/img/icon/editar.png" alt="Editar" width={22} height={22} className={styles.iconImg} />
+              <Image src="/img/icon/cancelar.png" alt="Limpar" width={22} height={22} className={styles.iconImg} />
             </button>
           )}
-
-          <button
-            type="button"
-            className={`${styles.iconSquareBtn} ${styles.btnGreen}`}
-            onClick={handleNewRegistration}
-            title="Novo Cadastro"
-          >
-            <Image src="/img/icon/mais.png" alt="Adicionar" width={22} height={22} className={styles.iconImg} />
-          </button>
         </div>
 
-        {isSearching && <span style={{ fontSize: '0.8rem', color: '#64748b', marginTop: '0.25rem' }}>Consultando...</span>}
-      </div>
-
-      {/* FORMULÁRIO EM GRID STRICT DE 12 COLUNAS */}
-      <form onSubmit={handleSubmit} className={styles.patientFormContainer}>
-        {/* DADOS PESSOAIS */}
-        <div className={styles.formSection}>
-          <div className={styles.formSectionHeader}>
-            <h4>DADOS PESSOAIS E CONTATO</h4>
-          </div>
-
-          <div className={styles.formGridStrict}>
-            <div className={`${styles.fieldGroup} ${styles.colCpf}`}>
-              <label>CPF *</label>
-              <input
-                type="text"
-                placeholder="000.000.000-00"
-                value={form.cpf}
-                onChange={(e) => setForm({ ...form, cpf: e.target.value })}
-                disabled={isReadOnly}
-                required
-              />
-            </div>
-
-            <div className={`${styles.fieldGroup} ${styles.colName}`}>
-              <label>Nome Completo *</label>
-              <input
-                type="text"
-                value={form.nomeCompleto}
-                onChange={(e) => setForm({ ...form, nomeCompleto: e.target.value })}
-                disabled={isReadOnly}
-                required
-              />
-            </div>
-
-            <div className={`${styles.fieldGroup} ${styles.colSexo}`}>
-              <label>Sexo *</label>
-              <select
-                value={form.sexo}
-                onChange={(e) => setForm({ ...form, sexo: e.target.value })}
-                disabled={isReadOnly}
-                required
-              >
-                <option value="Masculino">Masculino</option>
-                <option value="Feminino">Feminino</option>
-              </select>
-            </div>
-
-            <div className={`${styles.fieldGroup} ${styles.colBirth}`}>
-              <label>Data de Nascimento *</label>
-              <input
-                type="date"
-                value={form.dataNascimento}
-                onChange={(e) => setForm({ ...form, dataNascimento: e.target.value })}
-                disabled={isReadOnly}
-                required
-              />
-            </div>
-
-            <div className={`${styles.fieldGroup} ${styles.colMother}`}>
-              <label>Nome da Mãe *</label>
-              <input
-                type="text"
-                value={form.nomeMae}
-                onChange={(e) => setForm({ ...form, nomeMae: e.target.value })}
-                disabled={isReadOnly}
-                required
-              />
-            </div>
-
-            <div className={`${styles.fieldGroup} ${styles.colPhone}`}>
-              <label>Telefone / WhatsApp</label>
-              <input
-                type="text"
-                value={form.telefone}
-                onChange={(e) => setForm({ ...form, telefone: e.target.value })}
-                disabled={isReadOnly}
-              />
-            </div>
-
-            <div className={`${styles.fieldGroup} ${styles.colFull}`}>
-              <label>Tipo de Deficiência / Diagnóstico *</label>
-              <input
-                type="text"
-                placeholder="Ex: Deficiência Auditiva, TEA, Síndrome de Down..."
-                value={form.tipoDeficiencia}
-                onChange={(e) => setForm({ ...form, tipoDeficiencia: e.target.value })}
-                disabled={isReadOnly}
-                required
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* ENDEREÇO RESIDENCIAL */}
-        <div className={styles.formSection}>
-          <div className={styles.formSectionHeader}>
-            <h4>ENDEREÇO RESIDENCIAL</h4>
-          </div>
-
-          <div className={styles.formGridStrict}>
-            <div className={`${styles.fieldGroup} ${styles.colCep}`}>
-              <label>CEP</label>
-              <input
-                type="text"
-                value={form.cep}
-                onChange={(e) => setForm({ ...form, cep: e.target.value })}
-                disabled={isReadOnly}
-              />
-            </div>
-
-            <div className={`${styles.fieldGroup} ${styles.colStreet}`}>
-              <label>Logradouro / Rua</label>
-              <input
-                type="text"
-                value={form.logradouro}
-                onChange={(e) => setForm({ ...form, logradouro: e.target.value })}
-                disabled={isReadOnly}
-              />
-            </div>
-
-            <div className={`${styles.fieldGroup} ${styles.colNumber}`}>
-              <label>Número</label>
-              <input
-                type="text"
-                value={form.numero}
-                onChange={(e) => setForm({ ...form, numero: e.target.value })}
-                disabled={isReadOnly}
-              />
-            </div>
-
-            <div className={`${styles.fieldGroup} ${styles.colComp}`}>
-              <label>Complemento</label>
-              <input
-                type="text"
-                value={form.complemento}
-                onChange={(e) => setForm({ ...form, complemento: e.target.value })}
-                disabled={isReadOnly}
-              />
-            </div>
-
-            <div className={`${styles.fieldGroup} ${styles.colDistrict}`}>
-              <label>Bairro</label>
-              <input
-                type="text"
-                value={form.bairro}
-                onChange={(e) => setForm({ ...form, bairro: e.target.value })}
-                disabled={isReadOnly}
-              />
-            </div>
-
-            <div className={`${styles.fieldGroup} ${styles.colCity}`}>
-              <label>Cidade</label>
-              <input
-                type="text"
-                value={form.cidade}
-                onChange={(e) => setForm({ ...form, cidade: e.target.value })}
-                disabled={isReadOnly}
-              />
-            </div>
-
-            <div className={`${styles.fieldGroup} ${styles.colUf}`}>
-              <label>UF</label>
-              <input
-                type="text"
-                maxLength={2}
-                value={form.uf}
-                onChange={(e) => setForm({ ...form, uf: e.target.value })}
-                disabled={isReadOnly}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* LOCAIS DE ENCAMINHAMENTO */}
-        <div className={styles.formSection}>
-          <div className={styles.formSectionHeader}>
-            <h4>LOCAIS DE ENCAMINHAMENTO / VINCULADOS</h4>
-          </div>
-          <div className={styles.checkboxGrid}>
-            {LOCAIS_DISPONIVEIS.map((local) => (
-              <label key={local} className={styles.checkboxLabel}>
-                <input
-                  type="checkbox"
-                  checked={form.locaisEncaminhados.includes(local)}
-                  onChange={() => handleCheckboxChange(local)}
-                  disabled={isReadOnly}
-                />
-                <span>{local}</span>
-              </label>
-            ))}
-          </div>
-        </div>
-
-        {/* BOTÕES DE AÇÃO */}
-        {!isReadOnly && (
-          <div className={styles.formActions}>
-            <button type="button" onClick={handleCancel} className={styles.btnRedAction}>
-              Cancelar
-            </button>
-            <button
-              type="submit"
-              className={editingId ? styles.updateBtn : styles.primaryBtn}
-            >
-              {editingId ? '💾 Salvar Alterações' : 'Salvar Paciente na Junta'}
-            </button>
+        {isSearching && (
+          <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#64748b' }}>
+            Consultando banco de dados...
           </div>
         )}
-      </form>
+        <p style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#64748b' }}>
+          A pessoa precisa estar cadastrada em <strong>Gerenciamento &gt; Cadastro de Pessoas</strong>.
+        </p>
+      </div>
+
+      {pessoa && (
+        <form onSubmit={handleSubmit} className={styles.patientFormContainer}>
+          {/* RESUMO DA PESSOA (somente leitura) */}
+          <div className={styles.formSection}>
+            <div className={styles.formSectionHeader}>
+              <h4>Paciente selecionado</h4>
+            </div>
+            <div className={styles.formGridStrict}>
+              <div className={`${styles.fieldGroup} ${styles.colName}`}>
+                <label>Nome</label>
+                <input type="text" value={pessoa.nomeCompleto || pessoa.nome || ''} disabled />
+              </div>
+              <div className={`${styles.fieldGroup} ${styles.colCpf}`}>
+                <label>CPF</label>
+                <input type="text" value={formatCPF(pessoa.cpf)} disabled />
+              </div>
+              <div className={`${styles.fieldGroup} ${styles.colPhone}`}>
+                <label>Telefone</label>
+                <input type="text" value={pessoa.telefone || '-'} disabled />
+              </div>
+            </div>
+          </div>
+
+          {/* DADOS DA JUNTA */}
+          <div className={styles.formSection}>
+            <div className={styles.formSectionHeader}>
+              <h4>Tipo de Deficiência * (pode selecionar mais de um)</h4>
+            </div>
+            <div className={styles.checkboxGrid}>
+              {TIPOS_DEFICIENCIA.map((tipo) => (
+                <label key={tipo} className={styles.checkboxLabel}>
+                  <input
+                    type="checkbox"
+                    checked={tiposDeficiencia.includes(tipo)}
+                    onChange={() => handleTipoChange(tipo)}
+                  />
+                  {tipo}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* LOCAIS DE ENCAMINHAMENTO */}
+          <div className={styles.formSection}>
+            <div className={styles.formSectionHeader}>
+              <h4>Locais de Encaminhamento / Vinculados</h4>
+            </div>
+            <div className={styles.checkboxGrid}>
+              {LOCAIS_DISPONIVEIS.map((local) => (
+                <label key={local} className={styles.checkboxLabel}>
+                  <input
+                    type="checkbox"
+                    checked={locaisEncaminhados.includes(local)}
+                    onChange={() => handleCheckboxChange(local)}
+                  />
+                  {local}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          <div className={styles.formActions}>
+            <button type="button" className={styles.btnRedAction} onClick={handleClear} disabled={salvando}>
+              Cancelar
+            </button>
+            <button type="submit" className={styles.primaryBtn} disabled={salvando}>
+              {salvando ? 'Salvando...' : 'Salvar Dados da Junta'}
+            </button>
+          </div>
+        </form>
+      )}
     </div>
   );
 }

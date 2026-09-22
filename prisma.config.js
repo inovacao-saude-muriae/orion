@@ -1,13 +1,15 @@
-// @ts-check
-const { defineConfig, env } = require("prisma/config");
-require("dotenv/config");
+import { defineConfig } from '@prisma/config';
+import dotenv from 'dotenv';
 
-module.exports = defineConfig({
-  schema: "prisma/schema.prisma",
+dotenv.config({ path: '.env.local' });
+dotenv.config();
+
+export default defineConfig({
   migrations: {
-    seed: "node ./prisma/seed.js",
+    seed: 'node prisma/seed.js', // <-- Aponta para o local do seu arquivo de seed
   },
   datasource: {
-    url: env("DATABASE_URL"),
+    url: process.env.DATABASE_URL,
+    directUrl: process.env.DIRECT_URL,
   },
 });

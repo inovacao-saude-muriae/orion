@@ -2,7 +2,6 @@ generator client {
   provider        = "prisma-client-js"
   previewFeatures = ["driverAdapters"]
 }
-
 datasource db {
   provider = "postgresql"
 }
@@ -64,19 +63,21 @@ model Session {
 
 // ── MODELOS BASE (PESSOAS E ENDEREÇOS) ──────────────────────────────────
 model Pessoa {
-  cpf            String   @id @db.VarChar(11)
-  nomeCompleto   String   @map("nome_completo") @db.VarChar(150)
-  sexo           String   @db.VarChar(20)
-  dataNascimento DateTime @map("data_nascimento") @db.Date
-  nomeMae        String   @map("nome_mae") @db.VarChar(150)
-  telefone       String   @db.VarChar(20)
-  cns            String?  @unique @db.VarChar(15) // Não permite CNS duplicado
+  cpf              String   @id @db.VarChar(11)
+  nomeCompleto     String   @map("nome_completo") @db.VarChar(150)
+  sexo             String   @db.VarChar(20)
+  dataNascimento   DateTime @map("data_nascimento") @db.Date
+  nomeMae          String   @map("nome_mae") @db.VarChar(150)
+  telefone         String   @db.VarChar(20)
+  cns              String?  @unique @db.VarChar(15) // Não permite CNS duplicado
+  ubsReferenciaId  Int?     @map("ubs_referencia_id") // UBS de referência (opcional)
 
   enderecos        Endereco[]
   pedidos          PedidoExame[]
   tutor            Tutor?
   pacienteFarmacia PacienteFarmaciaJudicial?
   pacienteJunta    PacienteJunta?
+  ubsReferencia    Ubs?     @relation(fields: [ubsReferenciaId], references: [id], onDelete: SetNull, map: "fk_pessoa_ubs_referencia")
 
   @@index([nomeCompleto, dataNascimento], map: "idx_pessoa_nome")
   @@map("pessoa")
@@ -146,6 +147,7 @@ model Ubs {
   ativo     Boolean       @default(true)
   createdAt DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
   pedidos   PedidoExame[]
+  pessoas   Pessoa[]
 
   @@map("regula_ubs")
 }

@@ -16,12 +16,6 @@ import Financeiro from "./views/Financeiro";
 import TelaLiberarPedido from "./components/LiberarPedido";
 import TelaEditarPedido from "./components/EditarPedido";
 
-// 🎯 COMPONENTES DE CADASTRO DEDICADOS
-import CadastroPacientes from "./components/CadastroPacientes";
-import CadastroMedicos from "./components/CadastroMedicos";
-import CadastroUbs from "./components/CadastroUbs";
-import CadastroProcedimentos from "./components/CadastroProcedimentos";
-
 import ModalTetoFinanceiro from "./components/Modals/ModalTetoFinanceiro";
 import ModalSeletorCotas from "./components/Modals/ModalSeletorCotas";
 
@@ -32,7 +26,6 @@ function RegulacaoPageContent() {
   const router = useRouter();
 
   const activeTab = searchParams.get("tab") || "DASHBOARD";
-  const activeSubTab = searchParams.get("subTab") || "PESSOAS";
 
   const handleSetActiveTab = (tab, subTab) => {
     if (subTab) {
@@ -74,6 +67,11 @@ function RegulacaoPageContent() {
 
   return (
     <div className={styles.container}>
+      <header className={styles.header}>
+        <h1>Regulação Saúde</h1>
+        <p>Gestão de solicitações de exames, fila de espera e liberações.</p>
+      </header>
+
       {(activeTab === "LISTA_ESPERA" || activeTab === "LIBERADOS") && (
         <FiltersBar
           filters={filters}
@@ -82,6 +80,7 @@ function RegulacaoPageContent() {
           showAdvancedFilters={showAdvancedFilters}
           setShowAdvancedFilters={setShowAdvancedFilters}
           allProceduresList={allProceduresList}
+          filtrosFixos={activeTab === "LISTA_ESPERA" || activeTab === "LIBERADOS"}
         />
       )}
 
@@ -227,43 +226,6 @@ function RegulacaoPageContent() {
           setFinYear={data.setFinYear}
           calculateMonthQuotaDetails={data.calculateMonthQuotaDetails}
           handleOpenDefineTetoModal={data.handleOpenDefineTetoModal}
-        />
-      )}
-
-      {/* 🎯 CADASTROS CONTROLADOS PELA SUB-TAB VINDA DA URL */}
-      {activeTab === "CADASTROS" && activeSubTab === "PESSOAS" && (
-        <CadastroPacientes
-          formPessoa={data.formPessoa}
-          setFormPessoa={data.setFormPessoa}
-          auxData={data.auxData}
-          reloadData={data.reloadData}
-        />
-      )}
-
-      {activeTab === "CADASTROS" && activeSubTab === "MEDICOS" && (
-        <CadastroMedicos
-          formMedico={data.formMedico}
-          setFormMedico={data.setFormMedico}
-          auxData={data.auxData}
-          reloadData={data.reloadData}
-        />
-      )}
-
-      {activeTab === "CADASTROS" && activeSubTab === "UBS" && (
-        <CadastroUbs
-          formUbs={data.formUbs}
-          setFormUbs={data.setFormUbs}
-          auxData={data.auxData}
-          reloadData={data.reloadData}
-        />
-      )}
-
-      {activeTab === "CADASTROS" && activeSubTab === "PROCEDIMENTOS" && (
-        <CadastroProcedimentos
-          formProcedimento={data.formProcedimento}
-          setFormProcedimento={data.setFormProcedimento}
-          auxData={data.auxData}
-          reloadData={data.reloadData}
         />
       )}
 

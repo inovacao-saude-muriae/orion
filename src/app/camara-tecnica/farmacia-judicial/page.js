@@ -131,6 +131,7 @@ function FarmaciaJudicialPageContent() {
     const res = await createPacienteJudicial(formData);
     if (res.success) await reloadData();
     else alert("Erro: " + res.error);
+    return res;
   };
 
   const handleCreateMedicamento = async (formData) => {

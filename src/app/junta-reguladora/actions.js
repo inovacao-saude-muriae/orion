@@ -29,12 +29,20 @@ export async function buscarPessoaExistente(termo) {
           where: { enderecoAtual: true },
           take: 1,
         },
+        pacienteJunta: {
+          include: {
+            servicos: { include: { servico: true } },
+          },
+        },
       },
       take: 10,
     });
 
     return pessoas.map((p) => {
       const enderecoAtual = p.enderecos?.[0] || {};
+      const servicosAtivos = (p.pacienteJunta?.servicos || [])
+        .filter((v) => v.ativo !== false && v.servico)
+        .map((v) => v.servico.nome);
       return {
         cpf: p.cpf,
         nomeCompleto: p.nomeCompleto,
@@ -50,6 +58,8 @@ export async function buscarPessoaExistente(termo) {
         cidade: enderecoAtual.cidade || 'Muriaé',
         uf: enderecoAtual.uf || 'MG',
         cep: enderecoAtual.cep || '',
+        tipoDeficiencia: p.pacienteJunta?.tipoDeficiencia || '',
+        servicosAtivos,
       };
     });
   } catch (error) {
@@ -69,130 +79,69 @@ export async function buscarPessoaPorNomeOuCpf(termo) {
 /* ── 2. CADASTRAR OU ATUALIZAR PACIENTE NA JUNTA REGULADORA ── */
 export async function cadastrarPacienteJunta(data) {
   try {
-    const {
-      cpf,
-      nomeCompleto,
-      sexo,
-      dataNascimento,
-      nomeMae,
-      telefone,
-      tipoDeficiencia,
-      cep,
-      logradouro,
-      numero,
-      complemento,
-      bairro,
-      cidade,
-      uf,
-      locaisEncaminhados = [],
-    } = data;
+    const { cpf, tipoDeficiencia, locaisEncaminhados = [] } = data;
 
     const cpfClean = (cpf || '').replace(/\D/g, '').slice(0, 11);
-    const sexoVal = sexo || 'Masculino';
 
     if (!cpfClean || cpfClean.length !== 11) {
       return { success: false, error: 'CPF inválido. Deve conter 11 dígitos.' };
     }
-
-    // 1. Upsert na tabela Pessoa
-    await prisma.pessoa.upsert({
-      where: { cpf: cpfClean },
-      update: {
-        nomeCompleto: nomeCompleto ? nomeCompleto.slice(0, 150) : undefined,
-        sexo: sexoVal,
-        dataNascimento: dataNascimento ? new Date(dataNascimento) : undefined,
-        nomeMae: nomeMae ? nomeMae.slice(0, 150) : undefined,
-        telefone: telefone ? telefone.slice(0, 20) : undefined,
-      },
-      create: {
-        cpf: cpfClean,
-        nomeCompleto: (nomeCompleto || '').slice(0, 150),
-        sexo: sexoVal,
-        dataNascimento: dataNascimento ? new Date(dataNascimento) : new Date(),
-        nomeMae: (nomeMae || 'NÃO INFORMADO').slice(0, 150),
-        telefone: telefone ? telefone.slice(0, 20) : '',
-      },
-    });
-
-    // 2. Gravação do Endereço
-    if (logradouro || bairro || cep) {
-      const enderecoExistente = await prisma.endereco.findFirst({
-        where: { pessoaCpf: cpfClean, enderecoAtual: true },
-      });
-
-      if (enderecoExistente) {
-        await prisma.endereco.update({
-          where: { id: enderecoExistente.id },
-          data: {
-            cep: cep ? cep.replace(/\D/g, '').slice(0, 8) : null,
-            logradouro: logradouro ? logradouro.slice(0, 150) : '',
-            numero: numero ? numero.slice(0, 20) : '',
-            complemento: complemento ? complemento.slice(0, 50) : null,
-            bairro: bairro ? bairro.slice(0, 100) : '',
-            cidade: cidade ? cidade.slice(0, 100) : 'Muriaé',
-            uf: uf ? uf.slice(0, 2) : 'MG',
-          },
-        });
-      } else {
-        await prisma.endereco.create({
-          data: {
-            pessoaCpf: cpfClean,
-            cep: cep ? cep.replace(/\D/g, '').slice(0, 8) : null,
-            logradouro: logradouro ? logradouro.slice(0, 150) : '',
-            numero: numero ? numero.slice(0, 20) : '',
-            complemento: complemento ? complemento.slice(0, 50) : null,
-            bairro: bairro ? bairro.slice(0, 100) : '',
-            cidade: cidade ? cidade.slice(0, 100) : 'Muriaé',
-            uf: uf ? uf.slice(0, 2) : 'MG',
-            enderecoAtual: true,
-          },
-        });
-      }
+    if (!tipoDeficiencia?.trim()) {
+      return { success: false, error: 'Informe o tipo de deficiência.' };
     }
 
-    // 3. Cadastrar ou Atualizar o Paciente na Junta
-    const pacienteJunta = await prisma.pacienteJunta.upsert({
-      where: { pessoaCpf: cpfClean },
-      update: { tipoDeficiencia },
-      create: {
-        pessoaCpf: cpfClean,
-        tipoDeficiencia,
-      },
+    // A pessoa deve estar previamente cadastrada em Gerenciamento > Cadastro de Pessoas.
+    const pessoa = await prisma.pessoa.findUnique({
+      where: { cpf: cpfClean },
+      select: { cpf: true },
     });
+    if (!pessoa) {
+      return {
+        success: false,
+        error:
+          'Pessoa não encontrada. Cadastre-a primeiro em Gerenciamento > Cadastro de Pessoas.',
+      };
+    }
 
-    // Limpa vínculos anteriores
-    await prisma.pacienteJuntaServico.deleteMany({
-      where: { pacienteJuntaId: pacienteJunta.id },
-    });
+    // Transação: apenas dados específicos da Junta (PacienteJunta + vínculos).
+    const pacienteJunta = await prisma.$transaction(async (tx) => {
+      // 1. Cadastrar ou atualizar o paciente na Junta
+      const paciente = await tx.pacienteJunta.upsert({
+        where: { pessoaCpf: cpfClean },
+        update: { tipoDeficiencia },
+        create: { pessoaCpf: cpfClean, tipoDeficiencia },
+      });
 
-    // Cria novos vínculos
-    if (locaisEncaminhados.length > 0) {
-      const servicoIds = [];
+      // 2. Revincula serviços: limpa e recria
+      await tx.pacienteJuntaServico.deleteMany({
+        where: { pacienteJuntaId: paciente.id },
+      });
 
-      for (const localNome of locaisEncaminhados) {
-        let servico = await prisma.juntaServico.findFirst({
-          where: { nome: { equals: localNome.trim(), mode: 'insensitive' } },
-        });
-
-        if (!servico) {
-          servico = await prisma.juntaServico.create({
-            data: { nome: localNome.trim(), ativo: true },
+      if (locaisEncaminhados.length > 0) {
+        const servicoIds = [];
+        for (const localNome of locaisEncaminhados) {
+          let servico = await tx.juntaServico.findFirst({
+            where: { nome: { equals: localNome.trim(), mode: 'insensitive' } },
           });
+          if (!servico) {
+            servico = await tx.juntaServico.create({
+              data: { nome: localNome.trim(), ativo: true },
+            });
+          }
+          servicoIds.push(servico.id);
         }
 
-        servicoIds.push(servico.id);
+        await tx.pacienteJuntaServico.createMany({
+          data: servicoIds.map((sId) => ({
+            pacienteJuntaId: paciente.id,
+            servicoId: sId,
+            ativo: true,
+          })),
+        });
       }
 
-      const novosVinculos = servicoIds.map((sId) => ({
-        pacienteJuntaId: pacienteJunta.id,
-        servicoId: sId,
-        ativo: true,
-      }));
-
-      await prisma.pacienteJuntaServico.createMany({
-        data: novosVinculos,
-      });
-    }
+      return paciente;
+    });
 
     return { success: true, id: pacienteJunta.id };
   } catch (error) {

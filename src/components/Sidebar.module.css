@@ -6,12 +6,12 @@
   top: 60px; /* Começa exatamente abaixo do Header */
   left: 0;
   bottom: 0;
-  width: var(--sidebar-width-collapsed, 68px);
+  width: 270px; /* Sempre aberta */
   height: calc(100vh - 60px);
-  background-color: var(--sidebar-bg, #516f8a);
+  background-color: #ffffff;
+  border-right: 1px solid #e2e8f0;
   z-index: 900;
-  transition: width 0.3s ease;
-  
+
   /* HABILITA A BARRA DE ROLAGEM VERTICAL */
   overflow-y: auto;
   overflow-x: hidden;
@@ -20,51 +20,37 @@
   box-sizing: border-box;
 }
 
-/* EXPANSÃO NO HOVER */
-.sidebar:hover {
-  width: 270px;
-}
-
 /* 2. HEADER DA SIDEBAR / LOGO */
 .sidebarHeader {
   padding: 1.25rem 1rem;
   display: flex;
   align-items: center;
   flex-shrink: 0;
+  border-bottom: 1px solid #f1f5f9;
 }
 
 .brandLogo {
   display: flex;
   align-items: center;
   gap: 0.85rem;
-  color: #ffffff;
+  color: #2563eb;
   min-width: 200px;
 }
 
 .brandName {
   font-size: 1.1rem;
   font-weight: 700;
-  color: #ffffff;
+  color: #0f172a;
   letter-spacing: -0.02em;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-  white-space: nowrap;
-}
-
-.sidebar:hover .brandName {
   opacity: 1;
+  white-space: nowrap;
 }
 
 /* 3. CAMPO DE BUSCA */
 .searchContainer {
-  padding: 0 0.85rem 0.85rem 0.85rem;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-  flex-shrink: 0;
-}
-
-.sidebar:hover .searchContainer {
+  padding: 0.85rem;
   opacity: 1;
+  flex-shrink: 0;
 }
 
 .searchWrapper {
@@ -76,7 +62,7 @@
 .searchIcon {
   position: absolute;
   left: 0.75rem;
-  color: rgba(255, 255, 255, 0.5);
+  color: #94a3b8;
   pointer-events: none;
 }
 
@@ -84,27 +70,27 @@
   width: 100%;
   padding: 0.5rem 0.75rem 0.5rem 2.25rem;
   font-size: 0.8125rem;
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  border: 1px solid #cbd5e1;
   border-radius: 8px;
-  background-color: rgba(255, 255, 255, 0.08);
-  color: #ffffff;
+  background-color: #f8fafc;
+  color: #0f172a;
   outline: none;
   transition: all 0.2s ease;
 }
 
 .searchInput::placeholder {
-  color: rgba(255, 255, 255, 0.5);
+  color: #94a3b8;
 }
 
 .searchInput:focus {
-  border-color: rgba(255, 255, 255, 0.3);
-  background-color: rgba(255, 255, 255, 0.12);
+  border-color: #2563eb;
+  background-color: #ffffff;
 }
 
 /* 4. LISTA NAVEGÁVEL PRINCIPAL */
 .menuContentList {
   flex: 1;
-  padding: 0 0.5rem 1rem 0.5rem;
+  padding: 0.5rem 0.5rem 1rem 0.5rem;
   display: flex;
   flex-direction: column;
   gap: 0.35rem;
@@ -126,7 +112,7 @@
   border-radius: 8px;
   background: transparent;
   border: none;
-  color: rgba(255, 255, 255, 0.8);
+  color: #475569;
   font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
@@ -138,15 +124,15 @@
 }
 
 .menuItemBtn:hover {
-  background: rgba(255, 255, 255, 0.1);
-  color: #ffffff;
+  background: #f1f5f9;
+  color: #0f172a;
 }
 
 /* Quando o dropdown/menu principal está aberto/marcado */
 .menuItemBtn.active,
 .menuItemBtn[data-state="open"] {
-  background: rgba(255, 255, 255, 0.15);
-  color: #ffffff;
+  background: #eff6ff;
+  color: #2563eb;
   font-weight: 600;
 }
 
@@ -155,42 +141,33 @@
   align-items: center;
   justify-content: center;
   min-width: 24px;
-  color: rgba(255, 255, 255, 0.8);
+  color: #64748b;
   transition: color 0.15s ease;
 }
 
 .menuItemBtn:hover .itemIcon,
 .menuItemBtn.active .itemIcon,
 .menuItemBtn[data-state="open"] .itemIcon {
-  color: #ffffff;
+  color: #2563eb;
 }
 
 .itemLabel {
   margin-left: 0.75rem;
   flex: 1;
-  opacity: 0;
-  transition: opacity 0.2s ease;
-}
-
-.sidebar:hover .itemLabel {
   opacity: 1;
 }
 
 .arrowIcon {
-  color: rgba(255, 255, 255, 0.5);
-  opacity: 0;
-  transition: transform 0.2s ease, opacity 0.2s ease;
-}
-
-.sidebar:hover .arrowIcon {
+  color: #94a3b8;
   opacity: 1;
+  transition: transform 0.2s ease;
 }
 
 .arrowOpen,
 .menuItemBtn.active .arrowIcon,
 .menuItemBtn[data-state="open"] .arrowIcon {
   transform: rotate(90deg);
-  color: #ffffff;
+  color: #2563eb;
 }
 
 /* 6. SUBMENUS (NÍVEL 1 E 2) */
@@ -198,14 +175,10 @@
   list-style: none;
   padding: 0.25rem 0 0.25rem 0.75rem;
   margin: 0.2rem 0 0.3rem 1.1rem;
-  display: none;
+  display: flex;
   flex-direction: column;
   gap: 0.15rem;
-  border-left: 1px solid rgba(255, 255, 255, 0.15);
-}
-
-.sidebar:hover .subMenuList {
-  display: flex;
+  border-left: 1px solid #e2e8f0;
 }
 
 .subMenuItemLink,
@@ -216,7 +189,8 @@
   width: 100%;
   padding: 0.45rem 0.65rem;
   font-size: 0.8125rem;
-  color: rgba(255, 255, 255, 0.7);
+  color: #475569;
+  font-weight: 500;
   text-decoration: none;
   border-radius: 6px;
   transition: all 0.15s ease;
@@ -229,8 +203,8 @@
 
 .subMenuItemLink:hover,
 .nestedBtn:hover {
-  color: #ffffff;
-  background: rgba(255, 255, 255, 0.08);
+  color: #0f172a;
+  background: #f1f5f9;
 }
 
 .nestedMenuList {
@@ -240,20 +214,20 @@
   display: flex;
   flex-direction: column;
   gap: 0.1rem;
-  border-left: 1px dashed rgba(255, 255, 255, 0.15);
+  border-left: 1px dashed #cbd5e1;
 }
 
 /* 7. ESTADOS ATIVOS (LINKS SELECIONADOS) */
 .activeLink,
 .subMenuItemLink.activeLink,
 .nestedBtn.activeLink {
-  color: #ffffff !important;
-  background: rgba(255, 255, 255, 0.18) !important;
+  color: #2563eb !important;
+  background: #eff6ff !important;
   font-weight: 600;
 }
 
 .activeLink .itemIcon {
-  color: #ffffff;
+  color: #2563eb;
 }
 
 .activeAppBadge {
@@ -262,7 +236,7 @@
   gap: 0.75rem;
   font-size: 0.75rem;
   font-weight: 500;
-  color: rgba(255, 255, 255, 0.7);
+  color: #64748b;
   white-space: nowrap;
 }
 
@@ -272,7 +246,7 @@
 
 /* 8. SCROLLBAR CUSTOMIZADA (DISCRETA) */
 .sidebar::-webkit-scrollbar {
-  width: 4px;
+  width: 6px;
 }
 
 .sidebar::-webkit-scrollbar-track {
@@ -280,10 +254,10 @@
 }
 
 .sidebar::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
+  background: #cbd5e1;
   border-radius: 4px;
 }
 
 .sidebar::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.4);
+  background: #94a3b8;
 }

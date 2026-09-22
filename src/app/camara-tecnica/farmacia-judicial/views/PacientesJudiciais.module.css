@@ -691,3 +691,40 @@
     flex-direction: column;
   }
 }
+
+/* Resumo da pessoa selecionada (somente leitura) */
+.personSummary {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2rem;
+  padding: 1rem 1.25rem;
+  background-color: #f0f9ff;
+  border: 1px solid #bae6fd;
+  border-radius: 8px;
+  margin-bottom: 1.25rem;
+}
+
+.personSummary > div {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.summaryLabel {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #0369a1;
+  font-weight: 600;
+}
+
+.personSummary strong {
+  font-size: 0.95rem;
+  color: #0f172a;
+}
+
+.helperNote {
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: #64748b;
+}

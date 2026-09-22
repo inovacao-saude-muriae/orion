@@ -47,54 +47,73 @@ export async function getPacientesJudiciais() {
 // ==========================================
 // 2. CADASTRAR PACIENTE JUDICIAL (POSTGRESQL)
 // ==========================================
+// Normaliza o status vindo da UI (Ativo/Inativo/Falecido) para o padrão do banco.
+function normalizarStatusPaciente(status) {
+  const st = (status || "").toUpperCase();
+  if (st === "INATIVO") return "INATIVO";
+  if (st === "FALECIDO" || st === "ÓBITO" || st === "OBITO") return "ÓBITO";
+  return "ATIVO";
+}
+
 export async function createPacienteJudicial(data) {
-  const cleanCpf = data.cpf.replace(/\D/g, "");
-  const cleanCep = data.cep ? data.cep.replace(/\D/g, "") : null;
+  const cleanCpf = (data.cpf || "").replace(/\D/g, "");
 
   try {
+    if (cleanCpf.length !== 11) {
+      throw new Error("Selecione uma pessoa válida (CPF com 11 dígitos).");
+    }
+    if (!data.numeroPasta || !data.numeroProcesso) {
+      throw new Error("Informe o número da pasta e do processo.");
+    }
+
+    // A pessoa deve estar previamente cadastrada em Gerenciamento > Cadastro de Pessoas.
+    const pessoa = await prisma.pessoa.findUnique({
+      where: { cpf: cleanCpf },
+      select: { cpf: true },
+    });
+    if (!pessoa) {
+      throw new Error(
+        "Pessoa não encontrada. Cadastre-a primeiro em Gerenciamento > Cadastro de Pessoas.",
+      );
+    }
+
+    const statusDb = normalizarStatusPaciente(data.status);
+
     await prisma.$transaction(async (tx) => {
-      // 1. Upsert da Pessoa usando a sintaxe ON CONFLICT do Postgres
-      await tx.$executeRaw`
-        INSERT INTO public.pessoa (cpf, nome_completo, data_nascimento, nome_mae, telefone)
-        VALUES (${cleanCpf}, ${data.nomeCompleto}, ${data.dataNascimento}::date, ${data.nomeMae}, ${data.telefone || ""})
-        ON CONFLICT (cpf) DO UPDATE SET
-          nome_completo = EXCLUDED.nome_completo,
-          data_nascimento = EXCLUDED.data_nascimento,
-          nome_mae = EXCLUDED.nome_mae,
-          telefone = EXCLUDED.telefone
-      `;
-
-      // 2. Inserir Endereço se fornecido
-      if (data.logradouro) {
-        await tx.$executeRaw`
-          INSERT INTO public.pessoa_endereco (pessoa_cpf, logradouro, numero, complemento, bairro, cidade, uf, cep, endereco_atual)
-          VALUES (${cleanCpf}, ${data.logradouro}, ${data.numero || "S/N"}, ${data.complemento || null}, ${data.bairro || "Centro"}, ${data.cidade || "Muriaé"}, ${data.uf || "MG"}, ${cleanCep}, true)
-        `;
-      }
-
-      // 3. Cadastrar Paciente Judicial
+      // 1. Cadastrar/atualizar o vínculo do paciente judicial (dados do processo).
       await tx.$executeRaw`
         INSERT INTO public.farmacia_pacientes (numero_pasta, pessoa_cpf, numero_processo, status)
-        VALUES (${data.numeroPasta}, ${cleanCpf}, ${data.numeroProcesso}, 'ATIVO')
+        VALUES (${data.numeroPasta}, ${cleanCpf}, ${data.numeroProcesso}, ${statusDb})
         ON CONFLICT (numero_pasta) DO UPDATE SET
+          pessoa_cpf = EXCLUDED.pessoa_cpf,
           numero_processo = EXCLUDED.numero_processo,
           status = EXCLUDED.status
       `;
 
-      // 4. Cadastrar Medicamentos do Tratamento Mensal
-      if (data.medicamentos && data.medicamentos.length > 0) {
+      // 2. Recriar os tratamentos do mês (limpa antes para não duplicar).
+      await tx.tratamentoPaciente.deleteMany({
+        where: { pacientePasta: data.numeroPasta },
+      });
+
+      if (Array.isArray(data.medicamentos) && data.medicamentos.length > 0) {
         for (const med of data.medicamentos) {
           if (med.medicamentoId && med.qtdMensal) {
-            await tx.$executeRaw`
-              INSERT INTO public.farmacia_tratamentos_pacientes (paciente_pasta, medicamento_id, qtd_prescrita_mensal, ativo)
-              VALUES (${data.numeroPasta}, ${Number(med.medicamentoId)}, ${Number(med.qtdMensal)}, true)
-            `;
+            const ativo =
+              (med.statusMedication || "Ativo").toUpperCase() === "ATIVO";
+            await tx.tratamentoPaciente.create({
+              data: {
+                pacientePasta: data.numeroPasta,
+                medicamentoId: Number(med.medicamentoId),
+                qtdPrescritaMensal: Number(med.qtdMensal),
+                ativo,
+              },
+            });
           }
         }
       }
     });
 
-    revalidatePath("/farmacia");
+    revalidatePath("/camara-tecnica/farmacia-judicial");
     return { success: true };
   } catch (error) {
     console.error("Erro ao cadastrar paciente judicial:", error);

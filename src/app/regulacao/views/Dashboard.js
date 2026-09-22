@@ -53,24 +53,9 @@ export default function Dashboard({ requests = [], auxData = {}, setActiveTab })
   });
 
   return (
-    <div className={styles.dashboardContainer}>
-      {/* BANNER DE BOAS-VINDAS E ATALHO */}
-      <div className={styles.welcomeBanner}>
-        <div>
-          <h2>Visão Geral da Regulação</h2>
-          <p>Acompanhe o fluxo de solicitações, riscos e exames liberados em tempo real.</p>
-        </div>
-        <button
-          type="button"
-          className={styles.newRequestBtn}
-          onClick={() => setActiveTab("NOVO_PEDIDO")}
-        >
-          + Novo Pedido
-        </button>
-      </div>
-
-      {/* MÉTRICAS PRINCIPAIS (IGUAL AO PADRÃO FARMÁCIA) */}
-      <div className={styles.metricsGrid}>
+    <div className={styles.container}>
+      {/* MÉTRICAS PRINCIPAIS (SEÇÃO 1 - PADRÃO FARMÁCIA) */}
+      <section className={styles.kpiGrid}>
         {/* CARD 1: FILA DE ESPERA */}
         <div
           className={`${styles.kpiCard} ${styles.clickable}`}
@@ -160,14 +145,16 @@ export default function Dashboard({ requests = [], auxData = {}, setActiveTab })
             <span>Histórico geral do sistema</span>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* SEÇÃO 1: PAINEL DA FILA DE ESPERA */}
-      <h3 className={styles.sectionHeaderTitle}>Fila de Espera</h3>
-      <div className={styles.dashboardGrid}>
+      {/* SEÇÃO 2: FILA DE ESPERA (PADRÃO FARMÁCIA - contentGrid) */}
+      <div className={styles.contentGrid}>
         {/* CARD: FILA POR CLASSIFICAÇÃO DE RISCO */}
-        <div className={styles.dashCard}>
-          <h3 className={styles.cardTitle}>Fila por Classificação de Risco</h3>
+        <div className={styles.panelCard}>
+          <div className={styles.panelHeader}>
+            <h3>Fila por Classificação de Risco</h3>
+            <span className={styles.cardSubtitle}>Distribuição dos pacientes aguardando regulação</span>
+          </div>
           <div className={styles.riskProgressList}>
             <div className={styles.riskItem}>
               <div className={styles.riskHeader}>
@@ -220,8 +207,11 @@ export default function Dashboard({ requests = [], auxData = {}, setActiveTab })
         </div>
 
         {/* CARD: FILA POR TIPO DE EXAME */}
-        <div className={styles.dashCard}>
-          <h3 className={styles.cardTitle}>Fila por Tipo de Exame</h3>
+        <div className={styles.panelCard}>
+          <div className={styles.panelHeader}>
+            <h3>Fila por Tipo de Exame</h3>
+            <span className={styles.cardSubtitle}>Solicitações aguardando por tipo</span>
+          </div>
           <div className={styles.examTypeList}>
             {examTypeCountsFila.map((item) => (
               <div key={item.nome} className={styles.examTypeRow}>
@@ -233,12 +223,14 @@ export default function Dashboard({ requests = [], auxData = {}, setActiveTab })
         </div>
       </div>
 
-      {/* SEÇÃO 2: PAINEL DE PACIENTES LIBERADOS */}
-      <h3 className={styles.sectionHeaderTitle}>Pacientes Liberados</h3>
-      <div className={styles.dashboardGrid}>
+      {/* SEÇÃO 3: PACIENTES LIBERADOS (PADRÃO FARMÁCIA - contentGrid) */}
+      <div className={styles.contentGrid}>
         {/* CARD: LIBERADOS POR CLASSIFICAÇÃO DE RISCO */}
-        <div className={styles.dashCard}>
-          <h3 className={styles.cardTitle}>Liberados por Classificação de Risco</h3>
+        <div className={styles.panelCard}>
+          <div className={styles.panelHeader}>
+            <h3>Liberados por Classificação de Risco</h3>
+            <span className={styles.cardSubtitle}>Distribuição dos exames já autorizados</span>
+          </div>
           <div className={styles.riskProgressList}>
             <div className={styles.riskItem}>
               <div className={styles.riskHeader}>
@@ -291,8 +283,11 @@ export default function Dashboard({ requests = [], auxData = {}, setActiveTab })
         </div>
 
         {/* CARD: LIBERADOS POR TIPO DE EXAME */}
-        <div className={styles.dashCard}>
-          <h3 className={styles.cardTitle}>Liberados por Tipo de Exame</h3>
+        <div className={styles.panelCard}>
+          <div className={styles.panelHeader}>
+            <h3>Liberados por Tipo de Exame</h3>
+            <span className={styles.cardSubtitle}>Exames autorizados por tipo</span>
+          </div>
           <div className={styles.examTypeList}>
             {examTypeCountsLiberados.map((item) => (
               <div key={item.nome} className={styles.examTypeRow}>

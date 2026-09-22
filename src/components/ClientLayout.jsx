@@ -23,7 +23,9 @@ export default function ClientLayout({ children }) {
         <main
           style={{
             flex: 1,
-            marginLeft: "var(--sidebar-width-collapsed, 68px)",
+            minWidth: 0,
+            marginLeft: "270px",
+            width: "calc(100% - 270px)",
             padding: "1.5rem",
             boxSizing: "border-box",
             minHeight: "calc(100vh - 60px)",

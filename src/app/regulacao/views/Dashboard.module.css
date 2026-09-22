@@ -1,7 +1,46 @@
-.dashboardContainer {
+.container {
   display: flex;
   flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+/* SEÇÃO 2: PAINÉIS SECUNDÁRIOS (PADRÃO FARMÁCIA) */
+.contentGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
   gap: 1.25rem;
+}
+
+.panelCard {
+  background-color: #ffffff;
+  border-radius: 12px;
+  padding: 1.5rem;
+  border: 1px solid #e2e8f0;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.panelHeader {
+  margin-bottom: 1.25rem;
+}
+
+.panelHeader h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #1e293b;
+  margin: 0 0 0.25rem 0;
+}
+
+.cardSubtitle {
+  font-size: 0.85rem;
+  color: #64748b;
+  display: block;
+}
+
+@media (max-width: 900px) {
+  .contentGrid {
+    grid-template-columns: 1fr;
+  }
 }
 
 /* BANNER DE BOAS-VINDAS */
@@ -56,7 +95,8 @@
 }
 
 /* CARDS DE MÉTRICAS KPI (PADRÃO FARMÁCIA) */
-.metricsGrid {
+.metricsGrid,
+.kpiGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 1.25rem;

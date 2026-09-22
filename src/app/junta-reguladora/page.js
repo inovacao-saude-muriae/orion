@@ -97,11 +97,12 @@ function JuntaReguladoraPageContent() {
   const handleCadastrarPaciente = async (formData) => {
     const res = await cadastrarPacienteJunta(formData);
     if (res.success) {
-      alert("Paciente cadastrado/atualizado na Junta Reguladora com sucesso!");
+      alert("Dados da Junta salvos com sucesso!");
       recarregarPacientes();
     } else {
       alert("Erro ao salvar paciente: " + (res.error || "Erro desconhecido"));
     }
+    return res;
   };
 
   const handleRegistrarAtendimento = async (atendimentoData) => {

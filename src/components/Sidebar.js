@@ -57,17 +57,6 @@ const menuSections = [
           { name: "Lista de Espera", tab: "LISTA_ESPERA" },
           { name: "Liberados", tab: "LIBERADOS" },
           { name: "Financeiro", tab: "FINANCEIRO" },
-          {
-            name: "Cadastros",
-            tab: "CADASTROS",
-            isNestedDropdown: true,
-            nestedItems: [
-              { name: "Pacientes", subTab: "PESSOAS" },
-              { name: "Médicos Solicitantes", subTab: "MEDICOS" },
-              { name: "Unidades / UBS", subTab: "UBS" },
-              { name: "Procedimentos", subTab: "PROCEDIMENTOS" },
-            ],
-          },
         ],
       },
     ],
@@ -234,6 +223,26 @@ const menuSections = [
           </svg>
         ),
         subItems: [
+          {
+            name: "Cadastro de Pessoas",
+            path: "/pessoas",
+            tab: "PESSOAS",
+          },
+          {
+            name: "Médicos Solicitantes",
+            path: "/admin/cadastros-regulacao?subTab=MEDICOS",
+            tab: "MEDICOS",
+          },
+          {
+            name: "Unidade / UBS",
+            path: "/admin/cadastros-regulacao?subTab=UBS",
+            tab: "UBS",
+          },
+          {
+            name: "Procedimentos",
+            path: "/admin/cadastros-regulacao?subTab=PROCEDIMENTOS",
+            tab: "PROCEDIMENTOS",
+          },
           {
             name: "Gerenciar Usuários",
             path: "/admin/usuarios",
@@ -433,11 +442,13 @@ function MenuContent() {
 
                             const subLink =
                               sub.path || `${item.path}?tab=${sub.tab}`;
-                            const isSubActive =
-                              (sub.path
-                                ? pathname === sub.path
-                                : pathname === item.path) &&
-                              (!sub.path || currentTab === sub.tab);
+                            // Separa o path base da query (ex: /x?subTab=MEDICOS)
+                            const [subBasePath, subQuery] = (sub.path || "").split("?");
+                            const subQuerySubTab = new URLSearchParams(subQuery || "").get("subTab");
+                            const isSubActive = sub.path
+                              ? pathname === subBasePath &&
+                                (!subQuerySubTab || currentSubTab === subQuerySubTab)
+                              : pathname === item.path && currentTab === sub.tab;
 
                             return (
                               <li key={sub.tab}>

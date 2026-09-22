@@ -4,20 +4,63 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import styles from "./page.module.css";
 
+// Destino inicial de cada perfil que NÃO é gestor.
+const getDestinationByRole = (role) => {
+  switch (role) {
+    case "REGULACAO_ADMIN":
+    case "REGULACAO_COMUM":
+      return "/regulacao?tab=DASHBOARD";
+    case "FARMACIA_ADMIN":
+      return "/camara-tecnica/farmacia-judicial?tab=DASHBOARD";
+    case "PROCESSO_ADMIN":
+      return "/camara-tecnica/processos";
+    case "JUNTA_ADMIN":
+    case "JUNTA_CAEE":
+    case "JUNTA_EDUCACAO":
+    case "JUNTA_SAUDE":
+    case "JUNTA_ASSISTENCIA":
+      return "/junta-reguladora?tab=CADASTRO";
+    case "CCZ_ADMIN":
+      return "/ccz?tab=DASHBOARD";
+    default:
+      return "/regulacao";
+  }
+};
+
+const formatarData = (valor) => {
+  if (!valor) return "-";
+  return new Date(valor).toLocaleDateString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+  });
+};
+
+const formatarDataHora = (valor) => {
+  if (!valor) return "-";
+  return new Date(valor).toLocaleString("pt-BR", {
+    day: "2-digit",
+    month: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+};
+
 export default function Home() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
   const [user, setUser] = useState(null);
-  const [telemetry, setTelemetry] = useState(null);
+  const [metrics, setMetrics] = useState(null);
   const [error, setError] = useState("");
 
   useEffect(() => {
+    let ativo = true;
+
     async function initDashboard() {
       try {
-        setLoading(true);
-
-        // 1. Autenticação do Usuário
+        // 1. Autenticação do usuário
         const resUser = await fetch("/api/me");
+        if (!ativo) return;
         if (!resUser.ok) {
           router.replace("/login");
           return;
@@ -27,170 +70,169 @@ export default function Home() {
         const userData = dataUser.user;
         setUser(userData);
 
-        // 2. Redirecionamento de Operadores Comuns
-        const isGestorOuAdmin = userData?.role === "ADMIN" || userData?.role === "GESTOR";
-
-        if (!isGestorOuAdmin) {
-          switch (userData?.role) {
-            case "OPERADOR_REGULA":
-            case "ADMIN_REGULA":
-              router.replace("/regulacao?tab=DASHBOARD");
-              break;
-            case "ADMIN_FARMACIA":
-            case "OPERADOR_FARMACIA":
-              router.replace("/camara-tecnica/farmacia-judicial?tab=DASHBOARD");
-              break;
-            case "OPERADOR_JUNTA":
-            case "ADMIN_JUNTA":
-              router.replace("/junta-reguladora?tab=CADASTRO");
-              break;
-            case "VETERINARIO":
-            case "OPERADOR_CCZ":
-              router.replace("/ccz?tab=DASHBOARD");
-              break;
-            default:
-              router.replace("/regulacao");
-              break;
-          }
+        // 2. Somente o GESTOR vê o painel gerencial; demais perfis vão ao seu módulo
+        if (userData?.role !== "GESTOR") {
+          router.replace(getDestinationByRole(userData?.role));
           return;
         }
 
-        // 3. Telemetria Real do Sistema (ADMIN/GESTOR)
-        const resHealth = await fetch("/api/admin/health", { cache: "no-store" });
-        if (resHealth.ok) {
-          const healthData = await resHealth.json();
-          setTelemetry(healthData);
+        // 3. Métricas de negócio consolidadas (GESTOR)
+        const resMetrics = await fetch("/api/admin/metrics", { cache: "no-store" });
+        if (resMetrics.ok) {
+          const data = await resMetrics.json();
+          setMetrics(data);
           setError("");
         } else {
-          setError("Não foi possível carregar os diagnósticos do banco de dados.");
+          const corpo = await resMetrics.json().catch(() => ({}));
+          setError(corpo.error || "Não foi possível carregar os indicadores.");
         }
       } catch (err) {
-        console.error("Erro ao carregar Dashboard:", err);
+        console.error("Erro ao carregar o painel:", err);
         setError("Falha de conexão com o servidor.");
       } finally {
-        setLoading(false);
+        if (ativo) setLoading(false);
       }
     }
 
     initDashboard();
 
-    const interval = setInterval(async () => {
-      try {
-        const resHealth = await fetch("/api/admin/health", { cache: "no-store" });
-        if (resHealth.ok) {
-          const healthData = await resHealth.json();
-          setTelemetry(healthData);
-        }
-      } catch (err) {
-        console.error("Erro na atualização em segundo plano:", err);
-      }
-    }, 30000);
-
-    return () => clearInterval(interval);
+    return () => {
+      ativo = false;
+    };
   }, [router]);
 
   if (loading) {
     return (
       <div className={styles.loadingContainer}>
-        <p>Aferindo diagnóstico e telemetria do banco...</p>
+        <p>Carregando indicadores do sistema...</p>
       </div>
     );
   }
 
   if (!user) return null;
 
-  const isDbOnline = telemetry?.database?.status === "ONLINE";
-
   return (
     <div className={styles.container}>
-      {/* HEADER TÉCNICO */}
+      {/* CABEÇALHO */}
       <header className={styles.welcomeHeader}>
-        <span className={styles.systemBadge}>Painel do Desenvolvedor • Telemetria Real</span>
-        <h1 className={styles.pageTitle}>Diagnóstico do Sistema 🛠️</h1>
+        <span className={styles.systemBadge}>Painel Gerencial</span>
+        <h1 className={styles.pageTitle}>Visão consolidada</h1>
         <p className={styles.pageSubtitle}>
-          Operador logado: <strong>{user?.nomeCompleto}</strong> ({user?.cargo || user?.role}).
+          Bem-vindo(a), <strong>{user?.nomeCompleto}</strong> ({user?.cargo || user?.role}).
         </p>
       </header>
 
-      {/* MENSAGEM DE ERRO */}
       {error && (
         <div className={styles.errorAlert}>
-          <strong>Alerta de Diagnóstico:</strong> {error}
+          <strong>Alerta:</strong> {error}
         </div>
       )}
 
-      {/* CARDS DE MONITORAMENTO DA INFRAESTRUTURA */}
-      <section className={styles.kpiGrid}>
-        <div className={`${styles.kpiCard} ${isDbOnline ? styles.cardSuccessBorder : styles.cardDangerBorder}`}>
-          <div className={styles.kpiTitle}>Status do PostgreSQL (Prisma)</div>
-          <div className={`${styles.kpiValue} ${isDbOnline ? styles.textSuccess : styles.textDanger}`}>
-            {telemetry?.database?.status || "DESCONECTADO"}
-          </div>
-          <p className={styles.kpiFooter}>
-            Latência da Query: <strong>{telemetry?.database?.pingMs ?? 0}ms</strong>
-          </p>
-        </div>
+      {metrics && (
+        <>
+          {/* KPIs POR MÓDULO */}
+          <section className={styles.kpiGrid}>
+            <div className={styles.kpiCard}>
+              <div className={styles.kpiTitle}>Pessoas cadastradas</div>
+              <div className={`${styles.kpiValue} ${styles.textDark}`}>{metrics.pessoas.total}</div>
+              <p className={styles.kpiFooter}>Base compartilhada entre os módulos</p>
+            </div>
 
-        <div className={styles.kpiCard}>
-          <div className={styles.kpiTitle}>Tamanho do Banco</div>
-          <div className={`${styles.kpiValue} ${styles.textDark}`}>
-            {telemetry?.database?.tamanhoBanco || "Calculando..."}
-          </div>
-          <p className={styles.kpiFooter}>Volume de dados no PostgreSQL</p>
-        </div>
-
-        <div className={styles.kpiCard}>
-          <div className={styles.kpiTitle}>Sessões Ativas no Banco</div>
-          <div className={`${styles.kpiValue} ${styles.textPrimary}`}>
-            {telemetry?.metrics?.sessoesAtivas ?? 0}
-          </div>
-          <p className={styles.kpiFooter}>Tokens de sessão não expirados</p>
-        </div>
-
-        <div className={styles.kpiCard}>
-          <div className={styles.kpiTitle}>Usuários Registrados</div>
-          <div className={`${styles.kpiValue} ${styles.textDark}`}>
-            {telemetry?.metrics?.totalUsuarios ?? 0}
-          </div>
-          <p className={styles.kpiFooter}>Registros na tabela User</p>
-        </div>
-
-        <div className={styles.kpiCard}>
-          <div className={styles.kpiTitle}>API /api/me</div>
-          <div className={`${styles.kpiValue} ${styles.textSuccess}`}>
-            200 OK
-          </div>
-          <p className={styles.kpiFooter}>Sessão HTTP-Only validada</p>
-        </div>
-      </section>
-
-      {/* TRILHA DE SESSÕES RECENTES */}
-      <section className={styles.dashboardGrid}>
-        <div className={styles.cardSection}>
-          <h2 className={styles.sectionTitle}>Sessões Recentes Registradas no Banco</h2>
-          <div className={styles.moduleList}>
-            {telemetry?.logs?.length > 0 ? (
-              telemetry.logs.map((log) => (
-                <div key={log.id} className={styles.moduleItem}>
-                  <div>
-                    <strong>{log.usuario}</strong>
-                    <span className={styles.logRole}>
-                      • Perfil: {log.role}
-                    </span>
-                  </div>
-                  <span className={styles.logTime}>
-                    Iniciado às {log.data}
-                  </span>
-                </div>
-              ))
-            ) : (
-              <p className={styles.emptyLogText}>
-                Nenhuma sessão recente capturada.
+            <div className={`${styles.kpiCard} ${metrics.regulacao.aguardando > 0 ? styles.cardDangerBorder : styles.cardSuccessBorder}`}>
+              <div className={styles.kpiTitle}>Regulação — aguardando</div>
+              <div className={`${styles.kpiValue} ${styles.textPrimary}`}>{metrics.regulacao.aguardando}</div>
+              <p className={styles.kpiFooter}>
+                {metrics.regulacao.liberados} liberados de {metrics.regulacao.total} pedidos
               </p>
-            )}
-          </div>
-        </div>
-      </section>
+            </div>
+
+            <div className={styles.kpiCard}>
+              <div className={styles.kpiTitle}>Farmácia — pacientes ativos</div>
+              <div className={`${styles.kpiValue} ${styles.textDark}`}>{metrics.farmacia.ativos}</div>
+              <p className={styles.kpiFooter}>{metrics.farmacia.total} pacientes judiciais no total</p>
+            </div>
+
+            <div className={`${styles.kpiCard} ${metrics.farmacia.estoqueUnidades > 0 ? styles.cardSuccessBorder : styles.cardDangerBorder}`}>
+              <div className={styles.kpiTitle}>Estoque de medicamentos</div>
+              <div className={`${styles.kpiValue} ${styles.textDark}`}>{metrics.farmacia.estoqueUnidades}</div>
+              <p className={styles.kpiFooter}>
+                unidades · {metrics.farmacia.medicamentosAtivos} medicamentos ativos
+              </p>
+            </div>
+
+            <div className={styles.kpiCard}>
+              <div className={styles.kpiTitle}>Junta Reguladora</div>
+              <div className={`${styles.kpiValue} ${styles.textDark}`}>{metrics.junta.pacientes}</div>
+              <p className={styles.kpiFooter}>pacientes · {metrics.junta.atendimentos} atendimentos</p>
+            </div>
+
+            <div className={styles.kpiCard}>
+              <div className={styles.kpiTitle}>CCZ — animais</div>
+              <div className={`${styles.kpiValue} ${styles.textDark}`}>{metrics.ccz.animais}</div>
+              <p className={styles.kpiFooter}>
+                {metrics.ccz.zoonoses} zoonoses · {metrics.ccz.denuncias} denúncias
+              </p>
+            </div>
+          </section>
+
+          {/* PAINÉIS DE APOIO */}
+          <section className={styles.dashboardGrid}>
+            <div className={styles.cardSection}>
+              <h2 className={styles.sectionTitle}>Regulação por classificação de risco</h2>
+              <div className={styles.moduleList}>
+                {metrics.regulacao.risco.length > 0 ? (
+                  metrics.regulacao.risco.map((item) => (
+                    <div key={item.classificacao} className={styles.moduleItem}>
+                      <strong>{item.classificacao}</strong>
+                      <span>{item.total} pedido(s)</span>
+                    </div>
+                  ))
+                ) : (
+                  <p className={styles.emptyLogText}>Nenhum pedido registrado.</p>
+                )}
+              </div>
+            </div>
+
+            <div className={styles.cardSection}>
+              <h2 className={styles.sectionTitle}>Lotes a vencer (próximos 30 dias)</h2>
+              <div className={styles.moduleList}>
+                {metrics.farmacia.lotesAVencer.length > 0 ? (
+                  metrics.farmacia.lotesAVencer.map((lote) => (
+                    <div key={lote.id} className={styles.moduleItem}>
+                      <div>
+                        <strong>{lote.medicamento}</strong>
+                        <span className={styles.logRole}>Lote {lote.numeroLote}</span>
+                      </div>
+                      <span className={styles.logTime}>Vence {formatarData(lote.dataValidade)}</span>
+                    </div>
+                  ))
+                ) : (
+                  <p className={styles.emptyLogText}>Nenhum lote próximo do vencimento.</p>
+                )}
+              </div>
+            </div>
+
+            <div className={styles.cardSection}>
+              <h2 className={styles.sectionTitle}>Atividade recente do sistema</h2>
+              <div className={styles.moduleList}>
+                {metrics.atividadeRecente.length > 0 ? (
+                  metrics.atividadeRecente.map((item) => (
+                    <div key={item.id} className={styles.moduleItem}>
+                      <div>
+                        <strong>{item.descricao}</strong>
+                        <span className={styles.logRole}>{item.modulo}</span>
+                      </div>
+                      <span className={styles.logTime}>{formatarDataHora(item.data)}</span>
+                    </div>
+                  ))
+                ) : (
+                  <p className={styles.emptyLogText}>Nenhuma atividade recente registrada.</p>
+                )}
+              </div>
+            </div>
+          </section>
+        </>
+      )}
     </div>
   );
 }

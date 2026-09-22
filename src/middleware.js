@@ -83,6 +83,41 @@ const PERMISSOES_ROTAS = {
   ],
   
   // ─────────────────────────────────────────────────────────────────────────
+  // CADASTROS DA REGULAÇÃO (Médico / UBS / Procedimento) - Admin da Regulação
+  // ─────────────────────────────────────────────────────────────────────────
+  "/admin/cadastros-regulacao": [
+    "GESTOR",
+    "REGULACAO_ADMIN",
+  ],
+
+  // GERENCIAR USUÁRIOS - Apenas o Gestor
+  "/admin/usuarios": [
+    "GESTOR",
+  ],
+
+  // RELATÓRIOS GERAIS - Gestor + administradores de módulo
+  "/relatorios": [
+    "GESTOR",
+    "REGULACAO_ADMIN",
+    "JUNTA_ADMIN",
+    "FARMACIA_ADMIN",
+    "PROCESSO_ADMIN",
+    "CCZ_ADMIN",
+  ],
+
+  // ─────────────────────────────────────────────────────────────────────────
+  // CADASTRO CENTRAL DE PESSOAS (Gestor + administradores de módulo)
+  // ─────────────────────────────────────────────────────────────────────────
+  "/pessoas": [
+    "GESTOR",
+    "REGULACAO_ADMIN",
+    "JUNTA_ADMIN",
+    "FARMACIA_ADMIN",
+    "PROCESSO_ADMIN",
+    "CCZ_ADMIN",
+  ],
+
+  // ─────────────────────────────────────────────────────────────────────────
   // DASHBOARD - Todos os usuários autenticados
   // ─────────────────────────────────────────────────────────────────────────
   "/dashboard": [

@@ -3,6 +3,7 @@
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import { randomUUID } from "crypto";
+import { criarPessoaTx, gravarEnderecoTx } from "@/lib/pessoa";
 
 // ─────────────────────────────────────────────────────────────
 // HELPERS
@@ -325,16 +326,27 @@ export async function cadastrarTutor(dados) {
     }
 
     await prisma.$transaction(async (tx) => {
-      await tx.pessoa.create({
-        data: {
-          cpf,
-          nomeCompleto,
-          sexo: dados.sexo || "Não informado",
-          dataNascimento: new Date(`${dados.dataNascimento}T00:00:00.000Z`),
-          nomeMae,
-          telefone,
-        },
+      // Pessoa via helper central (CCZ mantém "Não informado" como sexo padrão).
+      await criarPessoaTx(tx, {
+        cpf,
+        nomeCompleto,
+        sexo: dados.sexo || "Não informado",
+        dataNascimento: dados.dataNascimento,
+        nomeMae,
+        telefone,
       });
+
+      // Endereço (grava apenas se o formulário trouxe dados de endereço).
+      await gravarEnderecoTx(tx, cpf, {
+        cep: dados.cep,
+        logradouro: dados.logradouro,
+        numero: dados.numero,
+        complemento: dados.complemento,
+        bairro: dados.bairro,
+        cidade: dados.cidade,
+        uf: dados.uf,
+      });
+
       await tx.tutor.create({
         data: {
           pessoaCpf: cpf,
@@ -785,25 +797,16 @@ export async function updateTutor(cpf, data) {
         },
       });
 
-      const endereco = pessoa.enderecos[0];
-      const enderecoData = {
-        logradouro: data.logradouro || "Não informado",
-        numero: data.numero || "S/N",
-        bairro: data.bairro || "Não informado",
-        cidade: data.cidade || "Não informado",
-        uf: (data.uf || "MG").slice(0, 2).toUpperCase(),
-      };
-
-      if (endereco) {
-        await tx.endereco.update({
-          where: { id: endereco.id },
-          data: enderecoData,
-        });
-      } else {
-        await tx.endereco.create({
-          data: { pessoaCpf, ...enderecoData },
-        });
-      }
+      // Endereço via helper central (substitui o endereço atual se houver dados).
+      await gravarEnderecoTx(tx, pessoaCpf, {
+        cep: data.cep,
+        logradouro: data.logradouro,
+        numero: data.numero,
+        complemento: data.complemento,
+        bairro: data.bairro,
+        cidade: data.cidade,
+        uf: data.uf,
+      });
     });
 
     revalidatePath("/ccz");
