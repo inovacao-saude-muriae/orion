@@ -81,6 +81,11 @@ function RegulacaoPageContent() {
           setShowAdvancedFilters={setShowAdvancedFilters}
           allProceduresList={allProceduresList}
           filtrosFixos={activeTab === "LISTA_ESPERA" || activeTab === "LIBERADOS"}
+          pacientesFila={
+            activeTab === "LISTA_ESPERA"
+              ? (data.requests || []).filter((r) => r.status === "Aguardando")
+              : []
+          }
         />
       )}
 

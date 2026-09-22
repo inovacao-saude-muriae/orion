@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import styles from './FiltersBar.module.css';
 
@@ -11,13 +11,64 @@ export default function FiltersBar({
   showAdvancedFilters,
   setShowAdvancedFilters,
   allProceduresList = [],
-  filtrosFixos = false
+  filtrosFixos = false,
+  pacientesFila = []
 }) {
   // Quando fixos, os filtros avançados ficam sempre abertos.
   const filtrosAbertos = filtrosFixos || showAdvancedFilters;
   // Estado local para os filtros
   const [draftFilters, setDraftFilters] = useState(filters);
   const [prevFilters, setPrevFilters] = useState(filters);
+
+  // Dropdown de pacientes na fila (ao clicar no campo de busca).
+  const [dropAberto, setDropAberto] = useState(false);
+  const buscaRef = useRef(null);
+
+  // Fecha o dropdown ao clicar fora.
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (buscaRef.current && !buscaRef.current.contains(e.target)) {
+        setDropAberto(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Lista única de pacientes na fila (por CPF), filtrada pelo termo digitado.
+  const termoBusca = (draftFilters.search || draftFilters.searchName || '').toLowerCase().trim();
+  const pacientesUnicos = [];
+  const cpfsVistos = new Set();
+  for (const p of pacientesFila) {
+    const cpf = (p.cpf || '').replace(/\D/g, '');
+    if (cpf && cpfsVistos.has(cpf)) continue;
+    if (cpf) cpfsVistos.add(cpf);
+    pacientesUnicos.push(p);
+  }
+  const pacientesFiltrados = pacientesUnicos.filter((p) => {
+    if (!termoBusca) return true;
+    const nome = (p.patientName || '').toLowerCase();
+    const mae = (p.motherName || '').toLowerCase();
+    const cpfLimpo = (p.cpf || '').replace(/\D/g, '');
+    const buscaLimpa = termoBusca.replace(/\D/g, '');
+    return nome.includes(termoBusca) || mae.includes(termoBusca) || (buscaLimpa && cpfLimpo.includes(buscaLimpa));
+  });
+
+  const formatCPF = (cpf) => {
+    if (!cpf) return '';
+    const d = cpf.replace(/\D/g, '');
+    if (d.length !== 11) return cpf;
+    return d.replace(/(\d{3})(\d{3})(\d{3})(\d{2})/, '$1.$2.$3-$4');
+  };
+
+  const selecionarPaciente = (p) => {
+    const nome = p.patientName || '';
+    handleDraftChange('search', nome);
+    handleDraftChange('searchName', nome);
+    handleFilterChange('search', nome);
+    handleFilterChange('searchName', nome);
+    setDropAberto(false);
+  };
 
   // Sincronização padrão recomendada pelo React (sem acionar cascading render em useEffect)
   if (filters !== prevFilters) {
@@ -48,7 +99,7 @@ export default function FiltersBar({
     <div className={styles.filterCard}>
       {/* BARRA SUPERIOR DE BUSCA E AÇÕES */}
       <div className={styles.filterBarTop}>
-        <div className={styles.mainSearchBox}>
+        <div className={styles.mainSearchBox} ref={buscaRef} style={{ position: 'relative' }}>
           <div className={styles.lupaIconContainer}>
             <Image
               src="/img/icon/lupa.png"
@@ -63,16 +114,43 @@ export default function FiltersBar({
             type="text"
             placeholder="Buscar por paciente, mãe, CPF ou Cartão SUS..."
             value={draftFilters.search || draftFilters.searchName || ''}
+            onFocus={() => pacientesFila.length > 0 && setDropAberto(true)}
             onChange={(e) => {
               handleDraftChange('search', e.target.value);
               handleDraftChange('searchName', e.target.value);
+              if (pacientesFila.length > 0) setDropAberto(true);
             }}
             onKeyDown={(e) => {
               if (e.key === 'Enter') {
+                setDropAberto(false);
                 handleApplyFilters();
               }
             }}
           />
+
+          {/* DROPDOWN COM OS PACIENTES DA FILA */}
+          {dropAberto && pacientesFila.length > 0 && (
+            <div className={styles.patientDropdown}>
+              {pacientesFiltrados.length > 0 ? (
+                pacientesFiltrados.map((p, idx) => (
+                  <button
+                    type="button"
+                    key={p.cpf ? `${p.cpf}-${idx}` : idx}
+                    className={styles.patientDropItem}
+                    onMouseDown={(e) => {
+                      e.preventDefault();
+                      selecionarPaciente(p);
+                    }}
+                  >
+                    <span className={styles.patientDropName}>{p.patientName}</span>
+                    <span className={styles.patientDropCpf}>{formatCPF(p.cpf)}</span>
+                  </button>
+                ))
+              ) : (
+                <div className={styles.patientDropEmpty}>Nenhum paciente na fila.</div>
+              )}
+            </div>
+          )}
         </div>
 
         <div className={styles.filterActionsTop}>
