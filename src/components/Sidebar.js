@@ -224,33 +224,38 @@ const menuSections = [
         ),
         subItems: [
           {
-            name: "Cadastro de Pessoas",
-            path: "/pessoas",
+            name: "Pacientes",
+            path: "/gerenciamento/pessoas",
             tab: "PESSOAS",
           },
           {
-            name: "Médicos Solicitantes",
-            path: "/admin/cadastros-regulacao?subTab=MEDICOS",
+            name: "Médicos",
+            path: "/gerenciamento/medicos",
             tab: "MEDICOS",
           },
           {
-            name: "Unidade / UBS",
-            path: "/admin/cadastros-regulacao?subTab=UBS",
+            name: "Unidade Básica de Saúde",
+            path: "/gerenciamento/ubs",
             tab: "UBS",
           },
           {
             name: "Procedimentos",
-            path: "/admin/cadastros-regulacao?subTab=PROCEDIMENTOS",
+            path: "/gerenciamento/procedimentos",
             tab: "PROCEDIMENTOS",
           },
           {
+            name: "Serviços e Especialidades",
+            path: "/gerenciamento/servicos",
+            tab: "SERVICOS",
+          },
+          {
             name: "Gerenciar Usuários",
-            path: "/admin/usuarios",
+            path: "/gerenciamento/usuarios",
             tab: "USUARIOS",
           },
           {
             name: "Relatórios Gerais",
-            path: "/relatorios",
+            path: "/gerenciamento/relatorios",
             tab: "RELATORIOS",
           },
         ],

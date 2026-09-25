@@ -2,8 +2,10 @@
 
 import { useState } from 'react';
 import styles from './AdminUsuarios.module.css';
+import { useConfirm } from '@/components/ConfirmDialog';
 
 export default function AdminUsuariosPage() {
+  const confirm = useConfirm();
   const [cpf, setCpf] = useState('');
   const [nomeCompleto, setNomeCompleto] = useState('');
   const [dataNascimento, setDataNascimento] = useState('');
@@ -106,13 +108,20 @@ export default function AdminUsuariosPage() {
       return;
     }
 
+    const ok = await confirm({
+      title: 'Cadastrar usuário',
+      message: 'Deseja confirmar o cadastro deste usuário?',
+      confirmText: 'Cadastrar',
+    });
+    if (!ok) return;
+
     setSalvando(true);
     setMensagem({ tipo: '', texto: '' });
 
     const cargoFormatado = obterNomePerfil(role);
 
     try {
-      const res = await fetch('/api/admin/usuarios', {
+      const res = await fetch('/api/gerenciamento/usuarios', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -146,7 +155,10 @@ export default function AdminUsuariosPage() {
 
   return (
     <div className={styles.container}>
-      <h1 className={styles.title}>Cadastro de Usuários do Sistema</h1>
+      <header className={styles.header}>
+        <h1>Gerenciar Usuários</h1>
+        <p>Cadastro dos usuários que terão acesso ao sistema.</p>
+      </header>
 
       {mensagem.texto && (
         <div className={`${styles.message} ${styles[mensagem.tipo]}`}>

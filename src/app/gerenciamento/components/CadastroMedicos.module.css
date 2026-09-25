@@ -136,7 +136,8 @@
   color: #475569;
 }
 
-.fieldGroup input {
+.fieldGroup input,
+.fieldGroup select {
   width: 100%;
   padding: 0.65rem 0.85rem;
   border: 1px solid #cbd5e1;
@@ -149,21 +150,31 @@
   box-sizing: border-box;
 }
 
-.fieldGroup input:focus {
+.fieldGroup select {
+  cursor: pointer;
+  appearance: auto;
+}
+
+.fieldGroup input:focus,
+.fieldGroup select:focus {
   border-color: #2563eb;
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
 }
 
-.fieldGroup input:disabled {
+.fieldGroup input:disabled,
+.fieldGroup select:disabled {
   background-color: #f8fafc;
   color: #94a3b8;
   border-color: #e2e8f0;
   cursor: not-allowed;
 }
 
-/* LARGURAS DAS COLUNAS DA UBS */
-.colUbsName { grid-column: span 8; }
-.colCnes { grid-column: span 4; }
+/* LARGURAS DAS COLUNAS DO MÉDICO */
+.colName { grid-column: span 4; }
+.colCrm { grid-column: span 2; }
+.colUfCrm { grid-column: span 1; }
+.colEspecialidade { grid-column: span 3; }
+.colTipo { grid-column: span 2; }
 
 .formActions {
   display: flex;
@@ -200,9 +211,50 @@
 
 .updateBtn:hover { background-color: #047857; }
 
+.btnAdicionar {
+  background-color: #059669;
+  color: #ffffff;
+  border: none;
+  padding: 0.6rem 1.1rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.2s ease;
+}
+
+.btnAdicionar:hover { background-color: #047857; }
+
+.btnGhost {
+  background-color: transparent;
+  color: #475569;
+  border: 1px solid #cbd5e0;
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.btnGhost:hover { background-color: #f1f5f9; }
+
+.btnDanger {
+  background-color: #dc2626;
+  color: #ffffff;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.btnDanger:hover { background-color: #b91c1c; }
+
 @media (max-width: 900px) {
-  .colCnes { grid-column: span 6; }
-  .colUbsName { grid-column: span 12; }
+  .colCrm, .colUfCrm, .colTipo { grid-column: span 6; }
+  .colName, .colEspecialidade { grid-column: span 12; }
 }
 
 @media (max-width: 600px) {
@@ -210,4 +262,118 @@
     display: flex;
     flex-direction: column;
   }
+}
+
+/* Busca estilo "Novo Pedido" (select-like + dropdown em tabela) */
+.selectSearchWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.selectLikeInput {
+  width: 100%;
+  padding: 0.65rem 2rem 0.65rem 0.85rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: #1e293b;
+  background-color: #ffffff;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.selectLikeInput:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+}
+
+.selectArrow {
+  position: absolute;
+  right: 0.85rem;
+  font-size: 0.75rem;
+  color: #64748b;
+  cursor: pointer;
+  user-select: none;
+}
+
+.tableDropdownMenu {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  right: 0;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  padding: 0.5rem;
+  z-index: 100;
+}
+
+.tableContainerScroll {
+  max-height: 240px;
+  overflow-y: auto;
+  border: 1px solid #f1f5f9;
+  border-radius: 6px;
+}
+
+.medicoTableDropdown {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.825rem;
+  text-align: left;
+}
+
+.medicoTableDropdown thead {
+  position: sticky;
+  top: 0;
+  background-color: #f8fafc;
+  z-index: 10;
+}
+
+.medicoTableDropdown th {
+  padding: 0.6rem 0.75rem;
+  color: #475569;
+  font-weight: 700;
+  border-bottom: 2px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.medicoTableDropdown td {
+  padding: 0.6rem 0.75rem;
+  color: #334155;
+  border-bottom: 1px solid #f1f5f9;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.medicoTableDropdown tbody tr:hover {
+  background-color: #2563eb;
+}
+
+.medicoTableDropdown tbody tr:hover td {
+  color: #ffffff;
+}
+
+.boldName {
+  font-weight: 600;
+}
+
+.selectedRow {
+  background-color: #eff6ff;
+}
+
+.noDataTd {
+  text-align: center;
+  padding: 1.5rem !important;
+  color: #94a3b8;
+  cursor: default !important;
+}
+
+.noDataTd:hover,
+.medicoTableDropdown tbody tr:hover .noDataTd {
+  background-color: transparent !important;
+  color: #94a3b8 !important;
 }

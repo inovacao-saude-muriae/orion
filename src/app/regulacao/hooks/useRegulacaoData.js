@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef } from "react";
+import { useConfirm } from "@/components/ConfirmDialog";
 import {
   getPedidosExames,
   getAuxiliaryData,
@@ -15,6 +16,8 @@ import {
   createProcedimento,
   getCotasFinanceiras,
   saveCotaFinanceira,
+  getPlanejamentoCidades,
+  savePlanejamentoCidade,
   updateBillingDate,
   updatePedidoExame,
   deletePedidoExame,
@@ -28,6 +31,7 @@ import {
 } from "../actions";
 
 export function useRegulacaoData(setActiveTab) {
+  const confirm = useConfirm();
   const [cadSubTab, setCadSubTab] = useState("PACIENTES");
   const [selectedQueueExam, setSelectedQueueExam] = useState("");
   const [selectedReleasedExam, setSelectedReleasedExam] = useState("");
@@ -48,13 +52,17 @@ export function useRegulacaoData(setActiveTab) {
   });
   const [requests, setRequests] = useState([]);
   const [cotasFinanceiras, setCotasFinanceiras] = useState([]);
+  const [planejamentoCidades, setPlanejamentoCidades] = useState([]);
 
   const [patientSuggestions, setPatientSuggestions] = useState([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
   const [isSearchingPatient, setIsSearchingPatient] = useState(false);
 
-  const [finMonth, setFinMonth] = useState("08");
-  const [finYear, setFinYear] = useState("2026");
+  const _hoje = new Date();
+  const [finMonth, setFinMonth] = useState(
+    String(_hoje.getMonth() + 1).padStart(2, "0"),
+  );
+  const [finYear, setFinYear] = useState(String(_hoje.getFullYear()));
 
   const [editCotaModal, setEditCotaModal] = useState(null);
 
@@ -64,6 +72,8 @@ export function useRegulacaoData(setActiveTab) {
 
   const [editingItem, setEditingItem] = useState(null);
   const [releasingItem, setReleasingItem] = useState(null);
+  // Aba de onde a edição foi aberta (para voltar ao cancelar/salvar).
+  const [editOrigin, setEditOrigin] = useState("LISTA_ESPERA");
 
   const [regulationForm, setRegulationForm] = useState({
     status: "Liberado",
@@ -159,6 +169,33 @@ export function useRegulacaoData(setActiveTab) {
     reloadData();
   }, []);
 
+  // Carrega o planejamento por cidade sempre que o ano de competência muda.
+  const reloadPlanejamento = async (ano = finYear) => {
+    const dados = await getPlanejamentoCidades(ano);
+    setPlanejamentoCidades(dados || []);
+  };
+
+  useEffect(() => {
+    reloadPlanejamento(finYear);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [finYear]);
+
+  // Salva uma célula do planejamento (cidade/ano/mês) e atualiza o estado local.
+  const handleSavePlanejamentoCidade = async (cidade, mes, valor) => {
+    const res = await savePlanejamentoCidade({ cidade, ano: finYear, mes, valor });
+    if (res.success) {
+      setPlanejamentoCidades((prev) => {
+        const outros = prev.filter(
+          (p) => !(p.cidade === cidade && p.ano === finYear && p.mes === mes),
+        );
+        return [...outros, res.data];
+      });
+    } else {
+      alert("Erro ao salvar planejamento: " + res.error);
+    }
+    return res;
+  };
+
   const handleDeleteOrder = async (item) => {
     if (
       !confirm(
@@ -182,8 +219,9 @@ export function useRegulacaoData(setActiveTab) {
     }
   };
 
-  const handleEditOrder = (pedido) => {
+  const handleEditOrder = (pedido, origem = "LISTA_ESPERA") => {
     setEditingItem(pedido);
+    setEditOrigin(origem);
     setActiveTab("EDITAR_PEDIDO");
   };
 
@@ -203,6 +241,12 @@ export function useRegulacaoData(setActiveTab) {
   const handleSaveEditedOrder = async (e) => {
     if (e) e.preventDefault();
     if (!editingItem) return;
+    const ok = await confirm({
+      title: "Salvar alterações",
+      message: "Deseja salvar as alterações deste pedido?",
+      confirmText: "Salvar",
+    });
+    if (!ok) return;
     const res = await updatePedidoExame(
       editingItem.dbId || editingItem.id,
       editingItem
@@ -272,6 +316,12 @@ export function useRegulacaoData(setActiveTab) {
       return alert('Selecione o status "Liberado".');
     if (!regulationForm.quota) return alert("Selecione um Tipo de Cota.");
 
+    const ok = await confirm({
+      title: "Liberar pedido",
+      message: "Deseja confirmar a liberação deste pedido?",
+      confirmText: "Liberar",
+    });
+    if (!ok) return;
     const res = await releasePaciente(releasingItem.id, regulationForm);
     if (res.success) {
       await reloadData();
@@ -392,6 +442,12 @@ export function useRegulacaoData(setActiveTab) {
     if (e) e.preventDefault();
     if (!editCotaModal) return;
 
+    const ok = await confirm({
+      title: "Salvar teto",
+      message: "Deseja salvar o teto financeiro desta cota?",
+      confirmText: "Salvar",
+    });
+    if (!ok) return;
     const res = await saveCotaFinanceira({
       tipoCota: editCotaModal.tipoCota,
       mes: finMonth,
@@ -406,9 +462,12 @@ export function useRegulacaoData(setActiveTab) {
 
   // 🎯 REGRA DE CÁLCULO MENSAL: SUS DEBITA PEDIDOS "SUS" E "PPI"
   const calculateMonthQuotaDetails = (quotaType, year, monthValue) => {
+    const norm = (v) => String(v || "").trim().toUpperCase();
+    const tipoAlvo = norm(quotaType);
+
     const record = cotasFinanceiras.find(
       (c) =>
-        c.tipoCota === quotaType && c.mes === monthValue && c.ano === year
+        norm(c.tipoCota) === tipoAlvo && c.mes === monthValue && c.ano === year
     );
     const totalLimit = record ? record.valorTeto : 0;
 
@@ -417,12 +476,14 @@ export function useRegulacaoData(setActiveTab) {
         if (r.status !== "Liberado") return false;
         if (r.quotaCompetenceMonth !== monthValue || r.quotaCompetenceYear !== year) return false;
 
+        const cotaPedido = norm(r.quota);
+
         // Se a cota consultada for SUS, soma os débitos do SUS e do PPI
-        if (quotaType === "SUS") {
-          return r.quota === "SUS" || r.quota === "PPI";
+        if (tipoAlvo === "SUS") {
+          return cotaPedido === "SUS" || cotaPedido === "PPI";
         }
 
-        return r.quota === quotaType;
+        return cotaPedido === tipoAlvo;
       })
       .reduce((sum, r) => sum + (r.estimatedCost || 0), 0);
 
@@ -529,6 +590,12 @@ export function useRegulacaoData(setActiveTab) {
       !newRequest.procedureId
     )
       return alert("Preencha os campos obrigatórios.");
+    const ok = await confirm({
+      title: "Cadastrar pedido",
+      message: "Deseja enviar este pedido para a lista de espera?",
+      confirmText: "Enviar",
+    });
+    if (!ok) return;
     const res = await createPedidoExame(newRequest);
     if (res.success) {
       reloadData();
@@ -554,12 +621,27 @@ export function useRegulacaoData(setActiveTab) {
   };
 
   const handleUpdateCommunicationDate = async (id, newDate) => {
+    const atual = requests.find((r) => r.id === id);
     setRequests((prev) =>
       prev.map((req) =>
         req.id === id ? { ...req, communicationDate: newDate } : req
       )
     );
-    await updateCommunicationDate(id, newDate);
+    await updateCommunicationDate(id, newDate, {
+      statusComunicacao: atual?.communicationStatus || "",
+    });
+  };
+
+  const handleUpdateCommunicationStatus = async (id, newStatus) => {
+    const atual = requests.find((r) => r.id === id);
+    setRequests((prev) =>
+      prev.map((req) =>
+        req.id === id ? { ...req, communicationStatus: newStatus } : req
+      )
+    );
+    await updateCommunicationDate(id, atual?.communicationDate || "", {
+      statusComunicacao: newStatus,
+    });
   };
 
   return {
@@ -577,6 +659,7 @@ export function useRegulacaoData(setActiveTab) {
     setSelectedReleasedIds,
     editingItem,
     setEditingItem,
+    editOrigin,
     releasingItem,
     setReleasingItem,
     regulationForm,
@@ -632,6 +715,8 @@ export function useRegulacaoData(setActiveTab) {
     handleUpdateProcedimento,
     handleOpenDefineTetoModal,
     handleSaveTetoCota,
+    planejamentoCidades,
+    handleSavePlanejamentoCidade,
     calculateMonthQuotaDetails,
     handleUpdateBillingDate,
     handlePatientSearchChange,
@@ -642,5 +727,6 @@ export function useRegulacaoData(setActiveTab) {
     handleProcedureChange,
     handleCreateRequest,
     handleUpdateCommunicationDate,
+    handleUpdateCommunicationStatus,
   };
 }

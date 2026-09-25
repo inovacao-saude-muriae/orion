@@ -97,31 +97,6 @@ export default function Liberados({
 
   return (
     <div className={styles.container}>
-      {/* ABAS SELETORAS DE TIPO DE EXAME */}
-      <div className={styles.examTabs}>
-        {tiposExameLista.map((tipo) => {
-          const isActive =
-            selectedReleasedExam?.toLowerCase().trim() === tipo.nome?.toLowerCase().trim() ||
-            String(selectedReleasedExam) === String(tipo.id);
-
-          return (
-            <button
-              key={tipo.id}
-              type="button"
-              className={`${styles.examTabBtn} ${
-                isActive ? styles.activeExamTab : ""
-              }`}
-              onClick={() => {
-                setSelectedReleasedExam(tipo.nome);
-                setSelectedIds([]);
-              }}
-            >
-              {tipo.nome}
-            </button>
-          );
-        })}
-      </div>
-
       {/* CABEÇALHO E AÇÃO DE EXPORTAR */}
       <div className={styles.tableHeaderBar}>
         <div className={styles.infoGroup}>
@@ -167,7 +142,6 @@ export default function Liberados({
                 </th>
                 <th>Cód. Reg.</th>
                 <th>Paciente</th>
-                <th>CPF</th>
                 <th>Procedimento</th>
                 <th>Data Liberação</th>
                 <th>Cota</th>
@@ -220,7 +194,6 @@ export default function Liberados({
                         </div>
                       )}
                     </td>
-                    <td>{item.cpf || "—"}</td>
                     <td>{item.procedure}</td>
                     <td>{item.releaseDate || "—"}</td>
                     <td>
@@ -230,20 +203,24 @@ export default function Liberados({
                     </td>
                     <td>{competence}</td>
                     <td>
-                      <input
-                        type="date"
-                        className={styles.dateInput}
-                        value={item.billingDate || ""}
-                        onChange={(e) =>
-                          handleUpdateBillingDate(item.id, e.target.value)
-                        }
-                      />
+                      {String(item.quota || "").trim().toUpperCase() === "CREDENCIAMENTO" ? (
+                        <input
+                          type="date"
+                          className={styles.dateInput}
+                          value={item.billingDate || ""}
+                          onChange={(e) =>
+                            handleUpdateBillingDate(item.id, e.target.value)
+                          }
+                        />
+                      ) : (
+                        <span className={styles.mutedDash}>—</span>
+                      )}
                     </td>
                     <td className={styles.actionsCell}>
                       <button
                         type="button"
                         className={styles.iconBtn}
-                        onClick={() => handleEditOrder(item)}
+                        onClick={() => handleEditOrder(item, "LIBERADOS")}
                         title="Editar Pedido"
                       >
                         <Image

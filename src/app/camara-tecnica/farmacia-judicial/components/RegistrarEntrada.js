@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import styles from "./RegistrarEntrada.module.css";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 export default function TabRegistrarEntrada({ catalogo = [], onCreateLote }) {
+  const confirm = useConfirm();
   const [searchMedInput, setSearchMedInput] = useState("");
   const [showMedDropdown, setShowMedDropdown] = useState(false);
 
@@ -45,6 +47,13 @@ export default function TabRegistrarEntrada({ catalogo = [], onCreateLote }) {
         "Selecione o medicamento e preencha os campos obrigatórios.",
       );
     }
+
+    const ok = await confirm({
+      title: "Registrar entrada de lote",
+      message: "Deseja confirmar a entrada deste lote no estoque?",
+      confirmText: "Confirmar",
+    });
+    if (!ok) return;
 
     await onCreateLote(formLote);
   };

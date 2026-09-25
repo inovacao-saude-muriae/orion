@@ -2,8 +2,10 @@
 
 import { useState } from "react";
 import styles from "./CadastrarMedicamentos.module.css";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 export default function TabCadastrarMedicamento({ onCreateMedicamento }) {
+  const confirm = useConfirm();
   const [darEntradaEstoque, setDarEntradaEstoque] = useState(false);
 
   const [formMed, setFormMed] = useState({
@@ -34,6 +36,15 @@ export default function TabCadastrarMedicamento({ onCreateMedicamento }) {
         return alert("Preencha todos os campos do lote para dar entrada.");
       }
     }
+
+    const ok = await confirm({
+      title: "Cadastrar medicamento",
+      message: darEntradaEstoque
+        ? "Deseja salvar o medicamento no catálogo e dar entrada no estoque?"
+        : "Deseja salvar o medicamento no catálogo?",
+      confirmText: "Salvar",
+    });
+    if (!ok) return;
 
     await onCreateMedicamento({
       ...formMed,

@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { buscarPessoaExistente } from '../actions';
+import { useConfirm } from '@/components/ConfirmDialog';
 import styles from './CadastroPacienteJunta.module.css';
 
 const LOCAIS_DISPONIVEIS = [
@@ -18,6 +19,7 @@ const LOCAIS_DISPONIVEIS = [
 const TIPOS_DEFICIENCIA = ['Física', 'Intelectual', 'Visual', 'Auditiva'];
 
 export default function CadastroPacienteJunta({ onCadastrar }) {
+  const confirm = useConfirm();
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -108,6 +110,13 @@ export default function CadastroPacienteJunta({ onCadastrar }) {
     if (tiposDeficiencia.length === 0) {
       return alert('Selecione ao menos um tipo de deficiência.');
     }
+
+    const ok = await confirm({
+      title: 'Salvar dados da Junta',
+      message: 'Deseja confirmar o cadastro dos dados da Junta para este paciente?',
+      confirmText: 'Salvar',
+    });
+    if (!ok) return;
 
     setSalvando(true);
     const res = await onCadastrar({

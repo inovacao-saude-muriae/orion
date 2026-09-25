@@ -36,6 +36,41 @@ function formatDateToBR(dateObjOrString) {
   return "-";
 }
 
+// Converte string de data em Date válida, aceitando ISO (YYYY-MM-DD) ou BR
+// (DD/MM/YYYY). Retorna null se vazia/inválida (evita `new Date("Invalid Date")`).
+function parseDataSegura(valor) {
+  if (!valor) return null;
+  const s = String(valor).trim();
+  if (!s || s === "-") return null;
+
+  // BR: DD/MM/YYYY -> YYYY-MM-DD
+  const br = s.match(/^(\d{2})\/(\d{2})\/(\d{4})$/);
+  const iso = br ? `${br[3]}-${br[2]}-${br[1]}` : s;
+
+  const d = new Date(iso);
+  return isNaN(d.getTime()) ? null : d;
+}
+
+// Monta a competência "YYYY-MM" a partir de mês/ano (com fallback na data de liberação).
+function montarCompetenciaCota({
+  quotaCompetenceYear,
+  quotaCompetenceMonth,
+  releaseDate,
+  releaseDateRaw,
+}) {
+  const ano = String(quotaCompetenceYear || "").slice(0, 4);
+  const mes = String(quotaCompetenceMonth || "").padStart(2, "0").slice(0, 2);
+  if (ano && mes && ano.length === 4 && mes !== "00") return `${ano}-${mes}`;
+  // Fallback: deriva da data de liberação, se válida.
+  const d = parseDataSegura(releaseDateRaw || releaseDate);
+  if (d) {
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, "0");
+    return `${y}-${m}`;
+  }
+  return null;
+}
+
 // 1. Buscar todos os pedidos relacionando as tabelas pessoa, procedimento, ubs e medicos
 export async function getPedidosExames() {
   try {
@@ -81,15 +116,23 @@ export async function getPedidosExames() {
         requestDateRaw: dataSolicitacaoRaw,
 
         classification: item.classificacaoRisco || "Verde",
-        competence: dataLiberacaoStr
-          ? `${dataLiberacaoStr.slice(5, 7)}/${dataLiberacaoStr.slice(0, 4)}`
-          : "",
-        quotaCompetenceMonth: dataLiberacaoStr
-          ? dataLiberacaoStr.slice(5, 7)
-          : "",
-        quotaCompetenceYear: dataLiberacaoStr
-          ? dataLiberacaoStr.slice(0, 4)
-          : "",
+        // Competência que debita o financeiro: usa competenciaCota ("YYYY-MM")
+        // se existir; senão, cai no fallback antigo (mês/ano da data de liberação).
+        competence: item.competenciaCota
+          ? `${item.competenciaCota.slice(5, 7)}/${item.competenciaCota.slice(0, 4)}`
+          : dataLiberacaoStr
+            ? `${dataLiberacaoStr.slice(5, 7)}/${dataLiberacaoStr.slice(0, 4)}`
+            : "",
+        quotaCompetenceMonth: item.competenciaCota
+          ? item.competenciaCota.slice(5, 7)
+          : dataLiberacaoStr
+            ? dataLiberacaoStr.slice(5, 7)
+            : "",
+        quotaCompetenceYear: item.competenciaCota
+          ? item.competenciaCota.slice(0, 4)
+          : dataLiberacaoStr
+            ? dataLiberacaoStr.slice(0, 4)
+            : "",
         requestDoctor: item.medicoSolicitante?.nome || "",
         requestDoctorId: item.medicoSolicitanteId || "",
         requestUbs: item.ubs?.nome || "",
@@ -99,6 +142,7 @@ export async function getPedidosExames() {
         communicationDate: item.dataComunicacao
           ? item.dataComunicacao.toISOString().split("T")[0]
           : "",
+        communicationStatus: item.statusComunicacao || "",
         quota: item.tipoCota || "",
         generalObservation: item.observacao || "",
         regulatorDoctor: item.medicoResponsavel?.nome || null,
@@ -273,16 +317,26 @@ export async function createPedidoExame(data) {
   }
 }
 
-// 6. Atualizar Data da Comunicação
-export async function updateCommunicationDate(idStr, dateStr) {
+// 6. Atualizar Comunicação (data e/ou status)
+// `extra` pode conter { statusComunicacao }. Quando não informado, mantém a
+// lógica antiga de marcar ENVIADO/PENDENTE conforme a data.
+export async function updateCommunicationDate(idStr, dateStr, extra = {}) {
   try {
     const numericId = Number(String(idStr).replace(/\D/g, ""));
+
+    const data = {
+      dataComunicacao: dateStr ? new Date(dateStr) : null,
+    };
+
+    if (extra && typeof extra.statusComunicacao === "string") {
+      data.statusComunicacao = extra.statusComunicacao || null;
+    } else {
+      data.statusComunicacao = dateStr ? "ENVIADO" : "PENDENTE";
+    }
+
     await prisma.pedidoExame.update({
       where: { id: numericId },
-      data: {
-        dataComunicacao: dateStr ? new Date(dateStr) : null,
-        statusComunicacao: dateStr ? "ENVIADO" : "PENDENTE",
-      },
+      data,
     });
 
     revalidatePath("/regulacao");
@@ -303,6 +357,7 @@ export async function releasePaciente(idStr, releaseData) {
         status: "Liberado",
         tipoCota: releaseData.quota,
         dataLiberacao: new Date(releaseData.releaseDate),
+        competenciaCota: montarCompetenciaCota(releaseData),
         observacao: releaseData.generalObservation,
         medicoResponsavelId: releaseData.regulatorDoctorId
           ? Number(releaseData.regulatorDoctorId)
@@ -418,6 +473,26 @@ export async function updateProcedimento(id, data) {
   }
 }
 
+// 12b. Excluir Procedimento
+export async function deleteProcedimento(id) {
+  try {
+    await requireRole(["GESTOR", "REGULACAO_ADMIN"]);
+    await prisma.procedimento.delete({ where: { id: Number(id) } });
+    revalidatePath("/regulacao");
+    return { success: true };
+  } catch (error) {
+    console.error("Erro ao excluir procedimento:", error);
+    // P2003: procedimento vinculado a pedidos de exame.
+    if (error.code === "P2003") {
+      return {
+        success: false,
+        error: "Não é possível excluir: há pedidos de exame usando este procedimento.",
+      };
+    }
+    return { success: false, error: error.message };
+  }
+}
+
 // 13. Buscar Tetos de Cotas Financeiras
 export async function getCotasFinanceiras() {
   try {
@@ -440,25 +515,139 @@ export async function getCotasFinanceiras() {
 export async function saveCotaFinanceira({ tipoCota, mes, ano, valorTeto }) {
   try {
     await requireRole(["GESTOR", "REGULACAO_ADMIN"]);
+
+    // Normaliza a competência (mês com 2 dígitos, ano com 4).
+    const mesStr = String(mes ?? "").padStart(2, "0").slice(0, 2);
+    const anoStr = String(ano ?? "").slice(0, 4);
+
+    // Aceita número (1000.5) ou string ("1.000,50"/"1000,50"/"1000.5").
+    let valorNum;
+    if (typeof valorTeto === "number") {
+      valorNum = valorTeto;
+    } else {
+      const normalizado = String(valorTeto ?? "")
+        .replace(/[R$\s]/g, "")
+        .replace(/\./g, "")
+        .replace(",", ".");
+      valorNum = parseFloat(normalizado);
+    }
+
+    if (!Number.isFinite(valorNum) || valorNum < 0) {
+      return { success: false, error: "Informe um valor de teto válido." };
+    }
+    if (!tipoCota || !mesStr || !anoStr) {
+      return { success: false, error: "Competência (mês/ano) ou tipo de cota inválidos." };
+    }
+
     const record = await prisma.cotaFinanceira.upsert({
       where: {
-        tipoCota_mes_ano: { tipoCota, mes, ano },
+        tipoCota_mes_ano: { tipoCota, mes: mesStr, ano: anoStr },
       },
       update: {
-        valorTeto: parseFloat(valorTeto),
+        valorTeto: valorNum,
       },
       create: {
         tipoCota,
-        mes,
-        ano,
-        valorTeto: parseFloat(valorTeto),
+        mes: mesStr,
+        ano: anoStr,
+        valorTeto: valorNum,
       },
     });
 
     revalidatePath("/regulacao");
-    return { success: true, data: record };
+    // Serializa para tipos simples (Decimal/Date não podem ir para o client).
+    return {
+      success: true,
+      data: {
+        id: record.id,
+        tipoCota: record.tipoCota,
+        mes: record.mes,
+        ano: record.ano,
+        valorTeto: Number(record.valorTeto),
+        createdAt: record.createdAt ? record.createdAt.toISOString() : null,
+      },
+    };
   } catch (error) {
     console.error("Erro ao salvar teto de cota:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+// 13c. Buscar Planejamento Mensal por Cidade (de um ano)
+export async function getPlanejamentoCidades(ano) {
+  try {
+    await requireRole(["GESTOR", "REGULACAO_ADMIN"]);
+    const anoStr = String(ano ?? "").slice(0, 4);
+    const registros = await prisma.planejamentoCidade.findMany({
+      where: { ano: anoStr },
+    });
+    return registros.map((r) => ({
+      cidade: r.cidade,
+      ano: r.ano,
+      mes: r.mes,
+      valor: Number(r.valor),
+      updatedBy: r.updatedBy || null,
+      updatedAt: r.updatedAt ? r.updatedAt.toISOString() : null,
+    }));
+  } catch (error) {
+    console.error("Erro ao buscar planejamento por cidade:", error);
+    return [];
+  }
+}
+
+// 13d. Salvar uma célula do Planejamento (cidade + ano + mês)
+export async function savePlanejamentoCidade({ cidade, ano, mes, valor }) {
+  try {
+    const user = await requireRole(["GESTOR", "REGULACAO_ADMIN"]);
+
+    const cidadeStr = String(cidade ?? "").trim();
+    const anoStr = String(ano ?? "").slice(0, 4);
+    const mesStr = String(mes ?? "").padStart(2, "0").slice(0, 2);
+
+    let valorNum;
+    if (typeof valor === "number") {
+      valorNum = valor;
+    } else {
+      const normalizado = String(valor ?? "")
+        .replace(/[R$\s]/g, "")
+        .replace(/\./g, "")
+        .replace(",", ".");
+      valorNum = parseFloat(normalizado);
+    }
+    if (!Number.isFinite(valorNum) || valorNum < 0) valorNum = 0;
+
+    if (!cidadeStr || !anoStr || !mesStr) {
+      return { success: false, error: "Cidade ou competência inválidas." };
+    }
+
+    const record = await prisma.planejamentoCidade.upsert({
+      where: {
+        cidade_ano_mes: { cidade: cidadeStr, ano: anoStr, mes: mesStr },
+      },
+      update: { valor: valorNum, updatedBy: user?.nome || null },
+      create: {
+        cidade: cidadeStr,
+        ano: anoStr,
+        mes: mesStr,
+        valor: valorNum,
+        updatedBy: user?.nome || null,
+      },
+    });
+
+    revalidatePath("/regulacao");
+    return {
+      success: true,
+      data: {
+        cidade: record.cidade,
+        ano: record.ano,
+        mes: record.mes,
+        valor: Number(record.valor),
+        updatedBy: record.updatedBy || null,
+        updatedAt: record.updatedAt ? record.updatedAt.toISOString() : null,
+      },
+    };
+  } catch (error) {
+    console.error("Erro ao salvar planejamento por cidade:", error);
     return { success: false, error: error.message };
   }
 }
@@ -507,15 +696,23 @@ export async function updatePedidoExame(idStr, updateData) {
       payload.procedimentoId = Number(updateData.procedureId);
     }
 
+    // Data de comunicação (quando editada na tela de autorização).
+    if (updateData.communicationDate !== undefined) {
+      payload.dataComunicacao = parseDataSegura(updateData.communicationDate);
+    }
+
     if (isRevertingToWaiting) {
       payload.tipoCota = null;
       payload.dataLiberacao = null;
+      payload.competenciaCota = null;
       payload.medicoResponsavelId = null;
     } else {
       payload.tipoCota = updateData.quota || null;
-      payload.dataLiberacao = updateData.releaseDate
-        ? new Date(updateData.releaseDate)
-        : null;
+      // Prefere a data ISO (releaseDateRaw); aceita BR como fallback.
+      payload.dataLiberacao = parseDataSegura(
+        updateData.releaseDateRaw || updateData.releaseDate,
+      );
+      payload.competenciaCota = montarCompetenciaCota(updateData);
       payload.medicoResponsavelId = updateData.regulatorDoctorId
         ? Number(updateData.regulatorDoctorId)
         : null;
@@ -561,6 +758,7 @@ export async function updateMedico(id, data) {
         crm: data.crm,
         ufCrm: data.ufCrm.toUpperCase(),
         especialidade: data.especialidade,
+        tipo: data.tipo || "Solicitante",
       },
     });
 

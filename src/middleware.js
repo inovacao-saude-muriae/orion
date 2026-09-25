@@ -83,20 +83,20 @@ const PERMISSOES_ROTAS = {
   ],
   
   // ─────────────────────────────────────────────────────────────────────────
-  // CADASTROS DA REGULAÇÃO (Médico / UBS / Procedimento) - Admin da Regulação
+  // GERENCIAMENTO
   // ─────────────────────────────────────────────────────────────────────────
-  "/admin/cadastros-regulacao": [
-    "GESTOR",
-    "REGULACAO_ADMIN",
-  ],
 
-  // GERENCIAR USUÁRIOS - Apenas o Gestor
-  "/admin/usuarios": [
-    "GESTOR",
-  ],
+  // Cadastros da Regulação (Médico / UBS / Procedimento) - Admin da Regulação
+  "/gerenciamento/medicos": ["GESTOR", "REGULACAO_ADMIN"],
+  "/gerenciamento/ubs": ["GESTOR", "REGULACAO_ADMIN"],
+  "/gerenciamento/procedimentos": ["GESTOR", "REGULACAO_ADMIN"],
+  "/gerenciamento/servicos": ["GESTOR", "REGULACAO_ADMIN"],
 
-  // RELATÓRIOS GERAIS - Gestor + administradores de módulo
-  "/relatorios": [
+  // Gerenciar Usuários - Apenas o Gestor
+  "/gerenciamento/usuarios": ["GESTOR"],
+
+  // Relatórios Gerais - Gestor + administradores de módulo
+  "/gerenciamento/relatorios": [
     "GESTOR",
     "REGULACAO_ADMIN",
     "JUNTA_ADMIN",
@@ -105,10 +105,8 @@ const PERMISSOES_ROTAS = {
     "CCZ_ADMIN",
   ],
 
-  // ─────────────────────────────────────────────────────────────────────────
-  // CADASTRO CENTRAL DE PESSOAS (Gestor + administradores de módulo)
-  // ─────────────────────────────────────────────────────────────────────────
-  "/pessoas": [
+  // Cadastro central de pessoas - Gestor + administradores de módulo
+  "/gerenciamento/pessoas": [
     "GESTOR",
     "REGULACAO_ADMIN",
     "JUNTA_ADMIN",

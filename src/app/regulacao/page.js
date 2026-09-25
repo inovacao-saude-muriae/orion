@@ -8,6 +8,7 @@ import { useRegulacaoData } from "./hooks/useRegulacaoData";
 import { useRegulacaoFilters } from "./hooks/useRegulacaoFilters";
 
 import FiltersBar from "./components/FiltersBar";
+import ExameTabs from "./components/ExameTabs";
 import Dashboard from "./views/Dashboard";
 import NovoPedido from "./views/NovoPedido";
 import ListaEspera from "./views/ListaEspera";
@@ -73,6 +74,21 @@ function RegulacaoPageContent() {
       </header>
 
       {(activeTab === "LISTA_ESPERA" || activeTab === "LIBERADOS") && (
+        <ExameTabs
+          tiposExame={data.auxData?.tiposExame || []}
+          selected={
+            activeTab === "LIBERADOS"
+              ? data.selectedReleasedExam
+              : data.selectedQueueExam
+          }
+          onSelect={(nome) => {
+            if (activeTab === "LIBERADOS") data.setSelectedReleasedExam(nome);
+            else data.setSelectedQueueExam(nome);
+          }}
+        />
+      )}
+
+      {(activeTab === "LISTA_ESPERA" || activeTab === "LIBERADOS") && (
         <FiltersBar
           filters={filters}
           handleFilterChange={handleFilterChange}
@@ -81,6 +97,7 @@ function RegulacaoPageContent() {
           setShowAdvancedFilters={setShowAdvancedFilters}
           allProceduresList={allProceduresList}
           filtrosFixos={activeTab === "LISTA_ESPERA" || activeTab === "LIBERADOS"}
+          contexto={activeTab === "LIBERADOS" ? "LIBERADOS" : "LISTA_ESPERA"}
           pacientesFila={
             activeTab === "LISTA_ESPERA"
               ? (data.requests || []).filter((r) => r.status === "Aguardando")
@@ -125,10 +142,40 @@ function RegulacaoPageContent() {
           setSelectedQueueExam={data.setSelectedQueueExam}
           applyFilters={applyFilters}
           handleUpdateCommunicationDate={data.handleUpdateCommunicationDate}
+          handleUpdateCommunicationStatus={data.handleUpdateCommunicationStatus}
           handleOpenReleaseModal={data.handleOpenReleaseModal}
           handleEditOrder={data.handleEditOrder}
           reloadData={data.reloadData}
           loading={data.loading}
+          handleExportToExcelWaiting={(selectedIds) => {
+            if (!selectedIds || selectedIds.length === 0)
+              return alert("Selecione pelo menos um paciente da fila.");
+            const selectedItems = data.requests.filter((r) =>
+              selectedIds.includes(r.id),
+            );
+            const exportData = selectedItems.map((item) => ({
+              "Código Regulação": item.id,
+              "Nome do Paciente": item.patientName,
+              CPF: item.cpf,
+              "Cartão SUS": item.susCard || "Não informado",
+              "Nome da Mãe": item.motherName || "Não informada",
+              "Tipo de Exame": item.examType,
+              Procedimento: item.procedure,
+              "Classificação de Risco": item.classification || "Verde",
+              "Data do Pedido": item.requestDate || "Não informada",
+              "Médico Solicitante": item.requestDoctor || "Não informado",
+              "UBS Solicitante": item.requestUbs || "Não informada",
+              "Data Comunicação": item.communicationDate || "Não informada",
+              "Status Comunicação": item.communicationStatus || "Sem info",
+            }));
+            const worksheet = XLSX.utils.json_to_sheet(exportData);
+            const workbook = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(workbook, worksheet, "Fila de Espera");
+            XLSX.writeFile(
+              workbook,
+              `ListaEspera_${String(data.selectedQueueExam || "Todos").replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.xlsx`,
+            );
+          }}
         />
       )}
 
@@ -137,11 +184,12 @@ function RegulacaoPageContent() {
           editingItem={data.editingItem}
           setEditingItem={data.setEditingItem}
           auxData={data.auxData}
+          editOrigin={data.editOrigin}
           handleEditStatusChange={data.handleEditStatusChange}
           handleSaveEditedOrder={data.handleSaveEditedOrder}
           onBack={() => {
             data.setEditingItem(null);
-            handleSetActiveTab("LISTA_ESPERA");
+            handleSetActiveTab(data.editOrigin || "LISTA_ESPERA");
           }}
           styles={styles}
         />
@@ -231,6 +279,8 @@ function RegulacaoPageContent() {
           setFinYear={data.setFinYear}
           calculateMonthQuotaDetails={data.calculateMonthQuotaDetails}
           handleOpenDefineTetoModal={data.handleOpenDefineTetoModal}
+          planejamentoCidades={data.planejamentoCidades}
+          handleSavePlanejamentoCidade={data.handleSavePlanejamentoCidade}
         />
       )}
 

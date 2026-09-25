@@ -31,7 +31,7 @@ export default function RelatoriosGeraisPage() {
   useEffect(() => {
     async function carregarRelatorio() {
       try {
-        const resposta = await fetch("/api/admin/relatorios", {
+        const resposta = await fetch("/api/gerenciamento/relatorios", {
           cache: "no-store",
         });
         const dados = await resposta.json();

@@ -128,7 +128,7 @@ export async function criarPessoa(data) {
       await gravarEnderecoTx(tx, pessoaData.cpf, data);
     });
 
-    revalidatePath("/pessoas");
+    revalidatePath("/gerenciamento/pessoas");
     return { success: true };
   } catch (error) {
     if (error.status === 401 || error.status === 403) {
@@ -153,7 +153,7 @@ export async function atualizarPessoa(cpfOriginal, data) {
       await gravarEnderecoTx(tx, cpf, data);
     });
 
-    revalidatePath("/pessoas");
+    revalidatePath("/gerenciamento/pessoas");
     return { success: true };
   } catch (error) {
     if (error.status === 401 || error.status === 403) {
@@ -178,7 +178,7 @@ export async function excluirPessoa(cpf) {
       await tx.pessoa.delete({ where: { cpf: cpfLimpo } });
     });
 
-    revalidatePath("/pessoas");
+    revalidatePath("/gerenciamento/pessoas");
     return { success: true };
   } catch (error) {
     if (error.status === 401 || error.status === 403) {

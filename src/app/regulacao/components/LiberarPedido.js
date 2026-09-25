@@ -265,23 +265,16 @@ export default function LiberarPedido({
                 }}
               >
                 <option value="">-- Selecione o Médico Regulador --</option>
-                {auxData.medicos?.map((m) => (
-                  <option key={m.id} value={m.id}>
-                    {m.nome} (CRM: {m.crm})
-                  </option>
-                ))}
+                {auxData.medicos
+                  ?.filter((m) => m.tipo === "Regulador")
+                  .map((m) => (
+                    <option key={m.id} value={m.id}>
+                      {m.nome} (CRM: {m.crm})
+                    </option>
+                  ))}
               </select>
             </div>
-          </div>
-        </div>
 
-        {/* SEÇÃO 3: COMUNICAÇÃO COM O PACIENTE */}
-        <div className={styles.formSection}>
-          <div className={styles.formSectionHeader}>
-            <h4>3. Comunicação com o Paciente</h4>
-          </div>
-
-          <div className={styles.formGridStrict}>
             <div className={`${styles.fieldGroup} ${styles.colCpf}`}>
               <label htmlFor="communicationDate">Data de Comunicação</label>
               <input
@@ -296,28 +289,6 @@ export default function LiberarPedido({
                   }));
                 }}
               />
-            </div>
-
-            <div className={`${styles.fieldGroup} ${styles.colStatus}`}>
-              <label htmlFor="communicationStatus">Status da Comunicação *</label>
-              <select
-                id="communicationStatus"
-                value={regulationForm.communicationStatus || "Avisado"}
-                onChange={(e) => {
-                  setIsDirty(true);
-                  setRegulationForm((prev) => ({
-                    ...prev,
-                    communicationStatus: e.target.value,
-                  }));
-                }}
-                required
-              >
-                <option value="Avisado">Avisado</option>
-                <option value="Paciente não quer">Paciente não quer</option>
-                <option value="Já realizou">Já realizou</option>
-                <option value="Faleceu">Faleceu</option>
-                <option value="Mudou de endereço">Mudou de endereço</option>
-              </select>
             </div>
 
             <div className={`${styles.fieldGroup} ${styles.fullWidth}`}>

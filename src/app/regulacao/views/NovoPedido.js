@@ -269,7 +269,7 @@ export default function NovoPedido({
               >
                 <option value="">Selecione o Médico</option>
                 {auxData.medicos
-                  ?.filter((m) => m.tipo !== 'Regulador')
+                  ?.filter((m) => m.tipo === 'Solicitante')
                   .map((m) => (
                     <option key={m.id} value={m.id}>
                       {m.nome} (CRM: {m.crm})

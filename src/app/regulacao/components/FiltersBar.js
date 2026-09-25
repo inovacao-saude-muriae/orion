@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import styles from './FiltersBar.module.css';
+import { STATUS_COMUNICACAO, STATUS_PEDIDO } from '../constants';
 
 export default function FiltersBar({
   filters,
@@ -12,8 +13,11 @@ export default function FiltersBar({
   setShowAdvancedFilters,
   allProceduresList = [],
   filtrosFixos = false,
-  pacientesFila = []
+  pacientesFila = [],
+  contexto = "LISTA_ESPERA", // "LISTA_ESPERA" ou "LIBERADOS"
 }) {
+  const isLiberados = contexto === "LIBERADOS";
+  const isListaEspera = contexto === "LISTA_ESPERA";
   // Quando fixos, os filtros avançados ficam sempre abertos.
   const filtrosAbertos = filtrosFixos || showAdvancedFilters;
   // Estado local para os filtros
@@ -223,11 +227,13 @@ export default function FiltersBar({
                 </select>
               </div>
 
+              {/* Tipo de Cota — habilitado apenas em Liberados */}
               <div className={styles.fieldItem}>
                 <label>Tipo de Cota</label>
                 <select
                   value={draftFilters.quotaType || ''}
                   onChange={(e) => handleDraftChange('quotaType', e.target.value)}
+                  disabled={!isLiberados}
                 >
                   <option value="">Todas</option>
                   <option value="SUS">SUS</option>
@@ -237,17 +243,50 @@ export default function FiltersBar({
                 </select>
               </div>
 
+              {/* Status do Pedido — habilitado nas duas telas */}
               <div className={styles.fieldItem}>
-                <label>Data Comunicação</label>
+                <label>Status do Pedido</label>
+                <select
+                  value={draftFilters.orderStatus || ''}
+                  onChange={(e) => handleDraftChange('orderStatus', e.target.value)}
+                >
+                  <option value="">Todos</option>
+                  {STATUS_PEDIDO.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Status de Comunicação — habilitado apenas em Lista de Espera */}
+              <div className={styles.fieldItem}>
+                <label>Status de Comunicação</label>
                 <select
                   value={draftFilters.communicationStatus || ''}
                   onChange={(e) =>
                     handleDraftChange('communicationStatus', e.target.value)
                   }
+                  disabled={!isListaEspera}
                 >
-                  <option value="">Todos</option>
-                  <option value="FILLED">Comunicação Preenchida</option>
-                  <option value="EMPTY">Comunicação Não Preenchida</option>
+                  <option value="">Todas</option>
+                  {STATUS_COMUNICACAO.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Data de Comunicação (preenchida x não preenchida) — Lista de Espera */}
+              <div className={styles.fieldItem}>
+                <label>Data Comunicação</label>
+                <select
+                  value={draftFilters.communicationFilled || ''}
+                  onChange={(e) =>
+                    handleDraftChange('communicationFilled', e.target.value)
+                  }
+                  disabled={!isListaEspera}
+                >
+                  <option value="">Todas</option>
+                  <option value="FILLED">Preenchida</option>
+                  <option value="EMPTY">Não preenchida</option>
                 </select>
               </div>
             </div>
@@ -256,88 +295,82 @@ export default function FiltersBar({
           <div className={styles.filterSection}>
             <span className={styles.sectionTitle}>Filtros por Período / Datas</span>
             <div className={styles.filterGridDates}>
+              {/* Período Entrada — habilitado em Lista de Espera */}
               <div className={styles.fieldItem}>
                 <label>Período Entrada</label>
                 <div className={styles.dateRangeBox}>
                   <input
                     type="date"
-                    value={draftFilters.entryDateStart || draftFilters.startDate || ''}
-                    onChange={(e) => {
-                      handleDraftChange('entryDateStart', e.target.value);
-                      handleDraftChange('startDate', e.target.value);
-                    }}
+                    value={draftFilters.entryDateStart || ''}
+                    onChange={(e) => handleDraftChange('entryDateStart', e.target.value)}
+                    disabled={!isListaEspera}
                   />
                   <span>até</span>
                   <input
                     type="date"
-                    value={draftFilters.entryDateEnd || draftFilters.endDate || ''}
-                    onChange={(e) => {
-                      handleDraftChange('entryDateEnd', e.target.value);
-                      handleDraftChange('endDate', e.target.value);
-                    }}
+                    value={draftFilters.entryDateEnd || ''}
+                    onChange={(e) => handleDraftChange('entryDateEnd', e.target.value)}
+                    disabled={!isListaEspera}
                   />
                 </div>
               </div>
 
+              {/* Período Comunicação — habilitado em Lista de Espera */}
               <div className={styles.fieldItem}>
                 <label>Período Comunicação</label>
                 <div className={styles.dateRangeBox}>
                   <input
                     type="date"
                     value={draftFilters.communicationDateStart || ''}
-                    onChange={(e) =>
-                      handleDraftChange('communicationDateStart', e.target.value)
-                    }
+                    onChange={(e) => handleDraftChange('communicationDateStart', e.target.value)}
+                    disabled={!isListaEspera}
                   />
                   <span>até</span>
                   <input
                     type="date"
                     value={draftFilters.communicationDateEnd || ''}
-                    onChange={(e) =>
-                      handleDraftChange('communicationDateEnd', e.target.value)
-                    }
+                    onChange={(e) => handleDraftChange('communicationDateEnd', e.target.value)}
+                    disabled={!isListaEspera}
                   />
                 </div>
               </div>
 
+              {/* Período Liberação — habilitado em Liberados */}
               <div className={styles.fieldItem}>
                 <label>Período Liberação</label>
                 <div className={styles.dateRangeBox}>
                   <input
                     type="date"
                     value={draftFilters.releaseDateStart || ''}
-                    onChange={(e) =>
-                      handleDraftChange('releaseDateStart', e.target.value)
-                    }
+                    onChange={(e) => handleDraftChange('releaseDateStart', e.target.value)}
+                    disabled={!isLiberados}
                   />
                   <span>até</span>
                   <input
                     type="date"
                     value={draftFilters.releaseDateEnd || ''}
-                    onChange={(e) =>
-                      handleDraftChange('releaseDateEnd', e.target.value)
-                    }
+                    onChange={(e) => handleDraftChange('releaseDateEnd', e.target.value)}
+                    disabled={!isLiberados}
                   />
                 </div>
               </div>
 
+              {/* Período Faturamento — habilitado em Liberados */}
               <div className={styles.fieldItem}>
                 <label>Período Faturamento</label>
                 <div className={styles.dateRangeBox}>
                   <input
                     type="date"
                     value={draftFilters.billingDateStart || ''}
-                    onChange={(e) =>
-                      handleDraftChange('billingDateStart', e.target.value)
-                    }
+                    onChange={(e) => handleDraftChange('billingDateStart', e.target.value)}
+                    disabled={!isLiberados}
                   />
                   <span>até</span>
                   <input
                     type="date"
                     value={draftFilters.billingDateEnd || ''}
-                    onChange={(e) =>
-                      handleDraftChange('billingDateEnd', e.target.value)
-                    }
+                    onChange={(e) => handleDraftChange('billingDateEnd', e.target.value)}
+                    disabled={!isLiberados}
                   />
                 </div>
               </div>

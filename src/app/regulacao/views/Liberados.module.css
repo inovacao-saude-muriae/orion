@@ -188,6 +188,11 @@
   border-color: #2563eb;
 }
 
+.mutedDash {
+  color: #94a3b8;
+  font-weight: 600;
+}
+
 /* BOTÃO COM O ÍCONE DE IMAGEM DA PASTA PUBLIC */
 /* BOTÃO DE AÇÃO COM FUNDO VERDE */
 .actionsCell {

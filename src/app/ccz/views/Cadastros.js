@@ -9,6 +9,7 @@ import ts from "./Cadastros.module.css";
 // Modais importados da pasta components
 import ModalConfirmacaoCCZ from "../components/Modals/ModalConfirmacaoCCZ";
 import ModalMensagemCCZ from "../components/Modals/ModalMensagemCCZ";
+import { useConfirm } from "@/components/ConfirmDialog";
 
 // Actions importadas da raiz do módulo ccz
 import {
@@ -88,6 +89,7 @@ const EMPTY_ANIMAL = {
 
 // ─────────────────────────────────────────────────────────────────────────
 export default function Cadastros({ tutores = [], animais = [], reloadData }) {
+  const confirm = useConfirm();
   const [subTab, setSubTab] = useState("TUTORES");
 
   // ── TUTORES ──────────────────────────────────────────────────────────
@@ -162,6 +164,14 @@ export default function Cadastros({ tutores = [], animais = [], reloadData }) {
       });
       return;
     }
+    const ok = await confirm({
+      title: pessoaSel.isTutor ? "Atualizar tutor" : "Vincular tutor",
+      message: pessoaSel.isTutor
+        ? "Deseja salvar as alterações deste responsável?"
+        : "Deseja vincular esta pessoa como tutor do CCZ?",
+      confirmText: pessoaSel.isTutor ? "Atualizar" : "Vincular",
+    });
+    if (!ok) return;
     const payload = {
       ...tutorExtra,
       telefoneSecundario: onlyDigits(tutorExtra.telefoneSecundario) || null,
@@ -212,6 +222,12 @@ export default function Cadastros({ tutores = [], animais = [], reloadData }) {
       });
       return;
     }
+    const ok = await confirm({
+      title: "Cadastrar animal",
+      message: "Deseja confirmar o cadastro deste animal?",
+      confirmText: "Cadastrar",
+    });
+    if (!ok) return;
     const animalPayload = {
       ...animalForm,
       tutorCpf:

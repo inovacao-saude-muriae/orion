@@ -4,10 +4,34 @@ import { useState } from "react";
 import styles from "./EditarPedido.module.css";
 import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
 
+const MESES_COMPETENCIA = [
+  { value: "01", name: "Jan" },
+  { value: "02", name: "Fev" },
+  { value: "03", name: "Mar" },
+  { value: "04", name: "Abr" },
+  { value: "05", name: "Mai" },
+  { value: "06", name: "Jun" },
+  { value: "07", name: "Jul" },
+  { value: "08", name: "Ago" },
+  { value: "09", name: "Set" },
+  { value: "10", name: "Out" },
+  { value: "11", name: "Nov" },
+  { value: "12", name: "Dez" },
+];
+
+const _anoAtual = new Date().getFullYear();
+const ANOS_COMPETENCIA = [
+  String(_anoAtual - 1),
+  String(_anoAtual),
+  String(_anoAtual + 1),
+  String(_anoAtual + 2),
+];
+
 export default function EditarPedido({
   editingItem,
   setEditingItem,
   auxData,
+  editOrigin,
   handleEditStatusChange,
   handleSaveEditedOrder,
   onBack,
@@ -207,17 +231,17 @@ export default function EditarPedido({
             <div className={`${styles.fieldGroup} ${styles.colDoctor}`}>
               <label>Médico Solicitante</label>
               <select
-                value={editingItem.medicoSolicitanteId || ""}
+                value={editingItem.requestDoctorId ? String(editingItem.requestDoctorId) : ""}
                 onChange={(e) => {
                   setIsDirty(true);
-                  setEditingItem({ ...editingItem, medicoSolicitanteId: e.target.value });
+                  setEditingItem({ ...editingItem, requestDoctorId: e.target.value });
                 }}
               >
                 <option value="">-- Selecione o Médico Solicitante --</option>
                 {auxData.medicos
-                  ?.filter((m) => m.tipo !== "Regulador")
+                  ?.filter((m) => m.tipo === "Solicitante")
                   .map((m) => (
-                    <option key={m.id} value={m.id}>
+                    <option key={m.id} value={String(m.id)}>
                       {m.nome} (CRM: {m.crm})
                     </option>
                   ))}
@@ -227,15 +251,15 @@ export default function EditarPedido({
             <div className={`${styles.fieldGroup} ${styles.colUbs}`}>
               <label>UBS Solicitante</label>
               <select
-                value={editingItem.ubsResponsavelId || ""}
+                value={editingItem.requestUbsId ? String(editingItem.requestUbsId) : ""}
                 onChange={(e) => {
                   setIsDirty(true);
-                  setEditingItem({ ...editingItem, ubsResponsavelId: e.target.value });
+                  setEditingItem({ ...editingItem, requestUbsId: e.target.value });
                 }}
               >
                 <option value="">-- Selecione a UBS --</option>
                 {auxData.ubsList?.map((u) => (
-                  <option key={u.id} value={u.id}>
+                  <option key={u.id} value={String(u.id)}>
                     {u.nome} (CNES: {u.cnes})
                   </option>
                 ))}
@@ -261,6 +285,139 @@ export default function EditarPedido({
             </div>
           </div>
         </div>
+
+        {/* SEÇÃO 3: DADOS DA AUTORIZAÇÃO (para pedidos liberados) */}
+        {(editOrigin === "LIBERADOS" || editingItem.status === "Liberado") && (
+          <div className={styles.formSection}>
+            <div className={styles.formSectionHeader}>
+              <h4>3. Dados da Autorização</h4>
+            </div>
+
+            <div className={styles.formGridStrict}>
+              <div className={`${styles.fieldGroup} ${styles.colRisk}`}>
+                <label>Tipo de Cota</label>
+                <select
+                  value={editingItem.quota || ""}
+                  onChange={(e) => {
+                    setIsDirty(true);
+                    setEditingItem({ ...editingItem, quota: e.target.value });
+                  }}
+                >
+                  <option value="">-- Selecione a Cota --</option>
+                  <option value="CREDENCIAMENTO">CREDENCIAMENTO</option>
+                  <option value="OCI">OCI</option>
+                  <option value="SUS">SUS</option>
+                  <option value="PPI">PPI (Debita no SUS)</option>
+                </select>
+              </div>
+
+              {/* Competência da cota: aparece após selecionar a cota.
+                  É a partir dela que o débito do financeiro é feito. */}
+              {editingItem.quota && (
+                <>
+                  <div className={`${styles.fieldGroup} ${styles.colRisk}`}>
+                    <label>Mês da Competência *</label>
+                    <select
+                      value={editingItem.quotaCompetenceMonth || ""}
+                      onChange={(e) => {
+                        setIsDirty(true);
+                        setEditingItem({ ...editingItem, quotaCompetenceMonth: e.target.value });
+                      }}
+                    >
+                      <option value="">-- Mês --</option>
+                      {MESES_COMPETENCIA.map((m) => (
+                        <option key={m.value} value={m.value}>
+                          {m.name} ({m.value})
+                        </option>
+                      ))}
+                    </select>
+                  </div>
+
+                  <div className={`${styles.fieldGroup} ${styles.colRisk}`}>
+                    <label>Ano da Competência *</label>
+                    <select
+                      value={editingItem.quotaCompetenceYear || ""}
+                      onChange={(e) => {
+                        setIsDirty(true);
+                        setEditingItem({ ...editingItem, quotaCompetenceYear: e.target.value });
+                      }}
+                    >
+                      <option value="">-- Ano --</option>
+                      {ANOS_COMPETENCIA.map((y) => (
+                        <option key={y} value={y}>{y}</option>
+                      ))}
+                    </select>
+                  </div>
+                </>
+              )}
+
+              <div className={`${styles.fieldGroup} ${styles.colCpf}`}>
+                <label>Data de Liberação</label>
+                <input
+                  type="date"
+                  value={editingItem.releaseDateRaw || ""}
+                  onChange={(e) => {
+                    setIsDirty(true);
+                    setEditingItem({
+                      ...editingItem,
+                      releaseDate: e.target.value,
+                      releaseDateRaw: e.target.value,
+                    });
+                  }}
+                />
+              </div>
+
+              <div className={`${styles.fieldGroup} ${styles.colDoctor}`}>
+                <label>Médico Regulador / Responsável</label>
+                <select
+                  value={editingItem.regulatorDoctorId ? String(editingItem.regulatorDoctorId) : ""}
+                  onChange={(e) => {
+                    setIsDirty(true);
+                    setEditingItem({ ...editingItem, regulatorDoctorId: e.target.value });
+                  }}
+                >
+                  <option value="">-- Selecione o Médico Regulador --</option>
+                  {auxData.medicos
+                    ?.filter((m) => m.tipo === "Regulador")
+                    .map((m) => (
+                      <option key={m.id} value={String(m.id)}>
+                        {m.nome} (CRM: {m.crm})
+                      </option>
+                    ))}
+                </select>
+              </div>
+
+              <div className={`${styles.fieldGroup} ${styles.colCpf}`}>
+                <label>Data de Comunicação</label>
+                <input
+                  type="date"
+                  value={editingItem.communicationDate || ""}
+                  onChange={(e) => {
+                    setIsDirty(true);
+                    setEditingItem({ ...editingItem, communicationDate: e.target.value });
+                  }}
+                />
+              </div>
+
+              <div className={`${styles.fieldGroup} ${styles.fullWidth}`}>
+                <label htmlFor="generalObservation">Observação Geral da Regulação</label>
+                <textarea
+                  id="generalObservation"
+                  rows={3}
+                  value={editingItem.generalObservation || ""}
+                  onChange={(e) => {
+                    setIsDirty(true);
+                    setEditingItem({
+                      ...editingItem,
+                      generalObservation: e.target.value,
+                    });
+                  }}
+                  placeholder="Observações específicas sobre esta liberação..."
+                />
+              </div>
+            </div>
+          </div>
+        )}
 
         <div className={styles.formActions}>
           <button type="button" className={styles.secondaryBtn} onClick={handleCancel}>

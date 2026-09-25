@@ -1,31 +1,30 @@
 .container {
-  width: min(100%, 780px);
-  margin: 0 auto;
-  padding: 2rem;
-  background: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 12px;
-  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
   color: #1e293b;
   box-sizing: border-box;
 }
 
-.title {
-  margin: 0 0 0.35rem;
+.header {
+  margin-bottom: 0.5rem;
+  padding-bottom: 1.25rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.header h1 {
+  font-size: 1.75rem;
+  font-weight: 800;
   color: #0f172a;
-  font-size: 1.5rem;
-  font-weight: 700;
+  margin: 0 0 0.25rem;
   letter-spacing: -0.02em;
 }
 
-.title::after {
-  content: "";
-  display: block;
-  width: 42px;
-  height: 3px;
-  margin-top: 0.75rem;
-  border-radius: 2px;
-  background: #516f8a;
+.header p {
+  font-size: 0.925rem;
+  color: #64748b;
+  margin: 0;
 }
 
 /* Alert Messages */
@@ -151,9 +150,12 @@
   display: flex;
   flex-direction: column;
   gap: 1rem;
-  border-top: 1px solid #e2e8f0;
-  margin-top: 1.5rem;
-  padding-top: 1.5rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+  padding: 2rem;
+  box-sizing: border-box;
 }
 
 .personBox {

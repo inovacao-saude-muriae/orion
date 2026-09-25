@@ -3,16 +3,18 @@
 import { usePathname } from "next/navigation";
 import Sidebar from "@/components/Sidebar";
 import Header from "@/components/Header";
+import { ConfirmProvider } from "@/components/ConfirmDialog";
 
 export default function ClientLayout({ children }) {
   const pathname = usePathname();
   const isLoginPage = pathname === "/login";
 
   if (isLoginPage) {
-    return <>{children}</>;
+    return <ConfirmProvider>{children}</ConfirmProvider>;
   }
 
   return (
+    <ConfirmProvider>
     <div style={{ display: "flex", flexDirection: "column", minHeight: "100vh", width: "100%" }}>
       {/* Header fixo no topo com z-index alto */}
       <Header />
@@ -36,5 +38,6 @@ export default function ClientLayout({ children }) {
         </main>
       </div>
     </div>
+    </ConfirmProvider>
   );
 }

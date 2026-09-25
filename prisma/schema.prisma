@@ -162,6 +162,7 @@ model PedidoExame {
   medicoResponsavelId Int?      @map("medico_responsavel_id")
   classificacaoRisco  String?   @map("classificacao_risco") @db.VarChar(50)
   tipoCota            String?   @map("tipo_cota") @db.VarChar(50)
+  competenciaCota     String?   @map("competencia_cota") @db.VarChar(7) // "YYYY-MM" — competência que debita o financeiro
   status              String    @default("Aguardando") @db.VarChar(50)
   statusComunicacao   String?   @default("PENDENTE") @map("status_comunicacao") @db.VarChar(50)
   motivoLiberacao     String?   @map("motivo_liberacao")
@@ -196,6 +197,46 @@ model CotaFinanceira {
 
   @@unique([tipoCota, mes, ano], map: "idx_cota_competencia_unica")
   @@map("regula_cotas_financeiras")
+}
+
+// Planejamento mensal por cidade (12 meses) — persistido para auditoria.
+model PlanejamentoCidade {
+  id        Int      @id @default(autoincrement())
+  cidade    String   @db.VarChar(120)
+  ano       String   @db.VarChar(4)
+  mes       String   @db.VarChar(2)
+  valor     Decimal  @default(0) @db.Decimal(12, 2)
+  updatedBy String?  @map("updated_by") @db.VarChar(150)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  @@unique([cidade, ano, mes], map: "idx_planejamento_cidade_competencia")
+  @@index([ano], map: "idx_planejamento_ano")
+  @@map("regula_planejamento_cidade")
+}
+
+// ── CADASTRO: SERVIÇOS E ESPECIALIDADES (`cad_`) ─────────────────────────
+model Servico {
+  id             Int             @id @default(autoincrement())
+  nome           String          @db.VarChar(150)
+  ativo          Boolean         @default(true)
+  createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
+  especialidades Especialidade[]
+
+  @@map("cad_servicos")
+}
+
+model Especialidade {
+  id        Int      @id @default(autoincrement())
+  servicoId Int      @map("servico_id")
+  nome      String   @db.VarChar(150)
+  ativo     Boolean  @default(true)
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  servico Servico @relation(fields: [servicoId], references: [id], onDelete: Cascade, map: "fk_especialidade_servico")
+
+  @@index([servicoId], map: "idx_especialidade_servico")
+  @@map("cad_especialidades")
 }
 
 // ── MÓDULO: FARMÁCIA JUDICIAL (`farmacia_`) ──────────────────────────────

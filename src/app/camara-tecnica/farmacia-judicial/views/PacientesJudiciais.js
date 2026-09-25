@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import Image from 'next/image';
 import { buscarPessoaExistente } from '../actions';
+import { useConfirm } from '@/components/ConfirmDialog';
 import styles from './PacientesJudiciais.module.css';
 
 const MED_VAZIO = { medicamentoId: '', qtdMensal: '', statusMedication: 'Ativo' };
@@ -19,6 +20,7 @@ export default function TabPacientesJudiciais({
   onCreatePaciente,
   loading,
 }) {
+  const confirm = useConfirm();
   const [searchTerm, setSearchTerm] = useState('');
   const [searchResults, setSearchResults] = useState([]);
   const [isSearching, setIsSearching] = useState(false);
@@ -126,6 +128,13 @@ export default function TabPacientesJudiciais({
     if (!form.numeroPasta || !form.numeroProcesso) {
       return alert('Informe o número da pasta e do processo.');
     }
+
+    const ok = await confirm({
+      title: 'Salvar paciente judicial',
+      message: 'Deseja confirmar o cadastro do processo e medicamentos?',
+      confirmText: 'Salvar',
+    });
+    if (!ok) return;
 
     setSalvando(true);
     const payload = {

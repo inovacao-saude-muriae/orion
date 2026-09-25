@@ -72,11 +72,44 @@
   margin-bottom: 0.4rem;
 }
 
+/* Linha: busca + botão adicionar ao lado */
+.searchRowInline {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+}
+
+.btnAdicionar {
+  background-color: #059669;
+  color: #ffffff;
+  border: none;
+  padding: 0.6rem 1.1rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.2s ease;
+}
+
+.btnAdicionar:hover {
+  background-color: #047857;
+}
+
+/* Rodapé de ações na parte inferior */
+.footerActions {
+  width: 100%;
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 1rem;
+}
+
 /* Busca no estilo "Novo Pedido" (campo select-like + dropdown em tabela) */
 .searchSelectWrapper {
   position: relative;
   display: flex;
   align-items: center;
+  flex: 1;
 }
 
 .selectLikeInput {

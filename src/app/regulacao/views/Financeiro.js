@@ -1,11 +1,8 @@
 'use client';
 
-import { useState } from 'react';
-
-// Estilo local da View
+import { useEffect, useState } from 'react';
 import styles from './Financeiro.module.css';
 
-// Lista de meses
 const DEFAULT_MONTHS_LIST = [
   { value: "01", name: "Jan" },
   { value: "02", name: "Fev" },
@@ -21,15 +18,24 @@ const DEFAULT_MONTHS_LIST = [
   { value: "12", name: "Dez" },
 ];
 
-// Tipos de cotas oficiais para os cards
 const LISTA_COTAS_OFICIAIS = ['SUS', 'Credenciamento', 'OCI'];
 
-// Cidades para a tabela de Planejamento Mensal
 const LISTA_CIDADES = [
   'ALÉM PARAÍBA',
   'LEOPOLDINA-CATAGUASES',
   'MANHUAÇU',
 ];
+
+const brl = (v) =>
+  `R$ ${(Number(v) || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+
+// Classifica o consumo em faixas de cor:
+// verde até a metade, amarelo a partir de ~50% e vermelho quando está acabando (>80%).
+const nivelConsumo = (pct) => {
+  if (pct >= 80) return 'estouro';
+  if (pct >= 50) return 'alerta';
+  return 'ok';
+};
 
 export default function Financeiro({
   finMonth,
@@ -38,9 +44,10 @@ export default function Financeiro({
   setFinYear = () => {},
   MONTHS_LIST = DEFAULT_MONTHS_LIST,
   calculateMonthQuotaDetails = () => ({ totalLimit: 0, totalUsed: 0, available: 0 }),
-  handleOpenDefineTetoModal = () => {}
+  handleOpenDefineTetoModal = () => {},
+  planejamentoCidades = [],
+  handleSavePlanejamentoCidade = async () => {},
 }) {
-  // Inicialização dinâmica baseada na data atual do sistema
   const currentDate = new Date();
   const currentMonthStr = String(currentDate.getMonth() + 1).padStart(2, '0');
   const currentYearStr = String(currentDate.getFullYear());
@@ -48,14 +55,24 @@ export default function Financeiro({
   const activeMonth = finMonth || currentMonthStr;
   const activeYear = finYear || currentYearStr;
 
-  // Estado local com as cidades para a tabela de planejamento
-  const [tableData, setTableData] = useState({
-    'ALÉM PARAÍBA': Array(12).fill(0),
-    'LEOPOLDINA-CATAGUASES': Array(12).fill(0),
-    'MANHUAÇU': Array(12).fill(0),
-  });
+  // ── Planejamento por cidade: mapeia os dados persistidos numa matriz local
+  // para edição, e salva no banco ao sair do campo (onBlur). ────────────────
+  const [tableData, setTableData] = useState({});
 
-  // Atualiza a célula da cidade
+  useEffect(() => {
+    // Monta { cidade: [12 valores] } a partir do que veio do banco (ano ativo).
+    const base = {};
+    LISTA_CIDADES.forEach((cidade) => {
+      base[cidade] = Array(12).fill(0);
+    });
+    (planejamentoCidades || []).forEach((p) => {
+      const idx = Number(p.mes) - 1;
+      if (!base[p.cidade]) base[p.cidade] = Array(12).fill(0);
+      if (idx >= 0 && idx < 12) base[p.cidade][idx] = Number(p.valor) || 0;
+    });
+    setTableData(base);
+  }, [planejamentoCidades]);
+
   const handleCellChange = (cidade, monthIndex, value) => {
     const numericValue = parseFloat(value) || 0;
     setTableData((prev) => {
@@ -65,22 +82,38 @@ export default function Financeiro({
     });
   };
 
-  // Calcula o total da linha de cada cidade
-  const calculateRowTotal = (cidade) => {
-    return (tableData[cidade] || []).reduce((sum, val) => sum + (val || 0), 0);
+  const handleCellBlur = async (cidade, monthIndex) => {
+    const valor = (tableData[cidade] || [])[monthIndex] || 0;
+    const mes = String(monthIndex + 1).padStart(2, '0');
+    await handleSavePlanejamentoCidade(cidade, mes, valor);
   };
 
-  // Anos para o select (ano atual + 2 próximos)
-  const currentYearNum = currentDate.getFullYear();
+  const calculateRowTotal = (cidade) =>
+    (tableData[cidade] || []).reduce((sum, val) => sum + (val || 0), 0);
+
   const availableYears = [
-    String(currentYearNum),
-    String(currentYearNum + 1),
-    String(currentYearNum + 2),
+    currentYearStr,
+    String(Number(currentYearStr) + 1),
+    String(Number(currentYearStr) + 2),
   ];
+
+  // ── Consolidado das cotas do mês ativo ────────────────────────────────────
+  const detalhesPorCota = LISTA_COTAS_OFICIAIS.map((tipoCota) => {
+    const d = calculateMonthQuotaDetails(tipoCota, activeYear, activeMonth) || {
+      totalLimit: 0,
+      totalUsed: 0,
+      available: 0,
+    };
+    const pct = d.totalLimit > 0 ? (d.totalUsed / d.totalLimit) * 100 : 0;
+    return { tipoCota, ...d, pct };
+  });
+
+  const barraClasse = (nivel) =>
+    nivel === 'estouro' ? styles.barEstouro : nivel === 'alerta' ? styles.barAlerta : styles.barOk;
 
   return (
     <div className={styles.financeContainer}>
-      {/* CARD SUPERIOR DE FILTRO DE COMPETÊNCIA */}
+      {/* FILTRO DE COMPETÊNCIA */}
       <div className={`${styles.card} ${styles.financeHeaderCard}`}>
         <h2 className={styles.cardTitle}>Painel de Controle Financeiro de Cotas</h2>
         <p>Selecione a competência para visualizar limites, gastos e saldos restantes de cada cota:</p>
@@ -108,70 +141,71 @@ export default function Financeiro({
             </select>
           </div>
         </div>
-      </div>
 
-      {/* GRID DE CARDS COM AS COTAS DO SISTEMA */}
-      <div className={styles.financeCardsGrid}>
-        {LISTA_COTAS_OFICIAIS.map((tipoCota) => {
-          const details = calculateMonthQuotaDetails(tipoCota, activeYear, activeMonth) || {
-            totalLimit: 0,
-            totalUsed: 0,
-            available: 0,
-          };
-
-          return (
-            <div key={tipoCota} className={`${styles.card} ${styles.financeQuotaCard}`}>
+        {/* CARDS POR COTA (dentro do mesmo card da competência) */}
+        <div className={styles.financeCardsGrid}>
+          {detalhesPorCota.map((d) => {
+            const nivel = nivelConsumo(d.pct);
+            return (
+              <div key={d.tipoCota} className={`${styles.card} ${styles.financeQuotaCard}`}>
               <div className={styles.financeCardHeader}>
-                <h3>Cota: {tipoCota}</h3>
-                <button
-                  type="button"
-                  onClick={() => handleOpenDefineTetoModal(tipoCota, details.totalLimit)}
-                  className={styles.iconBtn}
-                  title="Editar Teto de Gastos"
-                >
-                  <img
-                    src="/img/icon/editar.png"
-                    alt="Editar"
-                    width={16}
-                    height={16}
-                    style={{ objectFit: "contain" }}
-                  />
-                </button>
+                <h3>Cota: {d.tipoCota}</h3>
+                <div className={styles.headerRight}>
+                  {d.pct > 100 && <span className={styles.badgeEstouro}>Estourou</span>}
+                  {d.pct <= 100 && nivel === 'estouro' && <span className={styles.badgeEstouro}>Acabando</span>}
+                  {nivel === 'alerta' && <span className={styles.badgeAlerta}>Atenção</span>}
+                  <button
+                    type="button"
+                    onClick={() => handleOpenDefineTetoModal(d.tipoCota, d.totalLimit)}
+                    className={styles.iconBtn}
+                    title="Editar Teto de Gastos"
+                  >
+                    <img src="/img/icon/editar.png" alt="Editar" width={16} height={16} style={{ objectFit: 'contain' }} />
+                  </button>
+                </div>
               </div>
 
               <div className={styles.financeCardBody}>
                 <div>
-                  <small className={styles.mutedText}>
-                    Teto Disponível para {activeMonth}/{activeYear}:
-                  </small>
-                  <div className={styles.amountTotal}>
-                    R$ {(details.totalLimit || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                  </div>
+                  <small className={styles.mutedText}>Teto para {activeMonth}/{activeYear}:</small>
+                  <div className={styles.amountTotal}>{brl(d.totalLimit)}</div>
                 </div>
 
                 <div>
                   <small className={styles.mutedText}>Total Debitado (Liberados no Mês):</small>
-                  <div className={styles.amountSpent}>
-                    R$ {(details.totalUsed || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  <div className={styles.amountSpent}>{brl(d.totalUsed)}</div>
+                </div>
+
+                {/* Barra de progresso de consumo */}
+                <div className={styles.progressWrap}>
+                  <div className={styles.progressTrack}>
+                    <div
+                      className={`${styles.progressBar} ${barraClasse(nivel)}`}
+                      style={{ width: `${Math.min(d.pct, 100)}%` }}
+                    />
                   </div>
+                  <span className={styles.progressLabel}>{d.pct.toFixed(1)}% consumido</span>
                 </div>
 
                 <div className={styles.balanceDivider}>
                   <small className={styles.mutedText}>Saldo Restante:</small>
-                  <div className={(details.available || 0) >= 0 ? styles.positiveText : styles.negativeText}>
-                    R$ {(details.available || 0).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+                  <div className={d.available >= 0 ? styles.positiveText : styles.negativeText}>
+                    {brl(d.available)}
                   </div>
                 </div>
+                </div>
               </div>
-            </div>
-          );
-        })}
+            );
+          })}
+        </div>
       </div>
 
-      {/* TABELA DE ACOMPANHAMENTO MENSAL POR CIDADE */}
+      {/* PLANEJAMENTO MENSAL POR CIDADE (persistido) */}
       <div className={`${styles.card} ${styles.tableCard}`}>
         <h3 className={styles.tableTitle}>Planejamento Mensal por Cidade ({activeYear})</h3>
-        <p className={styles.tableSubtitle}>Preencha os valores de cada mês para acompanhar o total anual das cidades:</p>
+        <p className={styles.tableSubtitle}>
+          Os valores são salvos automaticamente ao sair de cada campo e ficam registrados para auditoria.
+        </p>
 
         <div className={styles.tableResponsive}>
           <table className={styles.cotasTable}>
@@ -187,7 +221,6 @@ export default function Financeiro({
             <tbody>
               {LISTA_CIDADES.map((cidade) => {
                 const totalRow = calculateRowTotal(cidade);
-
                 return (
                   <tr key={cidade}>
                     <td className={styles.cotaNameCell}>
@@ -198,17 +231,17 @@ export default function Financeiro({
                         <input
                           type="number"
                           step="0.01"
+                          min="0"
                           className={styles.cellInput}
                           value={val === 0 ? '' : val}
                           placeholder="0,00"
                           onChange={(e) => handleCellChange(cidade, idx, e.target.value)}
+                          onBlur={() => handleCellBlur(cidade, idx)}
                         />
                       </td>
                     ))}
                     <td className={styles.totalCell}>
-                      <strong>
-                        R$ {totalRow.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-                      </strong>
+                      <strong>{brl(totalRow)}</strong>
                     </td>
                   </tr>
                 );

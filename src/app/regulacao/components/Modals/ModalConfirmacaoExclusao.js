@@ -14,6 +14,9 @@ export default function ModalConfirmacaoExclusao({
     MEDICO: "👨‍⚕️",
     UBS: "🏥",
     PEDIDO: "📋",
+    PROCEDIMENTO: "🩺",
+    SERVICO: "🗂️",
+    ESPECIALIDADE: "🩺",
   };
 
   const colorMap = {
@@ -21,6 +24,9 @@ export default function ModalConfirmacaoExclusao({
     MEDICO: styles.tagMedico,
     UBS: styles.tagUbs,
     PEDIDO: styles.tagPedido,
+    PROCEDIMENTO: styles.tagMedico,
+    SERVICO: styles.tagUbs,
+    ESPECIALIDADE: styles.tagMedico,
   };
 
   const labelMap = {
@@ -28,6 +34,9 @@ export default function ModalConfirmacaoExclusao({
     MEDICO: "Médico",
     UBS: "Unidade de Saúde",
     PEDIDO: "Pedido de Regulação",
+    PROCEDIMENTO: "Procedimento",
+    SERVICO: "Serviço",
+    ESPECIALIDADE: "Especialidade",
   };
 
   const icon = iconMap[config.tipo] ?? "⚠️";

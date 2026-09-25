@@ -3,6 +3,7 @@
 import { useState, useEffect, useRef } from "react";
 import styles from "./Pessoas.module.css";
 import { buscarCep } from "@/lib/viacep";
+import { useConfirm } from "@/components/ConfirmDialog";
 import {
   listarPessoas,
   listarUbs,
@@ -62,6 +63,7 @@ const pessoaParaForm = (p) => ({
 });
 
 export default function PessoasPage() {
+  const confirm = useConfirm();
   const [ubsList, setUbsList] = useState([]);
   const [erro, setErro] = useState("");
 
@@ -191,6 +193,15 @@ export default function PessoasPage() {
 
   const salvar = async (e) => {
     e.preventDefault();
+    const ok = await confirm({
+      title: modo === "edicao" ? "Atualizar pessoa" : "Cadastrar pessoa",
+      message:
+        modo === "edicao"
+          ? "Deseja salvar as alterações desta pessoa?"
+          : "Deseja confirmar o cadastro desta pessoa?",
+      confirmText: modo === "edicao" ? "Atualizar" : "Cadastrar",
+    });
+    if (!ok) return;
     setSalvando(true);
     const payload = {
       ...form,
@@ -242,9 +253,6 @@ export default function PessoasPage() {
             Base central compartilhada entre Regulação, Farmácia Judicial, Junta e CCZ.
           </p>
         </div>
-        <button className={styles.btnPrimary} onClick={novoCadastro}>
-          + Nova pessoa
-        </button>
       </header>
 
       {erro && <div className={styles.alertErro}>{erro}</div>}
@@ -252,6 +260,7 @@ export default function PessoasPage() {
       {/* BUSCA (estilo Novo Pedido: select-like + dropdown em tabela) */}
       <div className={`${styles.card} ${styles.searchCard}`}>
         <label className={styles.searchLabel}>Buscar pessoa no banco</label>
+        <div className={styles.searchRowInline}>
         <div className={styles.searchSelectWrapper} ref={dropdownRef}>
           <input
             type="text"
@@ -311,17 +320,17 @@ export default function PessoasPage() {
             </div>
           )}
         </div>
+
+        <button type="button" className={styles.btnAdicionar} onClick={novoCadastro}>
+          + Adicionar novo
+        </button>
+        </div>
       </div>
 
       {/* FORMULÁRIO (sempre visível) */}
       <form onSubmit={salvar} className={`${styles.card} ${styles.formCard}`}>
         <div className={styles.cardHeaderRow}>
           <h2 className={styles.cardHeaderTitle}>{tituloForm}</h2>
-          {modo === "leitura" && pessoaSelecionada && (
-            <button type="button" className={styles.btnSecondary} onClick={habilitarEdicao}>
-              Editar
-            </button>
-          )}
         </div>
 
         <div className={styles.formSectionTitle}>Dados pessoais</div>
@@ -494,6 +503,11 @@ export default function PessoasPage() {
         </div>
 
         <div className={styles.formActions}>
+          {modo === "leitura" && pessoaSelecionada && (
+            <button type="button" className={styles.btnPrimary} onClick={habilitarEdicao}>
+              Editar
+            </button>
+          )}
           {editavel && (
             <button type="button" className={styles.btnGhost} onClick={cancelar} disabled={salvando}>
               Cancelar

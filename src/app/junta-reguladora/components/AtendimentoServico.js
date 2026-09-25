@@ -2,8 +2,10 @@
 
 import { useState } from 'react';
 import styles from './AtendimentoServico.module.css';
+import { useConfirm } from '@/components/ConfirmDialog';
 
 export default function AtendimentoServico({ servicoNome, pacientes = [], atendimentos = [], onRegistrar }) {
+  const confirm = useConfirm();
   const [form, setForm] = useState({
     pacienteId: '',
     especialidade: '',
@@ -25,12 +27,19 @@ export default function AtendimentoServico({ servicoNome, pacientes = [], atendi
       })
     : [];
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (!form.pacienteId || !form.especialidade) {
       return alert('Selecione o paciente e a especialidade.');
     }
-    
+
+    const ok = await confirm({
+      title: 'Registrar atendimento',
+      message: 'Deseja registrar esta presença / ocorrência?',
+      confirmText: 'Registrar',
+    });
+    if (!ok) return;
+
     if (onRegistrar) {
       onRegistrar({ ...form, servico: servicoNome });
     }

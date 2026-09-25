@@ -3,6 +3,7 @@
 import { useState } from "react";
 import Image from "next/image";
 import styles from "./ListaEspera.module.css";
+import { STATUS_COMUNICACAO } from "../constants";
 
 // Lista padrão de segurança para garantir a exibição dos botões
 const DEFAULT_TIPOS_EXAME = [
@@ -18,8 +19,10 @@ export default function ListaEspera({
   setSelectedQueueExam,
   applyFilters,
   handleUpdateCommunicationDate,
+  handleUpdateCommunicationStatus,
   handleOpenReleaseModal,
   handleEditOrder,
+  handleExportToExcelWaiting = () => {},
   loading,
 }) {
   const [selectedIds, setSelectedIds] = useState([]);
@@ -97,31 +100,6 @@ export default function ListaEspera({
 
   return (
     <div className={styles.container}>
-      {/* ABAS SELETORAS DE TIPO DE EXAME */}
-      <div className={styles.examTabs}>
-        {tiposExameLista.map((tipo) => {
-          const isActive =
-            selectedQueueExam?.toLowerCase().trim() === tipo.nome?.toLowerCase().trim() ||
-            String(selectedQueueExam) === String(tipo.id);
-
-          return (
-            <button
-              key={tipo.id}
-              type="button"
-              className={`${styles.examTabBtn} ${
-                isActive ? styles.activeExamTab : ""
-              }`}
-              onClick={() => {
-                setSelectedQueueExam(tipo.nome);
-                setSelectedIds([]);
-              }}
-            >
-              {tipo.nome}
-            </button>
-          );
-        })}
-      </div>
-
       {/* CABEÇALHO E RESUMO DA FILA */}
       <div className={styles.tableHeaderBar}>
         <div className={styles.infoGroup}>
@@ -132,6 +110,15 @@ export default function ListaEspera({
             Total aguardando: <strong>{waitingList.length}</strong> paciente(s)
           </p>
         </div>
+
+        <button
+          type="button"
+          className={styles.exportBtn}
+          onClick={() => handleExportToExcelWaiting(selectedIds)}
+          disabled={selectedIds.length === 0}
+        >
+          📊 Exportar Selecionados ({selectedIds.length}) para Excel
+        </button>
       </div>
 
       {/* TABELA DE DADOS */}
@@ -158,10 +145,10 @@ export default function ListaEspera({
                 </th>
                 <th>Cód. Reg.</th>
                 <th>Paciente</th>
-                <th>CPF</th>
                 <th>Procedimento</th>
                 <th>Data Pedido</th>
                 <th>Avisado Em</th>
+                <th>Status Com.</th>
                 <th style={{ textAlign: "center" }}>Ações</th>
               </tr>
             </thead>
@@ -201,7 +188,6 @@ export default function ListaEspera({
                         Mãe: {item.motherName || "Não informada"}
                       </small>
                     </td>
-                    <td>{item.cpf || "—"}</td>
                     <td>{item.procedure}</td>
                     <td>{item.requestDate || "—"}</td>
                     <td>
@@ -214,6 +200,20 @@ export default function ListaEspera({
                         }
                       />
                     </td>
+                    <td>
+                      <select
+                        className={styles.statusSelect}
+                        value={item.communicationStatus || ""}
+                        onChange={(e) =>
+                          handleUpdateCommunicationStatus(item.id, e.target.value)
+                        }
+                      >
+                        <option value="">— Selecionar —</option>
+                        {STATUS_COMUNICACAO.map((s) => (
+                          <option key={s} value={s}>{s}</option>
+                        ))}
+                      </select>
+                    </td>
                     <td className={styles.actionsCell}>
                       <button
                         type="button"
@@ -225,7 +225,7 @@ export default function ListaEspera({
                       <button
                         type="button"
                         className={styles.iconBtn}
-                        onClick={() => handleEditOrder(item)}
+                        onClick={() => handleEditOrder(item, "LISTA_ESPERA")}
                         title="Editar Pedido"
                       >
                         <Image

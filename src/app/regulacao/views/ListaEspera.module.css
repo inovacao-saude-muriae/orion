@@ -154,6 +154,20 @@
   border-color: #2563eb;
 }
 
+.statusSelect {
+  padding: 0.375rem 0.5rem;
+  font-size: 0.8125rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 0.375rem;
+  outline: none;
+  background-color: #ffffff;
+  min-width: 150px;
+}
+
+.statusSelect:focus {
+  border-color: #2563eb;
+}
+
 /* AÇÕES */
 .actionsCell {
   display: flex;
@@ -214,4 +228,26 @@
   border-radius: 0.5rem;
   color: #64748b;
   font-size: 0.875rem;
+}
+
+/* BOTÃO DE EXPORTAR PARA EXCEL */
+.exportBtn {
+  padding: 0.625rem 1.25rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #ffffff;
+  background-color: #16a34a;
+  border: none;
+  border-radius: 0.375rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.exportBtn:hover:not(:disabled) {
+  background-color: #15803d;
+}
+
+.exportBtn:disabled {
+  background-color: #cbd5e1;
+  cursor: not-allowed;
 }

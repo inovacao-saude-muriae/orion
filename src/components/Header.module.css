@@ -3,11 +3,11 @@
 .header {
   position: fixed;
   top: 0;
-  left: 0;
+  left: 270px; /* Começa ao lado da sidebar */
   right: 0;
-  width: 100%;
+  width: calc(100% - 270px);
   height: 60px; /* Igual ao .loginHeader */
-  background-color: var(--sidebar-bg, #516f8a);
+  background-color: #f5f7fa;
   border-bottom: 1px solid rgba(255, 255, 255, 0.12);
   display: flex;
   align-items: center;
@@ -30,7 +30,7 @@
   width: 32px; /* Proporcional à altura de 60px */
   height: 32px;
   border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
+  background:#4a6fa5;
   color: #ffffff;
   font-size: 0.85rem;
   font-weight: 700;
@@ -49,19 +49,19 @@
 .userName {
   font-size: 0.85rem;
   font-weight: 600;
-  color: #ffffff;
+  color: #4a6fa5;
 }
 
 .userRole {
   font-size: 0.72rem;
-  color: rgba(255, 255, 255, 0.75);
+  color:#4a6fa5;
 }
 
 /* BOTÃO DE SAIR */
 .logoutBtn {
   background: transparent;
   border: none;
-  color: rgba(255, 255, 255, 0.75);
+  color: #4a6fa5;
   width: 32px;
   height: 32px;
   border-radius: var(--radius-sm, 6px);

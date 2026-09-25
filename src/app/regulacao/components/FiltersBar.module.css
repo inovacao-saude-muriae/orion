@@ -207,6 +207,21 @@
   border-color: #2563eb;
 }
 
+/* Campos travados (não pertencem ao contexto atual da tela) */
+.fieldItem select:disabled,
+.fieldItem input:disabled,
+.dateRangeBox input:disabled {
+  background-color: #f1f5f9;
+  color: #94a3b8;
+  border-color: #e2e8f0;
+  cursor: not-allowed;
+}
+
+.fieldItem:has(select:disabled) label,
+.fieldItem:has(input:disabled) label {
+  color: #94a3b8;
+}
+
 /* RANGE DE DATAS */
 .dateRangeBox {
   display: flex;
@@ -227,6 +242,14 @@
 
 .dateRangeBox input[type="date"]:focus {
   border-color: #2563eb;
+}
+
+/* Data travada: mesmo cinza do select "Tipo de Cota" desabilitado */
+.dateRangeBox input[type="date"]:disabled {
+  background-color: #f1f5f9;
+  color: #94a3b8;
+  border-color: #e2e8f0;
+  cursor: not-allowed;
 }
 
 .dateRangeBox span {
