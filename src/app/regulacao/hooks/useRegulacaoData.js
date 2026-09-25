@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useRef } from "react";
 import { useConfirm } from "@/components/ConfirmDialog";
+import { localPorTipoExame } from "../constants";
 import {
   getPedidosExames,
   getAuxiliaryData,
@@ -125,6 +126,7 @@ export function useRegulacaoData(setActiveTab) {
     procedureId: "",
     procedureName: "",
     estimatedCost: 0,
+    localRealizacao: "",
     competence: `${new Date().toISOString().slice(5, 7)}/${new Date().getFullYear()}`,
     requestDate: new Date().toISOString().split("T")[0],
     classification: "Verde",
@@ -153,11 +155,7 @@ export function useRegulacaoData(setActiveTab) {
       );
       setCotasFinanceiras(cotas || []);
 
-      if (aux?.tiposExame?.length > 0) {
-        if (!selectedQueueExam) setSelectedQueueExam(aux.tiposExame[0].nome);
-        if (!selectedReleasedExam)
-          setSelectedReleasedExam(aux.tiposExame[0].nome);
-      }
+      // Padrão: "Todos os exames" (selectedQueueExam/selectedReleasedExam vazios).
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
     } finally {
@@ -552,12 +550,17 @@ export function useRegulacaoData(setActiveTab) {
 
   const handleExamTypeChange = (e) => {
     const selectedTypeId = e.target.value;
+    const tipo = auxData.tiposExame?.find(
+      (t) => String(t.id) === String(selectedTypeId),
+    );
+    const local = localPorTipoExame(tipo?.nome);
     setNewRequest((prev) => ({
       ...prev,
       examTypeId: selectedTypeId,
       procedureId: "",
       procedureName: "",
       estimatedCost: 0,
+      localRealizacao: local, // preenchido automaticamente pela regra
     }));
   };
 
@@ -610,6 +613,7 @@ export function useRegulacaoData(setActiveTab) {
         procedureId: "",
         procedureName: "",
         estimatedCost: 0,
+        localRealizacao: "",
         competence: `${new Date().toISOString().slice(5, 7)}/${new Date().getFullYear()}`,
         requestDate: new Date().toISOString().split("T")[0],
         classification: "Verde",

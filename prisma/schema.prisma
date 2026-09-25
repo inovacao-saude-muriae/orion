@@ -161,6 +161,7 @@ model PedidoExame {
   medicoSolicitanteId Int?      @map("medico_solicitante_id")
   medicoResponsavelId Int?      @map("medico_responsavel_id")
   classificacaoRisco  String?   @map("classificacao_risco") @db.VarChar(50)
+  localRealizacao     String?   @map("local_realizacao") @db.VarChar(20) // HSP / FCV
   tipoCota            String?   @map("tipo_cota") @db.VarChar(50)
   competenciaCota     String?   @map("competencia_cota") @db.VarChar(7) // "YYYY-MM" — competência que debita o financeiro
   status              String    @default("Aguardando") @db.VarChar(50)

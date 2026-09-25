@@ -8,7 +8,6 @@ import { useRegulacaoData } from "./hooks/useRegulacaoData";
 import { useRegulacaoFilters } from "./hooks/useRegulacaoFilters";
 
 import FiltersBar from "./components/FiltersBar";
-import ExameTabs from "./components/ExameTabs";
 import Dashboard from "./views/Dashboard";
 import NovoPedido from "./views/NovoPedido";
 import ListaEspera from "./views/ListaEspera";
@@ -68,43 +67,7 @@ function RegulacaoPageContent() {
 
   return (
     <div className={styles.container}>
-      <header className={styles.header}>
-        <h1>Regulação Saúde</h1>
-        <p>Gestão de solicitações de exames, fila de espera e liberações.</p>
-      </header>
 
-      {(activeTab === "LISTA_ESPERA" || activeTab === "LIBERADOS") && (
-        <ExameTabs
-          tiposExame={data.auxData?.tiposExame || []}
-          selected={
-            activeTab === "LIBERADOS"
-              ? data.selectedReleasedExam
-              : data.selectedQueueExam
-          }
-          onSelect={(nome) => {
-            if (activeTab === "LIBERADOS") data.setSelectedReleasedExam(nome);
-            else data.setSelectedQueueExam(nome);
-          }}
-        />
-      )}
-
-      {(activeTab === "LISTA_ESPERA" || activeTab === "LIBERADOS") && (
-        <FiltersBar
-          filters={filters}
-          handleFilterChange={handleFilterChange}
-          clearFilters={clearFilters}
-          showAdvancedFilters={showAdvancedFilters}
-          setShowAdvancedFilters={setShowAdvancedFilters}
-          allProceduresList={allProceduresList}
-          filtrosFixos={activeTab === "LISTA_ESPERA" || activeTab === "LIBERADOS"}
-          contexto={activeTab === "LIBERADOS" ? "LIBERADOS" : "LISTA_ESPERA"}
-          pacientesFila={
-            activeTab === "LISTA_ESPERA"
-              ? (data.requests || []).filter((r) => r.status === "Aguardando")
-              : []
-          }
-        />
-      )}
 
       {activeTab === "DASHBOARD" && (
         <Dashboard
@@ -135,6 +98,24 @@ function RegulacaoPageContent() {
       )}
 
       {activeTab === "LISTA_ESPERA" && (
+        <div className={styles.unifiedPanel}>
+        <FiltersBar
+          filters={filters}
+          handleFilterChange={handleFilterChange}
+          clearFilters={clearFilters}
+          showAdvancedFilters={showAdvancedFilters}
+          setShowAdvancedFilters={setShowAdvancedFilters}
+          allProceduresList={allProceduresList}
+          filtrosFixos={true}
+          contexto="LISTA_ESPERA"
+          unificado={true}
+          tiposExame={data.auxData?.tiposExame || []}
+          selectedExame={data.selectedQueueExam}
+          onSelectExame={(nome) => data.setSelectedQueueExam(nome)}
+          pacientesFila={(data.requests || []).filter(
+            (r) => r.status === "Aguardando",
+          )}
+        />
         <ListaEspera
           auxData={data.auxData}
           requests={data.requests}
@@ -177,6 +158,7 @@ function RegulacaoPageContent() {
             );
           }}
         />
+        </div>
       )}
 
       {activeTab === "EDITAR_PEDIDO" && (
@@ -220,6 +202,24 @@ function RegulacaoPageContent() {
       )}
 
       {activeTab === "LIBERADOS" && (
+        <div className={styles.unifiedPanel}>
+        <FiltersBar
+          filters={filters}
+          handleFilterChange={handleFilterChange}
+          clearFilters={clearFilters}
+          showAdvancedFilters={showAdvancedFilters}
+          setShowAdvancedFilters={setShowAdvancedFilters}
+          allProceduresList={allProceduresList}
+          filtrosFixos={true}
+          contexto="LIBERADOS"
+          unificado={true}
+          tiposExame={data.auxData?.tiposExame || []}
+          selectedExame={data.selectedReleasedExam}
+          onSelectExame={(nome) => data.setSelectedReleasedExam(nome)}
+          pacientesFila={(data.requests || []).filter(
+            (r) => r.status === "Liberado",
+          )}
+        />
         <Liberados
           auxData={data.auxData}
           requests={data.requests}
@@ -269,6 +269,7 @@ function RegulacaoPageContent() {
             );
           }}
         />
+        </div>
       )}
 
       {activeTab === "FINANCEIRO" && (

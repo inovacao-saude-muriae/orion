@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import styles from "./CadastroMedicos.module.css";
 import ModalConfirmacaoExclusao from "@/app/regulacao/components/Modals/ModalConfirmacaoExclusao";
 import { useConfirm, useNotify } from "@/components/ConfirmDialog";
+import BotaoEditar from "@/components/BotaoEditar";
 import { createMedico, updateMedico, deleteMedico } from "@/app/regulacao/actions";
 
 export default function CadastroMedicos({
@@ -258,9 +259,7 @@ export default function CadastroMedicos({
         <div className={styles.formActions}>
           {/* Modo leitura: só o botão Editar */}
           {formMedico.isEditing && !formMedico.isFormActive && (
-            <button type="button" className={styles.primaryBtn} onClick={habilitarEdicao}>
-              Editar
-            </button>
+            <BotaoEditar onClick={habilitarEdicao} />
           )}
 
           {/* Modo edição/novo: Cancelar, Excluir (só edição) e Salvar */}

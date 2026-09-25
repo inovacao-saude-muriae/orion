@@ -2,282 +2,251 @@
   display: flex;
   flex-direction: column;
   gap: 1.25rem;
+  width: 100%;
 }
 
 .card {
   background: #ffffff;
-  border-radius: 0.5rem;
+  border-radius: 14px;
   border: 1px solid #e2e8f0;
-  padding: 1.25rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-}
-
-.cardTitle {
-  margin: 0 0 0.25rem 0;
-  font-size: 1.125rem;
-  font-weight: 700;
-  color: #0f172a;
-}
-
-.financeFiltersRow {
-  display: flex;
-  gap: 1rem;
-  margin-top: 1rem;
-}
-
-.fieldGroup {
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
-}
-
-.fieldGroup select {
-  padding: 0.5rem 0.75rem;
-  border: 1px solid #cbd5e1;
-  border-radius: 0.375rem;
-  background-color: #ffffff;
-  font-size: 0.875rem;
-}
-
-/* GRID DE CARDS */
-.financeCardsGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 1.25rem;
-  margin-top: 1.25rem;
-  padding-top: 1.25rem;
-  border-top: 1px solid #f1f5f9;
-}
-
-.financeCardHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  border-bottom: 1px solid #f1f5f9;
-  padding-bottom: 0.75rem;
-  margin-bottom: 0.75rem;
-}
-
-.financeCardHeader h3 {
-  margin: 0;
-  font-size: 1.1rem;
-  color: #0f172a;
-}
-
-/* BOTÃO DE EDITAR VERDE */
-.iconBtn {
-  background-color: #16a34a;
-  border: 1px solid #15803d;
-  border-radius: 0.375rem;
-  padding: 0.375rem;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  transition: all 0.2s ease;
-}
-
-.iconBtn:hover {
-  background-color: #15803d;
-  border-color: #166534;
-  transform: translateY(-1px);
-}
-
-.iconBtn img {
-  display: block;
-  width: 16px;
-  height: 16px;
-  filter: brightness(0) invert(1);
-}
-
-.financeCardBody {
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
 }
 
 .mutedText {
-  font-size: 0.75rem;
+  font-size: 0.72rem;
   color: #64748b;
   font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
 }
 
-.amountTotal {
-  font-size: 1.125rem;
-  font-weight: 700;
-  color: #2563eb;
+/* ── CABEÇALHO DE COMPETÊNCIA ─────────────────────────────────────────── */
+.periodHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 1rem;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 14px;
+  padding: 1.1rem 1.4rem;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
 }
 
-.amountSpent {
-  font-size: 1.125rem;
-  font-weight: 700;
-  color: #d97706;
-}
-
-.balanceDivider {
-  border-top: 1px dashed #cbd5e1;
-  padding-top: 0.5rem;
-}
-
-.positiveText {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #16a34a;
-}
-
-.negativeText {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: #dc2626;
-}
-
-/* ESTILOS DA TABELA DE COTAS MENSAIS */
-.tableCard {
-  margin-top: 0.5rem;
-}
-
-.tableTitle {
-  margin: 0 0 0.25rem 0;
-  font-size: 1.1rem;
+.periodTitle h2 {
+  margin: 0;
+  font-size: 1.2rem;
+  font-weight: 800;
   color: #0f172a;
 }
 
-.tableSubtitle {
-  margin: 0 0 1rem 0;
+.periodTitle span {
+  display: block;
+  margin-top: 0.15rem;
   font-size: 0.85rem;
   color: #64748b;
 }
 
-.tableResponsive {
-  overflow-x: auto;
-}
-
-.cotasTable {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.8125rem;
-  text-align: center;
-}
-
-.cotasTable th {
-  background-color: #f8fafc;
-  color: #475569;
-  padding: 0.625rem 0.375rem;
-  border: 1px solid #e2e8f0;
-  font-weight: 700;
-}
-
-.cotasTable td {
-  border: 1px solid #e2e8f0;
-  padding: 0.25rem;
-}
-
-.cotaNameCell {
-  background-color: #f1f5f9;
-  color: #1e293b;
-  font-weight: 700;
-}
-
-.cellInput {
-  width: 100%;
-  min-width: 65px;
-  padding: 0.375rem 0.25rem;
-  border: 1px solid transparent;
-  border-radius: 0.25rem;
-  text-align: center;
-  font-size: 0.8125rem;
-  outline: none;
-  background: transparent;
-}
-
-.cellInput:hover,
-.cellInput:focus {
-  border-color: #2563eb;
-  background-color: #ffffff;
-}
-
-.totalCell {
-  background-color: #f0fdf4;
-  color: #16a34a;
-  font-weight: 700;
-  min-width: 90px;
-}
-
-/* ── CARD CONSOLIDADO ─────────────────────────────────────────────────── */
-.consolidadoCard {
-  border-left: 4px solid #2563eb;
-}
-
-.consolidadoHead {
-  display: flex;
-  align-items: flex-start;
-  justify-content: space-between;
-  margin-bottom: 0.85rem;
-}
-
-.consolidadoTitle {
-  margin: 0.15rem 0 0;
-  font-size: 1.15rem;
-  color: #0f172a;
-}
-
-.consolidadoGrid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1rem;
-  margin-bottom: 1rem;
-}
-
-@media (max-width: 640px) {
-  .consolidadoGrid {
-    grid-template-columns: 1fr;
-  }
-}
-
-.headerRight {
+.periodNav {
   display: flex;
   align-items: center;
   gap: 0.5rem;
 }
 
-/* ── BARRA DE PROGRESSO ───────────────────────────────────────────────── */
-.progressWrap {
+.navArrow {
+  width: 36px;
+  height: 36px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  background: #ffffff;
+  color: #2563eb;
+  font-size: 1.25rem;
+  line-height: 1;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.navArrow:hover {
+  background: #2563eb;
+  color: #ffffff;
+  border-color: #2563eb;
+}
+
+.periodSelect {
+  padding: 0.5rem 0.7rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  background: #ffffff;
+  font-size: 0.875rem;
+  font-weight: 600;
+  color: #0f172a;
+  cursor: pointer;
+  outline: none;
+}
+
+/* ── FAIXA DE RESUMO ──────────────────────────────────────────────────── */
+.summaryBar {
+  display: flex;
+  align-items: center;
+  gap: 2rem;
+  border-radius: 14px;
+  padding: 1.4rem 1.75rem;
+  color: #ffffff;
+  background: linear-gradient(135deg, #1e293b 0%, #0f172a 100%);
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.15);
+  flex-wrap: wrap;
+}
+
+.summary_ok { border-left: 6px solid #16a34a; }
+.summary_alerta { border-left: 6px solid #d97706; }
+.summary_estouro { border-left: 6px solid #dc2626; }
+
+.summaryDonut {
+  flex-shrink: 0;
+}
+
+.summaryStats {
+  display: flex;
+  gap: 2.5rem;
+  flex-wrap: wrap;
+  flex: 1;
+}
+
+.summaryStat {
   display: flex;
   flex-direction: column;
-  gap: 0.35rem;
+  gap: 0.3rem;
 }
 
-.progressTrack {
-  width: 100%;
-  height: 10px;
-  background: #e2e8f0;
-  border-radius: 999px;
-  overflow: hidden;
-}
-
-.progressBar {
-  height: 100%;
-  border-radius: 999px;
-  transition: width 0.3s ease;
-}
-
-.barOk {
-  background: #16a34a;
-}
-
-.barAlerta {
-  background: #d97706;
-}
-
-.barEstouro {
-  background: #dc2626;
-}
-
-.progressLabel {
-  font-size: 0.75rem;
+.summaryLabel {
+  font-size: 0.72rem;
   font-weight: 600;
-  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #94a3b8;
 }
+
+.summaryTotal { font-size: 1.5rem; font-weight: 800; color: #ffffff; }
+.summarySpent { font-size: 1.5rem; font-weight: 800; color: #fbbf24; }
+.summaryPositive { font-size: 1.5rem; font-weight: 800; color: #4ade80; }
+.summaryNegative { font-size: 1.5rem; font-weight: 800; color: #f87171; }
+
+/* ── DONUT ────────────────────────────────────────────────────────────── */
+.donut {
+  flex-shrink: 0;
+}
+
+.donutText {
+  font-size: 1rem;
+  font-weight: 800;
+  fill: #0f172a;
+}
+
+.summaryDonut .donutText {
+  fill: #ffffff;
+}
+
+/* ── CARDS POR COTA ───────────────────────────────────────────────────── */
+.financeCardsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.25rem;
+}
+
+.quotaCard {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-top: 4px solid #16a34a;
+  border-radius: 14px;
+  padding: 1.35rem;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+  display: flex;
+  flex-direction: column;
+  gap: 1.1rem;
+  transition: box-shadow 0.2s ease, transform 0.15s ease;
+}
+
+.quotaCard:hover {
+  box-shadow: 0 8px 20px rgba(15, 23, 42, 0.08);
+  transform: translateY(-2px);
+}
+
+.quotaCardHeader {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.quotaLabel {
+  font-size: 0.7rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  color: #94a3b8;
+}
+
+.quotaName {
+  margin: 0.1rem 0 0;
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.quotaCardBody {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+}
+
+.quotaNumbers {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  flex: 1;
+}
+
+.amountTotal {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #2563eb;
+}
+
+.amountSpent {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: #d97706;
+}
+
+.quotaCardFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 0.9rem;
+  border-top: 1px dashed #e2e8f0;
+}
+
+.positiveText {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #16a34a;
+}
+
+.negativeText {
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #dc2626;
+}
+
+/* Barras (mantidas para compatibilidade, caso reutilizadas) */
+.progressWrap { display: flex; flex-direction: column; gap: 0.35rem; }
+.progressTrack { width: 100%; height: 8px; background: #f1f5f9; border-radius: 999px; overflow: hidden; }
+.progressBar { height: 100%; border-radius: 999px; transition: width 0.3s ease; }
+.barOk { background: #16a34a; }
+.barAlerta { background: #d97706; }
+.barEstouro { background: #dc2626; }
+.progressLabel { font-size: 0.75rem; font-weight: 600; color: #64748b; }
 
 /* ── BADGES ───────────────────────────────────────────────────────────── */
 .badgeEstouro {
@@ -302,4 +271,164 @@
   font-size: 0.72rem;
   font-weight: 700;
   white-space: nowrap;
+}
+
+/* ── TABELA POR CIDADE ────────────────────────────────────────────────── */
+.tableCard {
+  padding: 0;
+  overflow: hidden;
+}
+
+.tableHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  padding: 1.25rem 1.5rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.tableTitle {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.tableSubtitle {
+  margin: 0.2rem 0 0;
+  font-size: 0.8rem;
+  color: #64748b;
+}
+
+.tableTotalPill {
+  background: #eff6ff;
+  border: 1px solid #bfdbfe;
+  color: #1e40af;
+  padding: 0.5rem 0.9rem;
+  border-radius: 999px;
+  font-size: 0.85rem;
+}
+
+.tableTotalPill strong {
+  color: #1d4ed8;
+  font-weight: 800;
+}
+
+.tableResponsive {
+  overflow-x: auto;
+}
+
+.cotasTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
+  text-align: center;
+}
+
+.cotasTable th {
+  background-color: #f8fafc;
+  color: #475569;
+  padding: 0.7rem 0.5rem;
+  border-bottom: 2px solid #e2e8f0;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.cotasTable td {
+  border-bottom: 1px solid #f1f5f9;
+  padding: 0.35rem;
+}
+
+.cotasTable tbody tr:hover td {
+  background-color: #f8fafc;
+}
+
+.stickyCol {
+  position: sticky;
+  left: 0;
+  z-index: 1;
+}
+
+.cotaNameCell {
+  background-color: #f1f5f9;
+  color: #1e293b;
+  font-weight: 700;
+  text-align: left;
+  padding-left: 1rem !important;
+  white-space: nowrap;
+}
+
+.cotasTable thead .stickyCol {
+  background-color: #f1f5f9;
+  text-align: left;
+  padding-left: 1rem;
+  z-index: 2;
+}
+
+.totalHeadCell {
+  background-color: #eff6ff !important;
+  color: #1e40af !important;
+}
+
+.cellInput {
+  width: 100%;
+  min-width: 70px;
+  padding: 0.4rem 0.3rem;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  text-align: center;
+  font-size: 0.8125rem;
+  outline: none;
+  background: transparent;
+  color: #0f172a;
+  transition: all 0.15s ease;
+}
+
+.cellInput:hover,
+.cellInput:focus {
+  border-color: #2563eb;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
+}
+
+.totalCell {
+  background-color: #f0fdf4;
+  color: #15803d;
+  font-weight: 700;
+  min-width: 100px;
+  white-space: nowrap;
+}
+
+/* Rodapé de totais */
+.totalRow td {
+  background-color: #f8fafc;
+  border-top: 2px solid #e2e8f0;
+  padding: 0.7rem 0.5rem;
+  color: #334155;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.totalRow .stickyCol {
+  background-color: #e2e8f0;
+  text-align: left;
+  padding-left: 1rem;
+  color: #0f172a;
+}
+
+.totalMesCell {
+  color: #475569;
+}
+
+.grandTotalCell {
+  background-color: #dbeafe !important;
+  color: #1d4ed8 !important;
+  font-weight: 800;
+}
+
+@media (max-width: 640px) {
+  .summaryStats { gap: 1.25rem; }
+  .summaryTotal, .summarySpent, .summaryPositive, .summaryNegative { font-size: 1.2rem; }
 }

@@ -174,10 +174,53 @@ export async function createMedicamento(data) {
       INSERT INTO public.farmacia_medicamentos (nome, tipo, dosagem, ativo)
       VALUES (${data.nome}, ${data.tipo}, ${data.dosagem}, true)
     `;
-    revalidatePath("/farmacia");
+    revalidatePath("/camara-tecnica/farmacia-judicial");
     return { success: true };
   } catch (error) {
     console.error("Erro ao cadastrar medicamento:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Catálogo completo (para a aba Medicamentos): nome, concentração, tipo.
+export async function getCatalogoCompleto() {
+  try {
+    const rows = await prisma.$queryRaw`
+      SELECT id, nome, tipo, dosagem
+      FROM public.farmacia_medicamentos
+      WHERE ativo = true
+      ORDER BY nome ASC
+    `;
+    return serializeData(rows);
+  } catch (error) {
+    console.error("Erro ao buscar catálogo completo:", error);
+    return [];
+  }
+}
+
+// Editar um medicamento do catálogo (nome, tipo, concentração).
+export async function updateMedicamento(id, data) {
+  try {
+    await requireRole(["GESTOR", "FARMACIA_ADMIN"]);
+
+    const medId = Number(id);
+    if (!Number.isSafeInteger(medId) || medId <= 0) {
+      throw new Error("Medicamento inválido.");
+    }
+    if (!data.nome || !data.tipo || !data.dosagem) {
+      throw new Error("Informe o nome, a concentração e o tipo.");
+    }
+
+    await prisma.$executeRaw`
+      UPDATE public.farmacia_medicamentos
+      SET nome = ${data.nome}, tipo = ${data.tipo}, dosagem = ${data.dosagem}
+      WHERE id = ${medId}
+    `;
+
+    revalidatePath("/camara-tecnica/farmacia-judicial");
+    return { success: true };
+  } catch (error) {
+    console.error("Erro ao atualizar medicamento:", error);
     return { success: false, error: error.message };
   }
 }
@@ -201,6 +244,97 @@ export async function createLoteMedicamento(data) {
     return { success: true };
   } catch (error) {
     console.error("Erro ao dar entrada no lote:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Estoque agrupado por medicamento (uma linha por medicamento, somando lotes).
+export async function getEstoqueAgrupado() {
+  try {
+    const rows = await prisma.$queryRaw`
+      SELECT
+        m.id AS "medicamentoId",
+        m.nome AS "medicamentoNome",
+        m.dosagem AS dosagem,
+        m.tipo AS tipo,
+        COALESCE(SUM(lm.qtd_inicial - COALESCE(entregas.total_entregue, 0)), 0)::integer AS "qtdTotal",
+        COALESCE(
+          (
+            SELECT lm2.valor_unitario
+            FROM public.farmacia_lotes_medicamentos lm2
+            WHERE lm2.medicamento_id = m.id
+            ORDER BY lm2.data_entrada DESC, lm2.id DESC
+            LIMIT 1
+          ),
+          0
+        ) AS "valorUnitario"
+      FROM public.farmacia_medicamentos m
+      LEFT JOIN public.farmacia_lotes_medicamentos lm ON lm.medicamento_id = m.id
+      LEFT JOIN (
+        SELECT lote_medicamento_id, SUM(qtd_entregue) AS total_entregue
+        FROM public.farmacia_dispensacoes_medicamentos
+        GROUP BY lote_medicamento_id
+      ) entregas ON entregas.lote_medicamento_id = lm.id
+      WHERE m.ativo = true
+      GROUP BY m.id, m.nome, m.dosagem, m.tipo
+      ORDER BY m.nome ASC
+    `;
+    return serializeData(rows);
+  } catch (error) {
+    console.error("Erro ao buscar estoque agrupado:", error);
+    return [];
+  }
+}
+
+// Editar um lote (entrada) existente: data entrada, validade, lote, qtd, valor, fornecedor.
+export async function updateLoteMedicamento(loteId, data) {
+  try {
+    await requireRole(["GESTOR", "FARMACIA_ADMIN"]);
+
+    const id = Number(loteId);
+    if (!Number.isSafeInteger(id) || id <= 0) {
+      throw new Error("Lote inválido.");
+    }
+    if (!data.numeroLote || !data.fornecedor) {
+      throw new Error("Informe o número do lote e o fornecedor.");
+    }
+    if (!data.dataEntrada || !data.dataValidade) {
+      throw new Error("Informe a data de entrada e a validade.");
+    }
+
+    const qtdInicial = Number(data.qtdInicial);
+    if (!Number.isSafeInteger(qtdInicial) || qtdInicial < 0) {
+      throw new Error("Quantidade inválida.");
+    }
+
+    // Não permite reduzir a quantidade abaixo do que já foi dispensado.
+    const entregas = await prisma.dispensacaoMedicamento.aggregate({
+      where: { loteMedicamentoId: id },
+      _sum: { qtdEntregue: true },
+    });
+    const totalEntregue = entregas._sum.qtdEntregue || 0;
+    if (qtdInicial < totalEntregue) {
+      throw new Error(
+        `A quantidade não pode ser menor que o já dispensado (${totalEntregue}).`,
+      );
+    }
+
+    await prisma.$executeRaw`
+      UPDATE public.farmacia_lotes_medicamentos
+      SET
+        numero_lote = ${data.numeroLote},
+        fornecedor = ${data.fornecedor},
+        qtd_inicial = ${qtdInicial},
+        valor_unitario = ${data.valorUnitario ? Number(data.valorUnitario) : 0},
+        data_entrada = ${data.dataEntrada}::date,
+        data_validade = ${data.dataValidade}::date
+      WHERE id = ${id}
+    `;
+
+    revalidatePath("/camara-tecnica/farmacia-judicial");
+    return { success: true };
+  } catch (error) {
+    console.error("Erro ao atualizar lote:", error);
     return { success: false, error: error.message };
   }
 }
@@ -373,17 +507,20 @@ export async function getDashboardMetrics() {
 }
 
 export async function buscarPessoaExistente(termo) {
-  if (!termo || termo.trim().length < 2) return [];
-
   try {
-    const searchTerm = `%${termo.trim()}%`;
+    // Termo vazio ou muito curto: traz os primeiros registros (para o dropdown
+    // já aparecer ao clicar no campo, como na Regulação).
+    const searchTerm = `%${(termo || "").trim()}%`;
     const rows = await prisma.$queryRaw`
       SELECT 
         p.cpf AS cpf,
+        p.cns AS cns,
         p.nome_completo AS "nomeCompleto",
+        p.sexo AS sexo,
         TO_CHAR(p.data_nascimento, 'YYYY-MM-DD') AS "dataNascimento",
         p.nome_mae AS "nomeMae",
         p.telefone AS telefone,
+        u.nome AS "ubsReferencia",
         e.logradouro AS logradouro,
         e.numero AS numero,
         e.complemento AS complemento,
@@ -393,6 +530,7 @@ export async function buscarPessoaExistente(termo) {
         e.cep AS cep
       FROM public.pessoa p
       LEFT JOIN public.pessoa_endereco e ON p.cpf = e.pessoa_cpf AND e.endereco_atual = true
+      LEFT JOIN public.regula_ubs u ON p.ubs_referencia_id = u.id
       WHERE p.cpf ILIKE ${searchTerm} 
          OR p.nome_completo ILIKE ${searchTerm}
       LIMIT 10

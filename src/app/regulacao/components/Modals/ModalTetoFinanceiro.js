@@ -110,39 +110,47 @@ export default function ModalTetoFinanceiro({
   };
 
   return (
-    <div className={styles.overlay}>
-      <div className={styles.modal}>
+    <div className={styles.overlay} onClick={() => setEditCotaModal(null)}>
+      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+        {/* CABEÇALHO */}
         <div className={styles.header}>
-          <h3>Definir Teto Financeiro ({editCotaModal.tipoCota})</h3>
+          <div className={styles.headerIcon}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <line x1="12" y1="1" x2="12" y2="23" />
+              <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
+            </svg>
+          </div>
+          <div className={styles.headerTexts}>
+            <h3>Definir Teto Financeiro</h3>
+            <span>
+              Cota <strong>{editCotaModal.tipoCota}</strong> · Competência {finMonth}/{finYear}
+            </span>
+          </div>
           <button
             type="button"
             className={styles.closeBtn}
             onClick={() => setEditCotaModal(null)}
+            aria-label="Fechar"
           >
             ✕
           </button>
         </div>
 
         <div className={styles.body}>
-          <p className={styles.competenceInfo}>
-            Competência: <strong>{finMonth}/{finYear}</strong>
-          </p>
-
-          <div className={styles.resumoTeto}>
-            <div className={styles.resumoLinha}>
-              <span>Teto atual</span>
-              <strong>{numberToBRL(tetoAtual)}</strong>
-            </div>
+          {/* TETO ATUAL EM DESTAQUE */}
+          <div className={styles.tetoAtualCard}>
+            <span className={styles.tetoAtualLabel}>Teto atual</span>
+            <strong className={styles.tetoAtualValor}>{numberToBRL(tetoAtual)}</strong>
           </div>
 
-          {/* Escolha do modo: somar ou substituir */}
+          {/* MODO: SOMAR OU SUBSTITUIR */}
           <div className={styles.modoTabs}>
             <button
               type="button"
               className={`${styles.modoTab} ${modo === "somar" ? styles.modoTabAtivo : ""}`}
               onClick={() => trocarModo("somar")}
             >
-              Acrescentar
+              + Acrescentar
             </button>
             <button
               type="button"
@@ -154,7 +162,7 @@ export default function ModalTetoFinanceiro({
           </div>
 
           <div className={styles.fieldGroup}>
-            <label>{modo === "somar" ? "Acrescentar valor (R$)" : "Novo valor do teto (R$)"}</label>
+            <label>{modo === "somar" ? "Valor a acrescentar" : "Novo valor do teto"}</label>
             <input
               type="text"
               inputMode="decimal"
@@ -162,14 +170,16 @@ export default function ModalTetoFinanceiro({
               onChange={handleChange}
               placeholder="R$ 0,00"
               className={styles.currencyInput}
+              autoFocus
             />
             <small className={styles.hint}>
               {modo === "somar"
-                ? "Informe o valor a somar ao teto atual. O total abaixo será salvo."
-                : "Informe o valor exato do teto. Ele substitui o valor atual."}
+                ? "O valor informado será somado ao teto atual."
+                : "O valor informado substitui o teto atual."}
             </small>
           </div>
 
+          {/* RESULTADO */}
           <div className={styles.resumoTotal}>
             <span>{modo === "somar" ? "Novo teto total" : "Teto será definido como"}</span>
             <strong>{numberToBRL(novoTotal)}</strong>

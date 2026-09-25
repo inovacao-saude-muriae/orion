@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { buscarPessoaExistente } from '../actions';
 import { useConfirm } from '@/components/ConfirmDialog';
+import { documentoPaciente } from '@/app/regulacao/constants';
 import styles from './PacientesJudiciais.module.css';
 
 const MED_VAZIO = { medicamentoId: '', qtdMensal: '', statusMedication: 'Ativo' };
@@ -31,6 +32,18 @@ export default function TabPacientesJudiciais({
   const [form, setForm] = useState(PROCESSO_VAZIO);
   const [medicamentosForm, setMedicamentosForm] = useState([{ ...MED_VAZIO }]);
   const [salvando, setSalvando] = useState(false);
+  const dropdownRef = useRef(null);
+
+  // Fecha o dropdown ao clicar fora.
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setShowDropdown(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const formatCPF = (cpf) => {
     if (!cpf) return '';
@@ -50,23 +63,36 @@ export default function TabPacientesJudiciais({
     });
   };
 
+  // Carrega uma lista inicial de pessoas ao montar (para o dropdown já ter
+  // conteúdo ao clicar no campo, como na Regulação).
+  useEffect(() => {
+    let ativo = true;
+    (async () => {
+      try {
+        const resultados = await buscarPessoaExistente("");
+        if (ativo) setSearchResults(removeDuplicadosPorCPF(resultados || []));
+      } catch {
+        if (ativo) setSearchResults([]);
+      }
+    })();
+    return () => {
+      ativo = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleInputChange = async (valor) => {
     setSearchTerm(valor);
-    if (valor.trim().length >= 2) {
-      setIsSearching(true);
-      setShowDropdown(true);
-      try {
-        const resultados = await buscarPessoaExistente(valor.trim());
-        setSearchResults(removeDuplicadosPorCPF(resultados || []));
-      } catch (error) {
-        console.error('Erro ao buscar pessoa:', error);
-        setSearchResults([]);
-      } finally {
-        setIsSearching(false);
-      }
-    } else {
+    setShowDropdown(true);
+    setIsSearching(true);
+    try {
+      const resultados = await buscarPessoaExistente(valor.trim());
+      setSearchResults(removeDuplicadosPorCPF(resultados || []));
+    } catch (error) {
+      console.error('Erro ao buscar pessoa:', error);
       setSearchResults([]);
-      setShowDropdown(false);
+    } finally {
+      setIsSearching(false);
     }
   };
 
@@ -162,32 +188,65 @@ export default function TabPacientesJudiciais({
           </label>
 
           <div className={styles.searchBarRow}>
-            <div className={styles.inputSearchWrapper}>
+            <div className={styles.searchSelectWrapper} ref={dropdownRef}>
               <input
                 type="text"
-                className={styles.searchInput}
-                placeholder="Digite o CPF ou Nome..."
+                className={styles.selectLikeInput}
+                placeholder="Selecionar ou digitar nome/CPF..."
                 value={searchTerm}
                 onChange={(e) => handleInputChange(e.target.value)}
+                onFocus={() => setShowDropdown(true)}
               />
-              {showDropdown && searchResults.length > 0 && (
-                <ul className={styles.suggestionsList}>
-                  {searchResults.map((p, index) => (
-                    <li
-                      key={p.cpf ? `${p.cpf}-${index}` : index}
-                      className={styles.suggestionItem}
-                      onClick={() => handleSelectPessoa(p)}
-                    >
-                      <strong>{p.nomeCompleto || p.nome}</strong> — CPF: {formatCPF(p.cpf)}
-                    </li>
-                  ))}
-                </ul>
+              <span className={styles.arrowIcon} onClick={() => setShowDropdown(!showDropdown)}>
+                {showDropdown ? '▲' : '▼'}
+              </span>
+
+              {showDropdown && (
+                <div className={styles.tableDropdownMenu}>
+                  <div className={styles.tableContainerScroll}>
+                    <table className={styles.patientTableDropdown}>
+                      <thead>
+                        <tr>
+                          <th>CPF / CNS</th>
+                          <th>Usuário</th>
+                          <th>Nome da mãe</th>
+                          <th>Data nasc.</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {searchResults.length > 0 ? (
+                          searchResults.map((p, index) => (
+                            <tr
+                              key={p.cpf ? `${p.cpf}-${index}` : index}
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                handleSelectPessoa(p);
+                              }}
+                              className={pessoa?.cpf === p.cpf ? styles.selectedRow : ''}
+                            >
+                              <td>{documentoPaciente({ cpf: p.cpf, cns: p.cns })}</td>
+                              <td className={styles.boldName}>{p.nomeCompleto || p.nome}</td>
+                              <td>{p.nomeMae || 'Não informada'}</td>
+                              <td>
+                                {p.dataNascimento
+                                  ? p.dataNascimento.split('-').reverse().join('/')
+                                  : '-'}
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan="4" className={styles.noDataTd}>
+                              {isSearching ? 'Consultando banco de dados...' : 'Nenhuma pessoa encontrada.'}
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               )}
             </div>
-
-            <button type="button" className={styles.searchBtn} title="Buscar">
-              <Image src="/img/icon/lupa.png" alt="Buscar" width={20} height={20} />
-            </button>
 
             {pessoa && (
               <button type="button" className={styles.iconBtn} onClick={handleClear} title="Limpar">
@@ -196,32 +255,88 @@ export default function TabPacientesJudiciais({
             )}
           </div>
 
-          {isSearching && <div className={styles.loadingBox}>Consultando banco de dados...</div>}
           <p className={styles.helperNote}>
             A pessoa precisa estar cadastrada em <strong>Gerenciamento &gt; Cadastro de Pessoas</strong>.
           </p>
         </div>
 
-        {pessoa && (
-          <>
-            <hr className={styles.divider} />
+        <hr className={styles.divider} />
 
-            {/* RESUMO DA PESSOA (somente leitura) */}
-            <div className={styles.personSummary}>
-              <div>
-                <span className={styles.summaryLabel}>Paciente</span>
-                <strong>{pessoa.nomeCompleto || pessoa.nome}</strong>
+            {/* DADOS DA PESSOA (somente leitura — cadastro em Gerenciamento > Pessoas) */}
+            <h2 className={styles.dataTitle}>Dados da pessoa</h2>
+
+            <div className={styles.formSectionTitle}>Dados pessoais</div>
+            <div className={styles.dataGrid}>
+              <div className={styles.field}>
+                <label>CPF</label>
+                <input type="text" value={pessoa ? formatCPF(pessoa.cpf) : ''} disabled readOnly placeholder="000.000.000-00" />
               </div>
-              <div>
-                <span className={styles.summaryLabel}>CPF</span>
-                <strong>{formatCPF(pessoa.cpf)}</strong>
+              <div className={`${styles.field} ${styles.colWide}`}>
+                <label>Nome completo</label>
+                <input type="text" value={pessoa?.nomeCompleto || pessoa?.nome || ''} disabled readOnly placeholder="—" />
               </div>
-              {pessoa.telefone && (
-                <div>
-                  <span className={styles.summaryLabel}>Telefone</span>
-                  <strong>{pessoa.telefone}</strong>
-                </div>
-              )}
+              <div className={styles.field}>
+                <label>Sexo</label>
+                <input type="text" value={pessoa?.sexo || ''} disabled readOnly placeholder="—" />
+              </div>
+              <div className={styles.field}>
+                <label>Data de nascimento</label>
+                <input
+                  type="text"
+                  value={pessoa?.dataNascimento ? pessoa.dataNascimento.split('-').reverse().join('/') : ''}
+                  disabled
+                  readOnly
+                  placeholder="dd/mm/aaaa"
+                />
+              </div>
+              <div className={`${styles.field} ${styles.colWide}`}>
+                <label>Nome da mãe</label>
+                <input type="text" value={pessoa?.nomeMae || ''} disabled readOnly placeholder="—" />
+              </div>
+              <div className={styles.field}>
+                <label>Telefone / WhatsApp</label>
+                <input type="text" value={pessoa?.telefone || ''} disabled readOnly placeholder="(00) 00000-0000" />
+              </div>
+              <div className={styles.field}>
+                <label>CNS (Cartão SUS)</label>
+                <input type="text" value={pessoa?.cns || ''} disabled readOnly placeholder="—" />
+              </div>
+              <div className={styles.field}>
+                <label>UBS de referência</label>
+                <input type="text" value={pessoa?.ubsReferencia || ''} disabled readOnly placeholder="—" />
+              </div>
+            </div>
+
+            <div className={styles.formSectionTitle}>Endereço</div>
+            <div className={styles.dataGrid}>
+              <div className={styles.field}>
+                <label>CEP</label>
+                <input type="text" value={pessoa?.cep || ''} disabled readOnly placeholder="00000-000" />
+              </div>
+              <div className={`${styles.field} ${styles.colWide}`}>
+                <label>Logradouro / Rua</label>
+                <input type="text" value={pessoa?.logradouro || ''} disabled readOnly placeholder="—" />
+              </div>
+              <div className={styles.field}>
+                <label>Número</label>
+                <input type="text" value={pessoa?.numero || ''} disabled readOnly placeholder="—" />
+              </div>
+              <div className={styles.field}>
+                <label>Complemento</label>
+                <input type="text" value={pessoa?.complemento || ''} disabled readOnly placeholder="—" />
+              </div>
+              <div className={styles.field}>
+                <label>Bairro</label>
+                <input type="text" value={pessoa?.bairro || ''} disabled readOnly placeholder="—" />
+              </div>
+              <div className={styles.field}>
+                <label>Cidade</label>
+                <input type="text" value={pessoa?.cidade || ''} disabled readOnly placeholder="—" />
+              </div>
+              <div className={styles.field}>
+                <label>UF</label>
+                <input type="text" value={pessoa?.uf || ''} disabled readOnly placeholder="—" />
+              </div>
             </div>
 
             <form onSubmit={handleSubmit} className={styles.formContainer}>
@@ -333,8 +448,6 @@ export default function TabPacientesJudiciais({
                 </button>
               </div>
             </form>
-          </>
-        )}
       </div>
     </div>
   );

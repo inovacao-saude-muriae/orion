@@ -43,6 +43,15 @@ export async function GET() {
       totalAnimais,
       totalZoonoses,
       totalDenuncias,
+      // Usuários / acesso
+      usuariosPorPerfil,
+      totalUsuariosAtivos,
+      // Auditoria — Regulação
+      valorAutorizadoAgg,
+      liberadosSemRegulador,
+      liberadosSemCompetencia,
+      urgenciasNaFila,
+      tempoMedioAgg,
       // Atividade recente
       ultimosPedidos,
       ultimasDispensacoes,
@@ -91,6 +100,39 @@ export async function GET() {
       prisma.animal.count(),
       prisma.cadastroZoonoses.count(),
       prisma.denunciaCaoAgressivo.count(),
+
+      // Usuários por perfil e ativos
+      prisma.user.groupBy({
+        by: ["role"],
+        _count: { _all: true },
+      }),
+      prisma.user.count({ where: { ativo: true } }),
+
+      // Auditoria — Regulação
+      // Valor total autorizado (soma do valor do procedimento dos liberados).
+      prisma.$queryRaw`
+        SELECT COALESCE(SUM(pr.valor), 0)::numeric AS total
+        FROM public.regula_pedidos_exames pe
+        JOIN public.regula_procedimentos pr ON pr.id = pe.procedimento_id
+        WHERE pe.status = 'Liberado'
+      `,
+      prisma.pedidoExame.count({
+        where: { status: "Liberado", medicoResponsavelId: null },
+      }),
+      prisma.pedidoExame.count({
+        where: { status: "Liberado", competenciaCota: null },
+      }),
+      prisma.pedidoExame.count({
+        where: { status: "Aguardando", classificacaoRisco: "Vermelho" },
+      }),
+      // Tempo médio de espera (dias) entre solicitação e liberação dos liberados.
+      prisma.$queryRaw`
+        SELECT COALESCE(AVG(EXTRACT(EPOCH FROM (pe.data_liberacao - pe.data_solicitacao)) / 86400), 0)::numeric AS media
+        FROM public.regula_pedidos_exames pe
+        WHERE pe.status = 'Liberado'
+          AND pe.data_liberacao IS NOT NULL
+          AND pe.data_solicitacao IS NOT NULL
+      `,
 
       prisma.pedidoExame.findMany({
         take: 6,
@@ -144,6 +186,20 @@ export async function GET() {
       else if (st === "ÓBITO" || st === "OBITO") farmacia.obitos += qtd;
     });
 
+    // ── Usuários / Acesso ─────────────────────────────────────────────────
+    const usuariosPerfil = usuariosPorPerfil
+      .map((row) => ({ role: row.role, total: toNumber(row._count._all) }))
+      .sort((a, b) => b.total - a.total);
+    const totalUsuarios = usuariosPerfil.reduce((s, u) => s + u.total, 0);
+
+    // ── Auditoria — pontos de atenção ─────────────────────────────────────
+    const valorAutorizado = toNumber(valorAutorizadoAgg?.[0]?.total);
+    const alertasAuditoria = [
+      { label: "Liberados sem médico regulador", valor: toNumber(liberadosSemRegulador) },
+      { label: "Liberados sem competência de cota", valor: toNumber(liberadosSemCompetencia) },
+      { label: "Urgências (Vermelho) na fila", valor: toNumber(urgenciasNaFila) },
+    ];
+
     return NextResponse.json({
       geradoEm: agora.toISOString(),
       pessoas: { total: totalPessoas },
@@ -170,6 +226,21 @@ export async function GET() {
         animais: totalAnimais,
         zoonoses: totalZoonoses,
         denuncias: totalDenuncias,
+      },
+      usuarios: {
+        total: totalUsuarios,
+        ativos: toNumber(totalUsuariosAtivos),
+        inativos: totalUsuarios - toNumber(totalUsuariosAtivos),
+        porPerfil: usuariosPerfil,
+      },
+      auditoria: {
+        valorAutorizado,
+        tempoMedioEspera: Math.round(toNumber(tempoMedioAgg?.[0]?.media)),
+        taxaLiberacao: regulacaoStatus.total > 0
+          ? (regulacaoStatus.liberados / regulacaoStatus.total) * 100
+          : 0,
+        alertas: alertasAuditoria,
+        totalAlertas: alertasAuditoria.reduce((s, a) => s + a.valor, 0),
       },
       atividadeRecente: [
         ...ultimosPedidos.map((p) => ({

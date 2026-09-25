@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import styles from "./Liberados.module.css";
+import BotaoEditar from "@/components/BotaoEditar";
 
 // Lista padrão caso os dados auxiliares do banco estejam vazios/carregando
 const DEFAULT_TIPOS_EXAME = [
@@ -217,20 +217,10 @@ export default function Liberados({
                       )}
                     </td>
                     <td className={styles.actionsCell}>
-                      <button
-                        type="button"
-                        className={styles.iconBtn}
+                      <BotaoEditar
                         onClick={() => handleEditOrder(item, "LIBERADOS")}
                         title="Editar Pedido"
-                      >
-                        <Image
-                          src="/img/icon/editar.png"
-                          alt="Editar"
-                          width={16}
-                          height={16}
-                          style={{ objectFit: "contain" }}
-                        />
-                      </button>
+                      />
                     </td>
                   </tr>
                 );

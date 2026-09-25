@@ -4,6 +4,8 @@ import { useState, useEffect, useRef } from "react";
 import styles from "./Pessoas.module.css";
 import { buscarCep } from "@/lib/viacep";
 import { useConfirm } from "@/components/ConfirmDialog";
+import BotaoEditar from "@/components/BotaoEditar";
+import { documentoPaciente } from "@/app/regulacao/constants";
 import {
   listarPessoas,
   listarUbs,
@@ -257,78 +259,80 @@ export default function PessoasPage() {
 
       {erro && <div className={styles.alertErro}>{erro}</div>}
 
-      {/* BUSCA (estilo Novo Pedido: select-like + dropdown em tabela) */}
-      <div className={`${styles.card} ${styles.searchCard}`}>
-        <label className={styles.searchLabel}>Buscar pessoa no banco</label>
-        <div className={styles.searchRowInline}>
-        <div className={styles.searchSelectWrapper} ref={dropdownRef}>
-          <input
-            type="text"
-            className={styles.selectLikeInput}
-            placeholder="Selecionar ou digitar nome/CPF..."
-            value={termo}
-            onChange={(e) => handleBuscar(e.target.value)}
-            onFocus={() => setDropAberto(true)}
-          />
-          <span className={styles.arrowIcon} onClick={() => setDropAberto(!dropAberto)}>
-            {dropAberto ? "▲" : "▼"}
-          </span>
-
-          {dropAberto && (
-            <div className={styles.tableDropdownMenu}>
-              <div className={styles.tableContainerScroll}>
-                <table className={styles.patientTableDropdown}>
-                  <thead>
-                    <tr>
-                      <th>CPF</th>
-                      <th>Usuário</th>
-                      <th>Nome da mãe</th>
-                      <th>Data nasc.</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {pessoasFiltradas.length > 0 ? (
-                      pessoasFiltradas.map((p) => (
-                        <tr
-                          key={p.cpf}
-                          onMouseDown={(e) => {
-                            e.preventDefault();
-                            selecionarPessoa(p);
-                          }}
-                          className={soDigitos(form.cpf) === soDigitos(p.cpf) ? styles.selectedRow : ""}
-                        >
-                          <td>{maskCpf(p.cpf)}</td>
-                          <td className={styles.boldName}>{p.nomeCompleto}</td>
-                          <td>{p.nomeMae || "Não informada"}</td>
-                          <td>
-                            {p.dataNascimento
-                              ? p.dataNascimento.split("-").reverse().join("/")
-                              : "-"}
-                          </td>
-                        </tr>
-                      ))
-                    ) : (
-                      <tr>
-                        <td colSpan="4" className={styles.noDataTd}>
-                          {buscando ? "Buscando pessoas..." : "Nenhuma pessoa encontrada."}
-                        </td>
-                      </tr>
-                    )}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-          )}
-        </div>
-
-        <button type="button" className={styles.btnAdicionar} onClick={novoCadastro}>
-          + Adicionar novo
-        </button>
-        </div>
-      </div>
-
-      {/* FORMULÁRIO (sempre visível) */}
+      {/* CARD ÚNICO: BUSCA + DADOS DA PESSOA */}
       <form onSubmit={salvar} className={`${styles.card} ${styles.formCard}`}>
+        {/* BUSCA (estilo Novo Pedido: select-like + dropdown em tabela) */}
+        <div className={styles.searchBlock}>
+          <label className={styles.searchLabel}>Buscar pessoa no banco</label>
+          <div className={styles.searchRowInline}>
+            <div className={styles.searchSelectWrapper} ref={dropdownRef}>
+              <input
+                type="text"
+                className={styles.selectLikeInput}
+                placeholder="Selecionar ou digitar nome/CPF..."
+                value={termo}
+                onChange={(e) => handleBuscar(e.target.value)}
+                onFocus={() => setDropAberto(true)}
+              />
+              <span className={styles.arrowIcon} onClick={() => setDropAberto(!dropAberto)}>
+                {dropAberto ? "▲" : "▼"}
+              </span>
+
+              {dropAberto && (
+                <div className={styles.tableDropdownMenu}>
+                  <div className={styles.tableContainerScroll}>
+                    <table className={styles.patientTableDropdown}>
+                      <thead>
+                        <tr>
+                          <th>CPF / CNS</th>
+                          <th>Usuário</th>
+                          <th>Nome da mãe</th>
+                          <th>Data nasc.</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pessoasFiltradas.length > 0 ? (
+                          pessoasFiltradas.map((p) => (
+                            <tr
+                              key={p.cpf}
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                selecionarPessoa(p);
+                              }}
+                              className={soDigitos(form.cpf) === soDigitos(p.cpf) ? styles.selectedRow : ""}
+                            >
+                              <td>{documentoPaciente({ cpf: p.cpf, cns: p.cns })}</td>
+                              <td className={styles.boldName}>{p.nomeCompleto}</td>
+                              <td>{p.nomeMae || "Não informada"}</td>
+                              <td>
+                                {p.dataNascimento
+                                  ? p.dataNascimento.split("-").reverse().join("/")
+                                  : "-"}
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan="4" className={styles.noDataTd}>
+                              {buscando ? "Buscando pessoas..." : "Nenhuma pessoa encontrada."}
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <button type="button" className={styles.btnAdicionar} onClick={novoCadastro}>
+              + Adicionar novo
+            </button>
+          </div>
+        </div>
+
+        <hr className={styles.divider} />
+
         <div className={styles.cardHeaderRow}>
           <h2 className={styles.cardHeaderTitle}>{tituloForm}</h2>
         </div>
@@ -504,9 +508,7 @@ export default function PessoasPage() {
 
         <div className={styles.formActions}>
           {modo === "leitura" && pessoaSelecionada && (
-            <button type="button" className={styles.btnPrimary} onClick={habilitarEdicao}>
-              Editar
-            </button>
+            <BotaoEditar onClick={habilitarEdicao} />
           )}
           {editavel && (
             <button type="button" className={styles.btnGhost} onClick={cancelar} disabled={salvando}>

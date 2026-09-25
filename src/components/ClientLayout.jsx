@@ -28,7 +28,7 @@ export default function ClientLayout({ children }) {
             minWidth: 0,
             marginLeft: "270px",
             width: "calc(100% - 270px)",
-            padding: "1.5rem",
+            padding: "0.75rem 1rem",
             boxSizing: "border-box",
             minHeight: "calc(100vh - 60px)",
             backgroundColor: "var(--bg-main, #f8fafc)",

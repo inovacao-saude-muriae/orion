@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import styles from './NovoPedido.module.css';
 import { useUnsavedChanges } from '../hooks/useUnsavedChanges';
+import { documentoPaciente, LOCAIS_REALIZACAO } from '../constants';
 
 export default function NovoPedido({
   newRequest = {
@@ -140,7 +141,7 @@ export default function NovoPedido({
                     <table className={styles.patientTableDropdown}>
                       <thead>
                         <tr>
-                          <th>CPF</th>
+                          <th>CPF / CNS</th>
                           <th>Usuário</th>
                           <th>Nome da mãe</th>
                           <th>Data nasc.</th>
@@ -157,7 +158,7 @@ export default function NovoPedido({
                               }}
                               className={newRequest.cpf === pessoa.cpf ? styles.selectedRow : ''}
                             >
-                              <td>{formatCPF(pessoa.cpf)}</td>
+                              <td>{documentoPaciente({ cpf: pessoa.cpf, cns: pessoa.cns })}</td>
                               <td className={styles.boldName}>
                                 {pessoa.nomeCompleto || pessoa.nome_completo}
                               </td>
@@ -260,6 +261,19 @@ export default function NovoPedido({
               </select>
             </div>
 
+            <div className={`${styles.fieldGroup} ${styles.colLocal}`}>
+              <label>Local de Realização</label>
+              <select
+                value={newRequest.localRealizacao || ''}
+                onChange={(e) => setNewRequest({ ...newRequest, localRealizacao: e.target.value })}
+              >
+                <option value="">-- Selecione --</option>
+                {LOCAIS_REALIZACAO.map((loc) => (
+                  <option key={loc} value={loc}>{loc}</option>
+                ))}
+              </select>
+            </div>
+
             <div className={`${styles.fieldGroup} ${styles.colDoctor}`}>
               <label>Médico Solicitante *</label>
               <select
@@ -322,7 +336,7 @@ export default function NovoPedido({
 
         <div className={styles.formActions}>
           <button type="submit" className={styles.primaryBtn}>
-            Enviar para Lista de Espera
+                Cadastrar
           </button>
         </div>
       </form>

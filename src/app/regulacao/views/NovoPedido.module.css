@@ -1,44 +1,50 @@
+/* Estrutura de espaçamento replicada de Farmácia Judicial / Pacientes */
+
+/* Wrapper branco unificado (equivalente a .mainWrapper) */
 .card {
   background-color: #ffffff;
   border: 1px solid #e2e8f0;
-  border-radius: 10px;
-  padding: 1.1rem 1.25rem;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
-  margin-bottom: 1.5rem;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.03), 0 2px 4px -2px rgba(0, 0, 0, 0.03);
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
 }
 
 .cardTitle {
-  font-size: 1rem;
-  font-weight: 600;
-  color: #1e293b;
-  margin-bottom: 0.75rem;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #0f172a;
+  margin: 0;
 }
 
 /* ── Container Geral do Formulário ── */
 .patientFormContainer {
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 1.25rem;
 }
 
-/* Seção como título com borda (padrão /pessoas), sem card cinza */
+/* Seção como card cinza (equivalente a .cardSection) */
 .formSection {
-  background-color: transparent;
-  border: none;
-  border-radius: 0;
-  padding: 0;
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 1.25rem;
 }
 
+/* Cabeçalho/título da seção (equivalente a .sectionHeaderTitle) */
 .formSectionHeader {
-  margin: 0.9rem 0 0.5rem;
-  padding-bottom: 0.3rem;
-  border-bottom: 1px solid #f1f5f9;
+  margin: 0 0 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .formSectionHeader h4 {
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: #64748b;
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #1e293b;
   text-transform: uppercase;
   letter-spacing: 0.03em;
   margin: 0;
@@ -58,11 +64,11 @@
 
 .selectLikeInput {
   width: 100%;
-  padding: 0.6rem 2rem 0.6rem 0.85rem !important;
+  padding: 0.65rem 2rem 0.65rem 0.85rem !important;
   background-color: #ffffff !important;
   border: 1px solid #cbd5e1 !important;
   border-radius: 8px !important;
-  font-size: 0.875rem !important;
+  font-size: 0.9rem !important;
   color: #0f172a !important;
   box-sizing: border-box;
 }
@@ -96,7 +102,7 @@
 }
 
 .tableContainerScroll {
-  max-height: 240px;
+  max-height: 260px;
   overflow-y: auto;
   border: 1px solid #f1f5f9;
   border-radius: 6px;
@@ -167,34 +173,34 @@
   margin-top: 0.35rem;
 }
 
-/* ── Grid Flexível de 12 Colunas (compacto, padrão /pessoas) ── */
+/* ── Grid Flexível de 12 Colunas ── */
 .formGridStrict {
   display: grid;
   grid-template-columns: repeat(12, 1fr);
-  gap: 0.6rem 0.75rem;
+  gap: 1rem;
 }
 
 .fieldGroup {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
+  gap: 0.35rem;
 }
 
 .fieldGroup label {
-  font-size: 0.72rem;
-  font-weight: 500;
-  color: #334155;
+  font-size: 0.825rem;
+  font-weight: 600;
+  color: #475569;
 }
 
 .fieldGroup input,
 .fieldGroup select,
 .fieldGroup textarea {
   width: 100%;
-  padding: 0.4rem 0.55rem;
-  border: 1px solid #cbd5e0;
-  border-radius: 6px;
-  font-size: 0.82rem;
-  color: #0f172a;
+  padding: 0.65rem 0.85rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  color: #1e293b;
   outline: none;
   background-color: #ffffff;
   transition: border-color 0.2s, box-shadow 0.2s;
@@ -209,9 +215,9 @@
 }
 
 .readOnlyInput {
-  background-color: #f8fafc !important;
+  background-color: #f1f5f9 !important;
   color: #64748b !important;
-  border-color: #e2e8f0 !important;
+  border-color: #cbd5e1 !important;
   cursor: not-allowed;
 }
 
@@ -223,6 +229,7 @@
 
 .colExamType { grid-column: span 4; }
 .colProcedure { grid-column: span 5; }
+.colLocal { grid-column: span 3; }
 .colDoctor { grid-column: span 6; }
 .colUbs { grid-column: span 6; }
 .colRisk { grid-column: span 3; }
@@ -235,15 +242,14 @@
 .formActions {
   display: flex;
   justify-content: flex-end;
-  gap: 0.6rem;
-  margin-top: 1.1rem;
+  gap: 0.75rem;
 }
 
 .primaryBtn {
   background-color: #2563eb;
   color: #ffffff;
   border: none;
-  padding: 0.6rem 1.2rem;
+  padding: 0.75rem 1.5rem;
   border-radius: 8px;
   font-size: 0.875rem;
   font-weight: 600;
@@ -257,7 +263,7 @@
 
 /* ── Responsividade ── */
 @media (max-width: 900px) {
-  .colName, .colMother, .colCpf, .colSus, .colExamType, .colProcedure, .colDoctor, .colUbs, .colRisk {
+  .colName, .colMother, .colCpf, .colSus, .colExamType, .colProcedure, .colLocal, .colDoctor, .colUbs, .colRisk {
     grid-column: span 12;
   }
 }

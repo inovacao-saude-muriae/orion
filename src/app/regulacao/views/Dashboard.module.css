@@ -281,3 +281,93 @@
   font-size: 0.75rem;
   font-weight: 700;
 }
+
+/* PONTOS DE ATENÇÃO / AUDITORIA */
+.auditGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 0.85rem;
+}
+
+.auditItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1rem;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background-color: #f8fafc;
+}
+
+.auditWarn {
+  background-color: #fef2f2;
+  border-color: #fecaca;
+}
+
+.auditOk {
+  background-color: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.auditValue {
+  font-size: 1.6rem;
+  font-weight: 800;
+  line-height: 1;
+  color: #0f172a;
+}
+
+.auditWarn .auditValue {
+  color: #b91c1c;
+}
+
+.auditOk .auditValue {
+  color: #15803d;
+}
+
+.auditLabel {
+  font-size: 0.8rem;
+  color: #475569;
+  font-weight: 600;
+}
+
+.emptyRow {
+  padding: 0.9rem 0.75rem;
+  text-align: center;
+  color: #94a3b8;
+  font-size: 0.85rem;
+  font-style: italic;
+}
+
+/* FILTRO DE TIPO DE EXAME NO BANNER */
+.bannerActions {
+  display: flex;
+  align-items: flex-end;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.examFilter {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.examFilter label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #cbd5e1;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.examFilter select {
+  padding: 0.55rem 0.75rem;
+  min-width: 220px;
+  font-size: 0.875rem;
+  color: #0f172a;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  outline: none;
+  cursor: pointer;
+}

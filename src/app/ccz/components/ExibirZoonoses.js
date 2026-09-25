@@ -4,6 +4,7 @@ import React, { useState, useMemo, useTransition } from "react";
 import styles from "./ExibirZoonoses.module.css";
 import ModalConfirmacaoCCZ from "./Modals/ModalConfirmacaoCCZ";
 import ModalEditarZoonose from "./Modals/ModalEditarZoonose";
+import BotaoEditar from "@/components/BotaoEditar";
 import { excluirZoonoseAction, salvarEdicaoZoonoseAction } from "../actions";
 
 function formatDate(value) {
@@ -167,13 +168,7 @@ export default function TabExibirZoonoses({
 
                 {/* Ações */}
                 <div className={styles.actions}>
-                  <button
-                    type="button"
-                    onClick={() => handleEdit(zoonose)}
-                    className={`${styles.actionBtn} ${styles.editBtn}`}
-                  >
-                    Editar
-                  </button>
+                  <BotaoEditar onClick={() => handleEdit(zoonose)} />
                   <button
                     type="button"
                     disabled={isPending}

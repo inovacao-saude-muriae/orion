@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import styles from "./CadastroServicos.module.css";
 import ModalConfirmacaoExclusao from "@/app/regulacao/components/Modals/ModalConfirmacaoExclusao";
 import { useConfirm, useNotify } from "@/components/ConfirmDialog";
+import BotaoEditar from "@/components/BotaoEditar";
 import { createRegistro, updateRegistro, deleteRegistro } from "@/app/gerenciamento/servicos/actions";
 
 const FORM_VAZIO = {
@@ -324,9 +325,7 @@ export default function CadastroServicos({ data = { servicos: [], linhas: [] }, 
 
           <div className={styles.formActions}>
             {form.isEditing && !form.isFormActive && (
-              <button type="button" className={styles.primaryBtn} onClick={habilitarEdicao}>
-                Editar
-              </button>
+              <BotaoEditar onClick={habilitarEdicao} />
             )}
             {form.isFormActive && (
               <>

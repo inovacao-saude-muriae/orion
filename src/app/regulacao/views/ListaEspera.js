@@ -1,8 +1,8 @@
 "use client";
 
 import { useState } from "react";
-import Image from "next/image";
 import styles from "./ListaEspera.module.css";
+import BotaoEditar from "@/components/BotaoEditar";
 import { STATUS_COMUNICACAO } from "../constants";
 
 // Lista padrão de segurança para garantir a exibição dos botões
@@ -222,20 +222,10 @@ export default function ListaEspera({
                       >
                         Liberar
                       </button>
-                      <button
-                        type="button"
-                        className={styles.iconBtn}
+                      <BotaoEditar
                         onClick={() => handleEditOrder(item, "LISTA_ESPERA")}
                         title="Editar Pedido"
-                      >
-                        <Image
-                          src="/img/icon/editar.png"
-                          alt="Editar"
-                          width={16}
-                          height={16}
-                          style={{ objectFit: "contain" }}
-                        />
-                      </button>
+                      />
                     </td>
                   </tr>
                 );

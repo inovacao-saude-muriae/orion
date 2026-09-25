@@ -3,6 +3,7 @@
 import { useState } from "react";
 import styles from "./EditarPedido.module.css";
 import { useUnsavedChanges } from "../hooks/useUnsavedChanges";
+import { STATUS_COMUNICACAO } from "../constants";
 
 const MESES_COMPETENCIA = [
   { value: "01", name: "Jan" },
@@ -397,6 +398,22 @@ export default function EditarPedido({
                     setEditingItem({ ...editingItem, communicationDate: e.target.value });
                   }}
                 />
+              </div>
+
+              <div className={`${styles.fieldGroup} ${styles.colDoctor}`}>
+                <label>Status da Comunicação</label>
+                <select
+                  value={editingItem.communicationStatus || ""}
+                  onChange={(e) => {
+                    setIsDirty(true);
+                    setEditingItem({ ...editingItem, communicationStatus: e.target.value });
+                  }}
+                >
+                  <option value="">-- Selecione --</option>
+                  {STATUS_COMUNICACAO.map((s) => (
+                    <option key={s} value={s}>{s}</option>
+                  ))}
+                </select>
               </div>
 
               <div className={`${styles.fieldGroup} ${styles.fullWidth}`}>

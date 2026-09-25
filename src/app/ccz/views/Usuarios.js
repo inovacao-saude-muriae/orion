@@ -5,6 +5,7 @@ import s from "../shared.module.css";
 import ts from "./Usuarios.module.css";
 import ModalConfirmacaoCCZ from "../components/Modals/ModalConfirmacaoCCZ";
 import ModalMensagemCCZ from "../components/Modals/ModalMensagemCCZ";
+import BotaoEditar from "@/components/BotaoEditar";
 import { updateTutor, deleteTutor } from "../actions";
 
 function maskCpf(v) {
@@ -233,14 +234,7 @@ export default function Usuarios({ tutores = [], animais = [], reloadData }) {
                 </div>
 
                 <div className={ts.detailActions}>
-                  <button
-                    type="button"
-                    className={ts.editBtn}
-                    onClick={startEditing}
-                    disabled={isEditing}
-                  >
-                    ✏️ Editar
-                  </button>
+                  <BotaoEditar onClick={startEditing} disabled={isEditing} />
                   <button
                     type="button"
                     className={ts.deleteBtn}

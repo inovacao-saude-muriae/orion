@@ -8,6 +8,7 @@ import s from "../shared.module.css";
 // Apontar para os Modais dentro da pasta components/
 import ModalConfirmacaoCCZ from "../components/Modals/ModalConfirmacaoCCZ";
 import ModalMensagemCCZ from "../components/Modals/ModalMensagemCCZ";
+import BotaoEditar from "@/components/BotaoEditar";
 
 const TIPOS_PROCEDIMENTO = [
   "Castração",
@@ -352,9 +353,7 @@ export default function Procedimentos({ tutores = [], animais = [] }) {
                     </span>
                   </td>
                   <td className={s.actionsCell}>
-                    <button className={s.editBtn} onClick={() => handleEdit(r)}>
-                      ✏️ Editar
-                    </button>
+                    <BotaoEditar onClick={() => handleEdit(r)} />
                     <button
                       className={s.deleteBtn}
                       onClick={() =>

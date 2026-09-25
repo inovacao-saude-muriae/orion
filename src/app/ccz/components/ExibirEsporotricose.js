@@ -4,6 +4,7 @@ import React, { useState, useMemo, useTransition } from "react";
 import styles from "./ExibirZoonoses.module.css";
 import ModalConfirmacaoEsporotricose from "./Modals/ModalConfirmacaoEsporotricose";
 import ModalEditarEsporotricose from "./Modals/ModalEditarEsporotricose";
+import BotaoEditar from "@/components/BotaoEditar";
 import {
   excluirEsporotricoseAction,
   salvarEsporotricoseAction,
@@ -156,13 +157,7 @@ export default function TabExibirEsporotricose({
                 </div>
 
                 <div className={styles.actions}>
-                  <button
-                    type="button"
-                    onClick={() => setRegistroParaEditar(item)}
-                    className={`${styles.actionBtn} ${styles.editBtn}`}
-                  >
-                    Editar
-                  </button>
+                  <BotaoEditar onClick={() => setRegistroParaEditar(item)} />
                   <button
                     type="button"
                     disabled={isPending}

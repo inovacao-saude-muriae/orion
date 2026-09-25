@@ -2,7 +2,7 @@ import ClientLayout from '@/components/ClientLayout';
 import './globals.css';
 
 export const metadata = {
-  title: 'Orion - Gestão e Regulação de Saúde',
+  title: 'Orion - Gestão Integrada',
   description: 'ERP para Saúde Pública, Regulação de Exames e Zoonoses',
 };
 

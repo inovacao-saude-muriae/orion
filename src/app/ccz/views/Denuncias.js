@@ -8,6 +8,7 @@ import s from "../shared.module.css";
 // Apontar para os Modais dentro da pasta components/
 import ModalConfirmacaoCCZ from "../components/Modals/ModalConfirmacaoCCZ";
 import ModalMensagemCCZ from "../components/Modals/ModalMensagemCCZ";
+import BotaoEditar from "@/components/BotaoEditar";
 
 // Server Actions importadas da raiz do módulo ccz
 import { createDenuncia, updateDenuncia, deleteDenuncia } from "../actions";
@@ -241,12 +242,7 @@ export default function Denuncias({
                 <td>{denuncia.causou_risco || "Não"}</td>
                 <td>{denuncia.animal_id || "Não vinculado"}</td>
                 <td className={s.actionsCell}>
-                  <button
-                    className={s.editBtn}
-                    onClick={() => handleEdit(denuncia)}
-                  >
-                    Editar
-                  </button>
+                  <BotaoEditar onClick={() => handleEdit(denuncia)} />
                   <button
                     className={s.deleteBtn}
                     onClick={() =>

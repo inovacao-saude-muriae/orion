@@ -3,7 +3,7 @@
 import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import styles from './FiltersBar.module.css';
-import { STATUS_COMUNICACAO, STATUS_PEDIDO } from '../constants';
+import { STATUS_COMUNICACAO, STATUS_PEDIDO, documentoPaciente } from '../constants';
 
 export default function FiltersBar({
   filters,
@@ -15,6 +15,10 @@ export default function FiltersBar({
   filtrosFixos = false,
   pacientesFila = [],
   contexto = "LISTA_ESPERA", // "LISTA_ESPERA" ou "LIBERADOS"
+  tiposExame = [],
+  selectedExame = "",
+  onSelectExame = () => {},
+  unificado = false, // quando true, remove o card próprio (fica dentro de um painel único)
 }) {
   const isLiberados = contexto === "LIBERADOS";
   const isListaEspera = contexto === "LISTA_ESPERA";
@@ -100,7 +104,7 @@ export default function FiltersBar({
   };
 
   return (
-    <div className={styles.filterCard}>
+    <div className={`${styles.filterCard} ${unificado ? styles.filterCardFlat : ''}`}>
       {/* BARRA SUPERIOR DE BUSCA E AÇÕES */}
       <div className={styles.filterBarTop}>
         <div className={styles.mainSearchBox} ref={buscaRef} style={{ position: 'relative' }}>
@@ -132,27 +136,43 @@ export default function FiltersBar({
             }}
           />
 
-          {/* DROPDOWN COM OS PACIENTES DA FILA */}
+          {/* DROPDOWN COM OS PACIENTES DA FILA (tabela) */}
           {dropAberto && pacientesFila.length > 0 && (
             <div className={styles.patientDropdown}>
-              {pacientesFiltrados.length > 0 ? (
-                pacientesFiltrados.map((p, idx) => (
-                  <button
-                    type="button"
-                    key={p.cpf ? `${p.cpf}-${idx}` : idx}
-                    className={styles.patientDropItem}
-                    onMouseDown={(e) => {
-                      e.preventDefault();
-                      selecionarPaciente(p);
-                    }}
-                  >
-                    <span className={styles.patientDropName}>{p.patientName}</span>
-                    <span className={styles.patientDropCpf}>{formatCPF(p.cpf)}</span>
-                  </button>
-                ))
-              ) : (
-                <div className={styles.patientDropEmpty}>Nenhum paciente na fila.</div>
-              )}
+              <table className={styles.patientTable}>
+                <thead>
+                  <tr>
+                    <th>CPF / CNS</th>
+                    <th>Usuário</th>
+                    <th>Nome da mãe</th>
+                    <th>Data nasc.</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {pacientesFiltrados.length > 0 ? (
+                    pacientesFiltrados.map((p, idx) => (
+                      <tr
+                        key={p.cpf ? `${p.cpf}-${idx}` : idx}
+                        onMouseDown={(e) => {
+                          e.preventDefault();
+                          selecionarPaciente(p);
+                        }}
+                      >
+                        <td>{documentoPaciente({ cpf: p.cpf, cns: p.susCard })}</td>
+                        <td className={styles.patientTableName}>{p.patientName}</td>
+                        <td>{p.motherName || "Não informada"}</td>
+                        <td>{p.birthDate || "—"}</td>
+                      </tr>
+                    ))
+                  ) : (
+                    <tr>
+                      <td colSpan={4} className={styles.patientTableEmpty}>
+                        Nenhum paciente na fila.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
             </div>
           )}
         </div>
@@ -170,21 +190,6 @@ export default function FiltersBar({
             </button>
           )}
 
-          <button
-            type="button"
-            className={styles.applyFilterBtnHeader}
-            onClick={handleApplyFilters}
-          >
-            Filtrar
-          </button>
-
-          <button
-            type="button"
-            className={styles.clearFilterBtn}
-            onClick={handleClear}
-          >
-            Limpar
-          </button>
         </div>
       </div>
 
@@ -194,6 +199,20 @@ export default function FiltersBar({
           <div className={styles.filterSection}>
             <span className={styles.sectionTitle}>Filtros Gerais</span>
             <div className={styles.filterGrid}>
+              {/* Tipo de Exame — substitui as antigas abas */}
+              <div className={styles.fieldItem}>
+                <label>Tipo de Exame</label>
+                <select
+                  value={selectedExame || ''}
+                  onChange={(e) => onSelectExame(e.target.value)}
+                >
+                  <option value="">Todos os exames</option>
+                  {tiposExame.map((t) => (
+                    <option key={t.id} value={t.nome}>{t.nome}</option>
+                  ))}
+                </select>
+              </div>
+
               <div className={styles.fieldItem}>
                 <label>Procedimento</label>
                 <select
@@ -378,6 +397,13 @@ export default function FiltersBar({
           </div>
 
           <div className={styles.bottomFilterActions}>
+            <button
+              type="button"
+              className={styles.clearFilterBtn}
+              onClick={handleClear}
+            >
+              Limpar
+            </button>
             <button
               type="button"
               className={styles.applyFilterBtn}

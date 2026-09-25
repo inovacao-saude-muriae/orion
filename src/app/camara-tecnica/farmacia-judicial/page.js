@@ -6,9 +6,13 @@ import {
   getPacientesJudiciais,
   createPacienteJudicial,
   getMedicamentosEEstoque,
+  getEstoqueAgrupado,
   getCatalogoMedicamentos,
+  getCatalogoCompleto,
   createMedicamento,
+  updateMedicamento,
   createLoteMedicamento,
+  updateLoteMedicamento,
   registrarDispensacao,
   getDashboardMetrics,
   getRelatorioEntradas,
@@ -17,6 +21,7 @@ import {
 
 import Dashboard from "./views/Dashboard";
 import PacientesJudiciais from "./views/PacientesJudiciais";
+import Medicamentos from "./views/Medicamentos";
 import Dispensacao from "./views/Dispensacao";
 import Relatorios from "./views/Relatorios";
 
@@ -45,27 +50,33 @@ function FarmaciaJudicialPageContent() {
   const [loading, setLoading] = useState(true);
   const [pacientes, setPacientes] = useState([]);
   const [estoqueLotes, setEstoqueLotes] = useState([]);
+  const [estoqueAgrupado, setEstoqueAgrupado] = useState([]);
   const [relatorioEntradas, setRelatorioEntradas] = useState([]);
   const [relatorioSaidas, setRelatorioSaidas] = useState([]);
   const [catalogo, setCatalogo] = useState([]);
+  const [catalogoCompleto, setCatalogoCompleto] = useState([]);
   const [metrics, setMetrics] = useState({});
 
   // Função para recarregar dados manualmente após ações (cadastros, dispensações, etc.)
   const reloadData = async () => {
     setLoading(true);
     try {
-      const [pacData, estData, catData, metData, entData, saiData] =
+      const [pacData, estData, agrData, catData, catFull, metData, entData, saiData] =
         await Promise.all([
           getPacientesJudiciais(),
           getMedicamentosEEstoque(),
+          getEstoqueAgrupado(),
           getCatalogoMedicamentos(),
+          getCatalogoCompleto(),
           getDashboardMetrics(),
           getRelatorioEntradas(),
           getRelatorioSaidas(),
         ]);
       setPacientes(pacData || []);
       setEstoqueLotes(estData || []);
+      setEstoqueAgrupado(agrData || []);
       setCatalogo(catData || []);
+      setCatalogoCompleto(catFull || []);
       setMetrics(metData || {});
       setRelatorioEntradas(entData || []);
       setRelatorioSaidas(saiData || []);
@@ -83,11 +94,13 @@ function FarmaciaJudicialPageContent() {
     const loadInitialData = async () => {
       setLoading(true);
       try {
-        const [pacData, estData, catData, metData, entData, saiData] =
+        const [pacData, estData, agrData, catData, catFull, metData, entData, saiData] =
           await Promise.all([
             getPacientesJudiciais(),
             getMedicamentosEEstoque(),
+            getEstoqueAgrupado(),
             getCatalogoMedicamentos(),
+            getCatalogoCompleto(),
             getDashboardMetrics(),
             getRelatorioEntradas(),
             getRelatorioSaidas(),
@@ -96,7 +109,9 @@ function FarmaciaJudicialPageContent() {
         if (isMounted) {
           setPacientes(pacData || []);
           setEstoqueLotes(estData || []);
+          setEstoqueAgrupado(agrData || []);
           setCatalogo(catData || []);
+          setCatalogoCompleto(catFull || []);
           setMetrics(metData || {});
           setRelatorioEntradas(entData || []);
           setRelatorioSaidas(saiData || []);
@@ -161,6 +176,36 @@ function FarmaciaJudicialPageContent() {
     } else alert("Erro: " + res.error);
   };
 
+  const handleUpdateLote = async (loteId, formData) => {
+    const res = await updateLoteMedicamento(loteId, formData);
+    if (res.success) await reloadData();
+    else alert("Erro: " + res.error);
+    return res;
+  };
+
+  // Nova entrada de estoque a partir da própria aba de Estoque (sem trocar de tela).
+  const handleCreateLoteEstoque = async (formData) => {
+    const res = await createLoteMedicamento(formData);
+    if (res.success) await reloadData();
+    else alert("Erro: " + res.error);
+    return res;
+  };
+
+  // Catálogo (aba Medicamentos): cria/atualiza sem sair da aba.
+  const handleCreateMedicamentoCatalogo = async (formData) => {
+    const res = await createMedicamento(formData);
+    if (res.success) await reloadData();
+    else alert("Erro: " + res.error);
+    return res;
+  };
+
+  const handleUpdateMedicamento = async (id, formData) => {
+    const res = await updateMedicamento(id, formData);
+    if (res.success) await reloadData();
+    else alert("Erro: " + res.error);
+    return res;
+  };
+
   const handleConfirmarDispensacao = async (dispensacaoData) => {
     const res = await registrarDispensacao(dispensacaoData);
     if (res.success) await reloadData();
@@ -170,13 +215,6 @@ function FarmaciaJudicialPageContent() {
 
   return (
     <div className={styles.container}>
-      <header className={styles.header}>
-        <div>
-          <h1>Farmácia Judicial</h1>
-          <p>Visão geral, processos judiciais, estoque e dispensação</p>
-        </div>
-      </header>
-
       {/* ROTEAMENTO DIRETO POR COMPONENTE */}
       {activeTab === "DASHBOARD" && (
         <Dashboard
@@ -196,6 +234,15 @@ function FarmaciaJudicialPageContent() {
         />
       )}
 
+      {activeTab === "MEDICAMENTOS" && (
+        <Medicamentos
+          catalogo={catalogoCompleto}
+          onCreateMedicamento={handleCreateMedicamentoCatalogo}
+          onUpdateMedicamento={handleUpdateMedicamento}
+          loading={loading}
+        />
+      )}
+
       {activeTab === "DISPENSACAO" && (
         <Dispensacao
           pacientes={pacientes}
@@ -206,7 +253,14 @@ function FarmaciaJudicialPageContent() {
 
       {/* ROTEAMENTO DE ESTOQUE DEDICADO */}
       {activeTab === "ESTOQUE" && activeSubTab === "SALDO" && (
-        <SaldoEstoque estoqueLotes={estoqueLotes} loading={loading} />
+        <SaldoEstoque
+          estoqueAgrupado={estoqueAgrupado}
+          estoqueLotes={estoqueLotes}
+          catalogo={catalogoCompleto}
+          onUpdateLote={handleUpdateLote}
+          onCreateLote={handleCreateLoteEstoque}
+          loading={loading}
+        />
       )}
 
       {activeTab === "ESTOQUE" && activeSubTab === "ENTRADA" && (

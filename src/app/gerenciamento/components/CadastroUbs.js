@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from "react";
 import styles from "./CadastroUbs.module.css";
 import ModalConfirmacaoExclusao from "@/app/regulacao/components/Modals/ModalConfirmacaoExclusao";
 import { useConfirm, useNotify } from "@/components/ConfirmDialog";
+import BotaoEditar from "@/components/BotaoEditar";
 import { createUbs, updateUbs, deleteUbs } from "@/app/regulacao/actions";
 
 export default function CadastroUbs({
@@ -215,9 +216,7 @@ export default function CadastroUbs({
 
         <div className={styles.formActions}>
           {formUbs.isEditing && !formUbs.isFormActive && (
-            <button type="button" className={styles.primaryBtn} onClick={habilitarEdicao}>
-              Editar
-            </button>
+            <BotaoEditar onClick={habilitarEdicao} />
           )}
 
           {formUbs.isFormActive && (

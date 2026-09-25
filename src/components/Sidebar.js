@@ -2,6 +2,7 @@
 
 import { Suspense, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname, useSearchParams } from "next/navigation";
 import styles from "./Sidebar.module.css";
 
@@ -9,7 +10,7 @@ const menuSections = [
   {
     items: [
       {
-        name: "Início / Módulos",
+        name: "Início",
         path: "/",
         icon: (
           <svg
@@ -22,10 +23,8 @@ const menuSections = [
             strokeLinecap="round"
             strokeLinejoin="round"
           >
-            <rect width="7" height="7" x="3" y="3" rx="1" />
-            <rect width="7" height="7" x="14" y="3" rx="1" />
-            <rect width="7" height="7" x="14" y="14" rx="1" />
-            <rect width="7" height="7" x="3" y="14" rx="1" />
+            <path d="M3 9.5 12 3l9 6.5" />
+            <path d="M5 10v10a1 1 0 0 0 1 1h4v-6h4v6h4a1 1 0 0 0 1-1V10" />
           </svg>
         ),
       },
@@ -91,6 +90,7 @@ const menuSections = [
             nestedItems: [
               { name: "Dashboard", subTab: "DASHBOARD" },
               { name: "Pacientes", subTab: "PACIENTES" },
+              { name: "Medicamentos", subTab: "MEDICAMENTOS" },
               { name: "Dispensação", subTab: "DISPENSACAO" },
               { name: "Estoque e Lotes", subTab: "ESTOQUE" },
               { name: "Relatórios", subTab: "RELATORIOS" },
@@ -287,46 +287,14 @@ function MenuContent() {
       {/* HEADER DA SIDEBAR */}
       <div className={styles.sidebarHeader}>
         <div className={styles.brandLogo}>
-          <svg
-            width="24"
-            height="24"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2.5"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <rect x="3" y="3" width="7" height="7" rx="1.5" />
-            <rect x="14" y="3" width="7" height="7" rx="1.5" />
-            <rect x="14" y="14" width="7" height="7" rx="1.5" />
-            <rect x="3" y="14" width="7" height="7" rx="1.5" />
-          </svg>
-          <span className={styles.brandName}>Orion</span>
-        </div>
-      </div>
-
-      {/* CAMPO DE BUSCA */}
-      <div className={styles.searchContainer}>
-        <div className={styles.searchWrapper}>
-          <svg
-            className={styles.searchIcon}
-            width="16"
-            height="16"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-          >
-            <circle cx="11" cy="11" r="8" />
-            <path d="m21 21-4.3-4.3" />
-          </svg>
-          <input
-            type="text"
-            placeholder="Buscar..."
-            value={searchTerm}
-            onChange={(e) => setSearchTerm(e.target.value)}
-            className={styles.searchInput}
+          <Image
+            src="/img/logos-orion/logo.png"
+            alt="Orion — Plataforma de Gestão Integrada"
+            width={480}
+            height={150}
+            quality={100}
+            className={styles.brandImage}
+            priority
           />
         </div>
       </div>

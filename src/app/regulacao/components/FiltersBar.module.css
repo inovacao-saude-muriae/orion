@@ -1,6 +1,6 @@
 /* CONTAINER PRINCIPAL DO CARD DE FILTROS */
 .filterCard {
-  background: #ffffff;
+  background: #f8fafc;
   border-radius: 0.75rem;
   border: 1px solid #e2e8f0;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
@@ -9,6 +9,12 @@
   display: flex;
   flex-direction: column;
   gap: 1rem;
+}
+
+/* Quando embutido no painel único (Lista de Espera): mantém o card cinza,
+   apenas remove a margem inferior (o gap do painel cuida do espaçamento). */
+.filterCardFlat {
+  margin-bottom: 0;
 }
 
 /* BARRA SUPERIOR */
@@ -162,7 +168,7 @@
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.05em;
-  color: #64748b;
+  color: #475569;
 }
 
 /* GRIDS RESPONSIVAS */
@@ -262,6 +268,7 @@
 .bottomFilterActions {
   display: flex;
   justify-content: flex-end;
+  gap: 0.6rem;
   padding-top: 0.75rem;
   border-top: 1px dashed #e2e8f0;
 }
@@ -304,49 +311,63 @@
   border: 1px solid #cbd5e1;
   border-radius: 8px;
   box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.12);
-  max-height: 260px;
+  max-height: 280px;
   overflow-y: auto;
   z-index: 50;
-  padding: 0.25rem;
+  padding: 0;
 }
 
-.patientDropItem {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
+/* Tabela do dropdown de pacientes */
+.patientTable {
   width: 100%;
-  padding: 0.55rem 0.7rem;
-  border: none;
-  background: transparent;
-  border-radius: 6px;
-  cursor: pointer;
+  border-collapse: collapse;
+  font-size: 0.8125rem;
   text-align: left;
-  transition: background-color 0.15s ease, color 0.15s ease;
 }
 
-.patientDropItem:hover {
+.patientTable thead th {
+  position: sticky;
+  top: 0;
+  background-color: #f8fafc;
+  color: #475569;
+  font-weight: 700;
+  padding: 0.6rem 0.75rem;
+  border-bottom: 2px solid #e2e8f0;
+  white-space: nowrap;
+  z-index: 1;
+}
+
+.patientTable tbody td {
+  padding: 0.6rem 0.75rem;
+  color: #334155;
+  border-bottom: 1px solid #f1f5f9;
+  cursor: pointer;
+}
+
+.patientTable tbody tr:hover td {
   background-color: #2563eb;
-}
-
-.patientDropItem:hover .patientDropName,
-.patientDropItem:hover .patientDropCpf {
   color: #ffffff;
 }
 
-.patientDropName {
-  font-size: 0.85rem;
+.patientTableName {
   font-weight: 600;
-  color: #1e293b;
+  color: #0f172a;
 }
 
-.patientDropCpf {
-  font-size: 0.8rem;
-  color: #64748b;
+.patientTable tbody tr:hover .patientTableName {
+  color: #ffffff;
 }
 
-.patientDropEmpty {
-  padding: 1rem;
+.patientTableEmpty {
   text-align: center;
   color: #94a3b8;
-  font-size: 0.85rem;
+  font-style: italic;
+  cursor: default !important;
 }
+
+.patientTable tbody tr:hover .patientTableEmpty {
+  background-color: transparent !important;
+  color: #94a3b8 !important;
+}
+
+

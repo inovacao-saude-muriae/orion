@@ -109,6 +109,9 @@ export async function getPedidosExames() {
         estimatedCost: item.procedimento ? Number(item.procedimento.valor) : 0,
         patientName: item.pessoa?.nomeCompleto || "",
         motherName: item.pessoa?.nomeMae || "",
+        birthDate: item.pessoa?.dataNascimento
+          ? formatDateToBR(item.pessoa.dataNascimento)
+          : "",
         cpf: item.pessoaCpf,
         susCard: item.cnsPaciente || "",
 
@@ -116,6 +119,7 @@ export async function getPedidosExames() {
         requestDateRaw: dataSolicitacaoRaw,
 
         classification: item.classificacaoRisco || "Verde",
+        localRealizacao: item.localRealizacao || "",
         // Competência que debita o financeiro: usa competenciaCota ("YYYY-MM")
         // se existir; senão, cai no fallback antigo (mês/ano da data de liberação).
         competence: item.competenciaCota
@@ -205,6 +209,7 @@ export async function getAuxiliaryData() {
         const endereco = p.enderecos && p.enderecos[0];
         return {
           cpf: p.cpf,
+          cns: p.cns || "",
           nomeCompleto: p.nomeCompleto,
           nomeMae: p.nomeMae,
           telefone: p.telefone,
@@ -279,6 +284,7 @@ export async function searchPessoasAutocomplete(term) {
 
     return pessoas.map((p) => ({
       cpf: p.cpf,
+      cns: p.cns || "",
       nomeCompleto: p.nomeCompleto,
       nomeMae: p.nomeMae,
       dataNascimento: formatDateToBR(p.dataNascimento),
@@ -304,6 +310,7 @@ export async function createPedidoExame(data) {
           ? Number(data.ubsResponsavelId)
           : null,
         classificacaoRisco: data.classification,
+        localRealizacao: data.localRealizacao || null,
         observacao: data.justification,
         status: "Aguardando",
       },
@@ -359,6 +366,8 @@ export async function releasePaciente(idStr, releaseData) {
         dataLiberacao: new Date(releaseData.releaseDate),
         competenciaCota: montarCompetenciaCota(releaseData),
         observacao: releaseData.generalObservation,
+        dataComunicacao: parseDataSegura(releaseData.communicationDate),
+        statusComunicacao: releaseData.communicationStatus || null,
         medicoResponsavelId: releaseData.regulatorDoctorId
           ? Number(releaseData.regulatorDoctorId)
           : null,
@@ -681,6 +690,7 @@ export async function updatePedidoExame(idStr, updateData) {
     const payload = {
       status: updateData.status,
       classificacaoRisco: updateData.classification,
+      localRealizacao: updateData.localRealizacao ?? null,
       cnsPaciente: updateData.susCard || null,
       observacao:
         updateData.justification || updateData.generalObservation || null,
@@ -699,6 +709,10 @@ export async function updatePedidoExame(idStr, updateData) {
     // Data de comunicação (quando editada na tela de autorização).
     if (updateData.communicationDate !== undefined) {
       payload.dataComunicacao = parseDataSegura(updateData.communicationDate);
+    }
+    // Status de comunicação (quando editado na tela de autorização).
+    if (updateData.communicationStatus !== undefined) {
+      payload.statusComunicacao = updateData.communicationStatus || null;
     }
 
     if (isRevertingToWaiting) {

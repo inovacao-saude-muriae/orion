@@ -36,16 +36,6 @@ const formatarData = (valor) => {
   });
 };
 
-const formatarDataHora = (valor) => {
-  if (!valor) return "-";
-  return new Date(valor).toLocaleString("pt-BR", {
-    day: "2-digit",
-    month: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-};
-
 export default function Home() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
@@ -130,30 +120,75 @@ export default function Home() {
 
       {metrics && (
         <>
-          {/* KPIs POR MÓDULO */}
-          <section className={styles.kpiGrid}>
-            <div className={styles.kpiCard}>
-              <div className={styles.kpiTitle}>Pessoas cadastradas</div>
-              <div className={`${styles.kpiValue} ${styles.textDark}`}>{metrics.pessoas.total}</div>
-              <p className={styles.kpiFooter}>Base compartilhada entre os módulos</p>
+          {/* PONTOS DE ATENÇÃO (AUDITORIA) */}
+          {metrics.auditoria && (
+            <div className={styles.auditPanel}>
+              <div className={styles.auditPanelHead}>
+                <h2 className={styles.sectionTitle}>Pontos de atenção — Auditoria</h2>
+                <span className={styles.auditPanelSub}>
+                  {metrics.auditoria.totalAlertas === 0
+                    ? "Nenhuma inconsistência encontrada."
+                    : `${metrics.auditoria.totalAlertas} ocorrência(s) para revisar.`}
+                </span>
+              </div>
+              <div className={styles.auditGrid}>
+                {metrics.auditoria.alertas.map((a) => (
+                  <div
+                    key={a.label}
+                    className={`${styles.auditItem} ${a.valor > 0 ? styles.auditWarn : styles.auditOk}`}
+                  >
+                    <span className={styles.auditValue}>{a.valor}</span>
+                    <span className={styles.auditLabel}>{a.label}</span>
+                  </div>
+                ))}
+              </div>
             </div>
+          )}
+
+          {/* KPIs DE AUDITORIA (estilo Regulação) */}
+          <section className={styles.kpiGrid}>
+            {metrics.auditoria && (
+              <div className={`${styles.kpiCard} ${styles.cardSuccessBorder}`}>
+                <div className={styles.kpiTitle}>Valor autorizado</div>
+                <div className={`${styles.kpiValue} ${styles.textSuccess}`} style={{ fontSize: "1.5rem" }}>
+                  {`R$ ${(metrics.auditoria.valorAutorizado || 0).toLocaleString("pt-BR", { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`}
+                </div>
+                <p className={styles.kpiFooter}>Soma dos exames liberados</p>
+              </div>
+            )}
+
+            {metrics.auditoria && (
+              <div className={styles.kpiCard}>
+                <div className={styles.kpiTitle}>Taxa de liberação</div>
+                <div className={`${styles.kpiValue} ${styles.textPrimary}`}>
+                  {(metrics.auditoria.taxaLiberacao || 0).toFixed(1)}
+                  <span style={{ fontSize: "1rem", fontWeight: 500 }}> %</span>
+                </div>
+                <p className={styles.kpiFooter}>
+                  {metrics.regulacao.liberados} liberados de {metrics.regulacao.total} pedidos
+                </p>
+              </div>
+            )}
+
+            {metrics.auditoria && (
+              <div className={styles.kpiCard}>
+                <div className={styles.kpiTitle}>Tempo médio de espera</div>
+                <div className={`${styles.kpiValue} ${styles.textDark}`}>
+                  {metrics.auditoria.tempoMedioEspera}
+                  <span style={{ fontSize: "1rem", fontWeight: 500 }}> dias</span>
+                </div>
+                <p className={styles.kpiFooter}>Do pedido até a liberação</p>
+              </div>
+            )}
 
             <div className={`${styles.kpiCard} ${metrics.regulacao.aguardando > 0 ? styles.cardDangerBorder : styles.cardSuccessBorder}`}>
-              <div className={styles.kpiTitle}>Regulação — aguardando</div>
+              <div className={styles.kpiTitle}>Fila de espera</div>
               <div className={`${styles.kpiValue} ${styles.textPrimary}`}>{metrics.regulacao.aguardando}</div>
-              <p className={styles.kpiFooter}>
-                {metrics.regulacao.liberados} liberados de {metrics.regulacao.total} pedidos
-              </p>
+              <p className={styles.kpiFooter}>pacientes aguardando regulação</p>
             </div>
 
             <div className={styles.kpiCard}>
-              <div className={styles.kpiTitle}>Farmácia — pacientes ativos</div>
-              <div className={`${styles.kpiValue} ${styles.textDark}`}>{metrics.farmacia.ativos}</div>
-              <p className={styles.kpiFooter}>{metrics.farmacia.total} pacientes judiciais no total</p>
-            </div>
-
-            <div className={`${styles.kpiCard} ${metrics.farmacia.estoqueUnidades > 0 ? styles.cardSuccessBorder : styles.cardDangerBorder}`}>
-              <div className={styles.kpiTitle}>Estoque de medicamentos</div>
+              <div className={styles.kpiTitle}>Farmácia — estoque</div>
               <div className={`${styles.kpiValue} ${styles.textDark}`}>{metrics.farmacia.estoqueUnidades}</div>
               <p className={styles.kpiFooter}>
                 unidades · {metrics.farmacia.medicamentosAtivos} medicamentos ativos
@@ -212,24 +247,6 @@ export default function Home() {
               </div>
             </div>
 
-            <div className={styles.cardSection}>
-              <h2 className={styles.sectionTitle}>Atividade recente do sistema</h2>
-              <div className={styles.moduleList}>
-                {metrics.atividadeRecente.length > 0 ? (
-                  metrics.atividadeRecente.map((item) => (
-                    <div key={item.id} className={styles.moduleItem}>
-                      <div>
-                        <strong>{item.descricao}</strong>
-                        <span className={styles.logRole}>{item.modulo}</span>
-                      </div>
-                      <span className={styles.logTime}>{formatarDataHora(item.data)}</span>
-                    </div>
-                  ))
-                ) : (
-                  <p className={styles.emptyLogText}>Nenhuma atividade recente registrada.</p>
-                )}
-              </div>
-            </div>
           </section>
         </>
       )}

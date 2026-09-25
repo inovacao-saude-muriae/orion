@@ -10,6 +10,7 @@ import ts from "./Cadastros.module.css";
 import ModalConfirmacaoCCZ from "../components/Modals/ModalConfirmacaoCCZ";
 import ModalMensagemCCZ from "../components/Modals/ModalMensagemCCZ";
 import { useConfirm } from "@/components/ConfirmDialog";
+import BotaoEditar from "@/components/BotaoEditar";
 
 // Actions importadas da raiz do módulo ccz
 import {
@@ -887,12 +888,7 @@ export default function Cadastros({ tutores = [], animais = [], reloadData }) {
                       </span>
                     </td>
                     <td className={s.actionsCell}>
-                      <button
-                        className={s.editBtn}
-                        onClick={() => handleEditAnimal(a)}
-                      >
-                        ✏️ Editar
-                      </button>
+                      <BotaoEditar onClick={() => handleEditAnimal(a)} />
                       <button
                         className={s.deleteBtn}
                         onClick={() =>

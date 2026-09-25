@@ -183,3 +183,74 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* PAINEL DE AUDITORIA (PONTOS DE ATENÇÃO) */
+.auditPanel {
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.25rem 1.5rem;
+  box-shadow: 0 1px 3px rgba(15, 23, 42, 0.06);
+  margin-bottom: 1.5rem;
+  border-left: 4px solid #2563eb;
+}
+
+.auditPanelHead {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.auditPanelHead .sectionTitle {
+  margin: 0;
+}
+
+.auditPanelSub {
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.auditGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.85rem;
+}
+
+.auditItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  padding: 1rem;
+  border-radius: 10px;
+  border: 1px solid #e2e8f0;
+  background-color: #f8fafc;
+}
+
+.auditWarn {
+  background-color: #fef2f2;
+  border-color: #fecaca;
+}
+
+.auditOk {
+  background-color: #f0fdf4;
+  border-color: #bbf7d0;
+}
+
+.auditValue {
+  font-size: 1.6rem;
+  font-weight: 800;
+  line-height: 1;
+  color: #0f172a;
+}
+
+.auditWarn .auditValue { color: #b91c1c; }
+.auditOk .auditValue { color: #15803d; }
+
+.auditLabel {
+  font-size: 0.8rem;
+  color: #475569;
+  font-weight: 600;
+}

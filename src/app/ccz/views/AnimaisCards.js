@@ -5,6 +5,7 @@ import st from "./AnimaisCards.module.css";
 import ModalConfirmacaoCCZ from "../components/Modals/ModalConfirmacaoCCZ";
 import ModalEditarAnimal from "../components/Modals/ModalEditarAnimal";
 import ModalMensagemCCZ from "../components/Modals/ModalMensagemCCZ";
+import BotaoEditar from "@/components/BotaoEditar";
 import { deleteAnimal, updateAnimal } from "../actions";
 
 function especieEmoji(especie) {
@@ -233,13 +234,7 @@ export default function TabAnimaisCards({
                       </div>
                     )}
                     <div className={st.actions}>
-                      <button
-                        type="button"
-                        className={st.editButton}
-                        onClick={() => setAnimalParaEditar(animal)}
-                      >
-                        ✏️ Editar
-                      </button>
+                      <BotaoEditar onClick={() => setAnimalParaEditar(animal)} />
                       <button
                         type="button"
                         className={st.deleteButton}

@@ -4,6 +4,7 @@ import { useState } from "react";
 import s from "./shared.module.css";
 import ModalConfirmacaoCCZ from "./Modals/ModalConfirmacaoCCZ";
 import ModalMensagemCCZ from "./Modals/ModalMensagemCCZ";
+import BotaoEditar from "@/components/BotaoEditar";
 import { createAtividade, updateAtividade, deleteAtividade } from "../actions";
 
 const TIPOS = [
@@ -290,9 +291,7 @@ export default function TabAtividades({ atividades = [], reloadData }) {
                   </span>
                 </td>
                 <td className={s.actionsCell}>
-                  <button className={s.editBtn} onClick={() => handleEdit(a)}>
-                    ✏️ Editar
-                  </button>
+                  <BotaoEditar onClick={() => handleEdit(a)} />
                   <button
                     className={s.deleteBtn}
                     onClick={() =>

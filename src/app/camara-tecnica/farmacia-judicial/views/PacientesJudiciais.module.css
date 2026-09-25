@@ -728,3 +728,174 @@
   font-size: 0.75rem;
   color: #64748b;
 }
+
+/* ── BUSCA DE PACIENTE ESTILO REGULAÇÃO (dropdown em tabela) ───────────── */
+.searchSelectWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.selectLikeInput {
+  width: 100%;
+  padding: 0.65rem 2rem 0.65rem 0.85rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: #1e293b;
+  background-color: #ffffff;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.selectLikeInput:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+}
+
+.arrowIcon {
+  position: absolute;
+  right: 0.85rem;
+  font-size: 0.75rem;
+  color: #64748b;
+  cursor: pointer;
+  user-select: none;
+}
+
+.tableDropdownMenu {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  right: 0;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  padding: 0.5rem;
+  z-index: 100;
+}
+
+.tableContainerScroll {
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1px solid #f1f5f9;
+  border-radius: 6px;
+}
+
+.patientTableDropdown {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.825rem;
+  text-align: left;
+}
+
+.patientTableDropdown thead {
+  position: sticky;
+  top: 0;
+  background-color: #f8fafc;
+  z-index: 10;
+}
+
+.patientTableDropdown th {
+  padding: 0.6rem 0.75rem;
+  color: #475569;
+  font-weight: 700;
+  border-bottom: 2px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.patientTableDropdown td {
+  padding: 0.6rem 0.75rem;
+  color: #334155;
+  border-bottom: 1px solid #f1f5f9;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.patientTableDropdown tbody tr:hover td {
+  background-color: #2563eb;
+  color: #ffffff;
+}
+
+.boldName {
+  font-weight: 600;
+}
+
+.selectedRow {
+  background-color: #eff6ff;
+}
+
+.noDataTd {
+  text-align: center;
+  padding: 1.5rem !important;
+  color: #94a3b8;
+  cursor: default !important;
+}
+
+.patientTableDropdown tbody tr:hover .noDataTd {
+  background-color: transparent !important;
+  color: #94a3b8 !important;
+}
+
+/* ── DADOS DA PESSOA (somente leitura, estilo cadastro de Pessoas) ─────── */
+.dataTitle {
+  margin: 0.5rem 0 0.25rem;
+  font-size: 1.15rem;
+  font-weight: 800;
+  color: #0f172a;
+}
+
+.formSectionTitle {
+  margin: 1rem 0 0.5rem;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid #e2e8f0;
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #64748b;
+}
+
+.dataGrid {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.field.colWide {
+  grid-column: span 2;
+}
+
+.field label {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.field input {
+  width: 100%;
+  padding: 0.6rem 0.75rem;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: #334155;
+  background-color: #f8fafc;
+  box-sizing: border-box;
+}
+
+@media (max-width: 900px) {
+  .dataGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .field.colWide {
+    grid-column: span 2;
+  }
+}

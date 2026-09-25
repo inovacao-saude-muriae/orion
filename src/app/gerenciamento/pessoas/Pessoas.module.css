@@ -63,6 +63,21 @@
   color: #1e293b;
 }
 
+/* Bloco de busca dentro do card único */
+.searchBlock {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 1.25rem;
+}
+
+/* Separador entre a busca e os dados da pessoa */
+.divider {
+  border: none;
+  border-top: 1px solid #f1f5f9;
+  margin: 1.25rem 0;
+}
+
 /* Card de busca (autocomplete) */
 .searchLabel {
   display: block;
