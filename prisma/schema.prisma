@@ -265,6 +265,7 @@ model Medicamento {
 
   lotes       LoteMedicamento[]
   tratamentos TratamentoPaciente[]
+  ajustes     AjusteEstoque[]
 
   @@map("farmacia_medicamentos")
 }
@@ -284,6 +285,21 @@ model LoteMedicamento {
   dispensacoes DispensacaoMedicamento[]
 
   @@map("farmacia_lotes_medicamentos")
+}
+
+model AjusteEstoque {
+  id            Int      @id @default(autoincrement())
+  medicamentoId Int      @map("medicamento_id")
+  saldoAnterior Int      @map("saldo_anterior")
+  saldoNovo     Int      @map("saldo_novo")
+  delta         Int
+  justificativa String
+  responsavel   String?  @db.VarChar(150)
+  createdAt     DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  medicamento Medicamento @relation(fields: [medicamentoId], references: [id], onDelete: Cascade)
+
+  @@map("farmacia_ajustes_estoque")
 }
 
 model TratamentoPaciente {

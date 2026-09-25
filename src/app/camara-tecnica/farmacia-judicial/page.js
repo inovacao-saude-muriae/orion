@@ -11,8 +11,11 @@ import {
   getCatalogoCompleto,
   createMedicamento,
   updateMedicamento,
+  deleteMedicamento,
   createLoteMedicamento,
   updateLoteMedicamento,
+  ajustarEstoque,
+  getAjustesEstoque,
   registrarDispensacao,
   getDashboardMetrics,
   getRelatorioEntradas,
@@ -191,6 +194,18 @@ function FarmaciaJudicialPageContent() {
     return res;
   };
 
+  // Ajuste de saldo (com justificativa) e leitura do histórico de ajustes.
+  const handleAjustarEstoque = async (medicamentoId, formData) => {
+    const res = await ajustarEstoque(medicamentoId, formData);
+    if (res.success) await reloadData();
+    else alert("Erro: " + res.error);
+    return res;
+  };
+
+  const handleGetAjustes = async (medicamentoId) => {
+    return await getAjustesEstoque(medicamentoId);
+  };
+
   // Catálogo (aba Medicamentos): cria/atualiza sem sair da aba.
   const handleCreateMedicamentoCatalogo = async (formData) => {
     const res = await createMedicamento(formData);
@@ -201,6 +216,13 @@ function FarmaciaJudicialPageContent() {
 
   const handleUpdateMedicamento = async (id, formData) => {
     const res = await updateMedicamento(id, formData);
+    if (res.success) await reloadData();
+    else alert("Erro: " + res.error);
+    return res;
+  };
+
+  const handleDeleteMedicamento = async (id) => {
+    const res = await deleteMedicamento(id);
     if (res.success) await reloadData();
     else alert("Erro: " + res.error);
     return res;
@@ -239,6 +261,7 @@ function FarmaciaJudicialPageContent() {
           catalogo={catalogoCompleto}
           onCreateMedicamento={handleCreateMedicamentoCatalogo}
           onUpdateMedicamento={handleUpdateMedicamento}
+          onDeleteMedicamento={handleDeleteMedicamento}
           loading={loading}
         />
       )}
@@ -259,6 +282,8 @@ function FarmaciaJudicialPageContent() {
           catalogo={catalogoCompleto}
           onUpdateLote={handleUpdateLote}
           onCreateLote={handleCreateLoteEstoque}
+          onAjustarEstoque={handleAjustarEstoque}
+          onGetAjustes={handleGetAjustes}
           loading={loading}
         />
       )}

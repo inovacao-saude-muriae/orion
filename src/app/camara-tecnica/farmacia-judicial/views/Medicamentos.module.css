@@ -196,9 +196,38 @@
 
 .formActions {
   display: flex;
-  justify-content: flex-end;
+  align-items: center;
+  justify-content: space-between;
   gap: 0.75rem;
   margin-top: 0.5rem;
+}
+
+.formActionsRight {
+  display: flex;
+  gap: 0.75rem;
+  margin-left: auto;
+}
+
+.dangerBtn {
+  background-color: #ffffff;
+  color: #dc2626;
+  border: 1px solid #fca5a5;
+  padding: 0.65rem 1.1rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.dangerBtn:hover {
+  background-color: #dc2626;
+  color: #ffffff;
+}
+
+.dangerBtn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
 }
 
 .primaryBtn {

@@ -29,6 +29,7 @@ export default function TabMedicamentos({
   catalogo = [],
   onCreateMedicamento = () => {},
   onUpdateMedicamento = () => {},
+  onDeleteMedicamento = () => {},
   loading = false,
 }) {
   const confirm = useConfirm();
@@ -84,6 +85,21 @@ export default function TabMedicamentos({
       : await onCreateMedicamento(payload);
     setSalvando(false);
 
+    if (res?.success !== false) fechar();
+  };
+
+  const handleExcluir = async () => {
+    if (!editId) return;
+    const ok = await confirm({
+      title: 'Excluir medicamento',
+      message: `Deseja excluir "${form.nome}" do catálogo? Ele deixará de aparecer nas listas, mas o histórico de estoque é preservado.`,
+      confirmText: 'Excluir',
+    });
+    if (!ok) return;
+
+    setSalvando(true);
+    const res = await onDeleteMedicamento(editId);
+    setSalvando(false);
     if (res?.success !== false) fechar();
   };
 
@@ -204,17 +220,29 @@ export default function TabMedicamentos({
               </div>
 
               <div className={styles.formActions}>
-                <button
-                  type="button"
-                  className={styles.secondaryBtn}
-                  onClick={fechar}
-                  disabled={salvando}
-                >
-                  Cancelar
-                </button>
-                <button type="submit" className={styles.primaryBtn} disabled={salvando}>
-                  {salvando ? 'Salvando...' : editId ? 'Atualizar' : 'Salvar'}
-                </button>
+                {editId && (
+                  <button
+                    type="button"
+                    className={styles.dangerBtn}
+                    onClick={handleExcluir}
+                    disabled={salvando}
+                  >
+                    Excluir
+                  </button>
+                )}
+                <div className={styles.formActionsRight}>
+                  <button
+                    type="button"
+                    className={styles.secondaryBtn}
+                    onClick={fechar}
+                    disabled={salvando}
+                  >
+                    Cancelar
+                  </button>
+                  <button type="submit" className={styles.primaryBtn} disabled={salvando}>
+                    {salvando ? 'Salvando...' : editId ? 'Atualizar' : 'Salvar'}
+                  </button>
+                </div>
               </div>
             </form>
           </div>

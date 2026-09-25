@@ -38,8 +38,59 @@ export default function TabSaldoEstoque({
   catalogo = [],
   onUpdateLote = () => {},
   onCreateLote = () => {},
+  onAjustarEstoque = () => {},
+  onGetAjustes = async () => [],
   loading = false,
 }) {
+  // Ajuste de estoque (saldo) por medicamento.
+  const [ajusteMed, setAjusteMed] = useState(null); // medicamento selecionado
+  const [ajusteTab, setAjusteTab] = useState('AJUSTAR'); // 'AJUSTAR' | 'HISTORICO'
+  const [novoSaldo, setNovoSaldo] = useState('');
+  const [justificativa, setJustificativa] = useState('');
+  const [salvandoAjuste, setSalvandoAjuste] = useState(false);
+  const [ajustes, setAjustes] = useState([]);
+  const [carregandoAjustes, setCarregandoAjustes] = useState(false);
+
+  const abrirAjuste = (med) => {
+    setAjusteMed(med);
+    setAjusteTab('AJUSTAR');
+    setNovoSaldo(String(med.qtdTotal ?? 0));
+    setJustificativa('');
+    setAjustes([]);
+  };
+
+  const fecharAjuste = () => {
+    setAjusteMed(null);
+    setNovoSaldo('');
+    setJustificativa('');
+    setAjustes([]);
+  };
+
+  const carregarHistoricoAjustes = async (med) => {
+    setCarregandoAjustes(true);
+    const lista = await onGetAjustes(med.medicamentoId);
+    setAjustes(Array.isArray(lista) ? lista : []);
+    setCarregandoAjustes(false);
+  };
+
+  const trocarTabAjuste = (tab) => {
+    setAjusteTab(tab);
+    if (tab === 'HISTORICO' && ajusteMed) {
+      carregarHistoricoAjustes(ajusteMed);
+    }
+  };
+
+  const confirmarAjuste = async () => {
+    if (justificativa.trim() === '') return alert('Informe a justificativa.');
+    setSalvandoAjuste(true);
+    const res = await onAjustarEstoque(ajusteMed.medicamentoId, {
+      saldoNovo: novoSaldo,
+      justificativa: justificativa.trim(),
+    });
+    setSalvandoAjuste(false);
+    if (res?.success !== false) fecharAjuste();
+  };
+
   // Medicamento cujo histórico está aberto (null = fechado).
   const [historicoMed, setHistoricoMed] = useState(null);
   // Id do lote em edição no histórico.
@@ -163,9 +214,16 @@ export default function TabSaldoEstoque({
                       <td>{med.dosagem || '—'}</td>
                       <td>{med.tipo || '—'}</td>
                       <td>
-                        <strong className={temEstoque ? styles.positiveQty : styles.zeroQty}>
-                          {med.qtdTotal}
-                        </strong>
+                        <button
+                          type="button"
+                          className={styles.qtyBtn}
+                          onClick={() => abrirAjuste(med)}
+                          title="Ajustar saldo"
+                        >
+                          <strong className={temEstoque ? styles.positiveQty : styles.zeroQty}>
+                            {med.qtdTotal}
+                          </strong>
+                        </button>
                       </td>
                       <td>R$ {Number(med.valorUnitario || 0).toFixed(2)}</td>
                       <td>
@@ -480,6 +538,143 @@ export default function TabSaldoEstoque({
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL DE AJUSTE DE ESTOQUE (SALDO) */}
+      {ajusteMed && (
+        <div className={styles.modalOverlay} onClick={fecharAjuste}>
+          <div className={styles.ajusteModal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.ajusteHeader}>
+              <div>
+                <h3 className={styles.ajusteTitle}>Ajuste de Estoque</h3>
+                <p className={styles.ajusteSubtitle}>{ajusteMed.medicamentoNome}</p>
+              </div>
+              <button type="button" className={styles.ajusteClose} onClick={fecharAjuste}>
+                ✕
+              </button>
+            </div>
+
+            <div className={styles.ajusteTabs}>
+              <button
+                type="button"
+                className={`${styles.ajusteTab} ${ajusteTab === 'AJUSTAR' ? styles.ajusteTabActive : ''}`}
+                onClick={() => trocarTabAjuste('AJUSTAR')}
+              >
+                Ajustar Saldo
+              </button>
+              <button
+                type="button"
+                className={`${styles.ajusteTab} ${ajusteTab === 'HISTORICO' ? styles.ajusteTabActive : ''}`}
+                onClick={() => trocarTabAjuste('HISTORICO')}
+              >
+                Histórico
+              </button>
+            </div>
+
+            {ajusteTab === 'AJUSTAR' ? (
+              <div className={styles.ajusteBody}>
+                <div className={styles.saldoRow}>
+                  <div className={styles.saldoCard}>
+                    <span className={styles.saldoLabel}>SALDO ATUAL</span>
+                    <span className={styles.saldoValor}>{ajusteMed.qtdTotal}</span>
+                    <span className={styles.saldoUnidade}>unidades</span>
+                  </div>
+                  <span className={styles.saldoArrow}>→</span>
+                  <div className={`${styles.saldoCard} ${styles.saldoCardNovo}`}>
+                    <span className={styles.saldoLabelNovo}>NOVO SALDO</span>
+                    <input
+                      type="number"
+                      min="0"
+                      className={styles.saldoInput}
+                      value={novoSaldo}
+                      onChange={(e) => setNovoSaldo(e.target.value)}
+                    />
+                    <span className={styles.saldoUnidade}>unidades</span>
+                  </div>
+                </div>
+
+                <div className={styles.fieldGroup}>
+                  <label>Justificativa *</label>
+                  <textarea
+                    rows={3}
+                    placeholder="Ex.: Conferência física, vencimento de lote, perda, etc."
+                    value={justificativa}
+                    onChange={(e) => setJustificativa(e.target.value)}
+                  />
+                </div>
+
+                <p className={styles.ajusteNote}>
+                  O ajuste fica registrado com data e responsável.
+                </p>
+
+                <div className={styles.entradaActions}>
+                  <button
+                    type="button"
+                    className={styles.cancelBtn}
+                    onClick={fecharAjuste}
+                    disabled={salvandoAjuste}
+                  >
+                    Cancelar
+                  </button>
+                  <button
+                    type="button"
+                    className={styles.confirmarBtn}
+                    onClick={confirmarAjuste}
+                    disabled={salvandoAjuste}
+                  >
+                    {salvandoAjuste ? 'Salvando...' : 'Confirmar Ajuste'}
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className={styles.ajusteBody}>
+                <div className={styles.tableWrapper}>
+                  <table className={styles.table}>
+                    <thead>
+                      <tr>
+                        <th>Data</th>
+                        <th>Saldo ant.</th>
+                        <th>Novo saldo</th>
+                        <th>Justificativa</th>
+                        <th>Responsável</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {carregandoAjustes ? (
+                        <tr>
+                          <td colSpan="5" style={{ textAlign: 'center', color: '#64748b' }}>
+                            Carregando histórico...
+                          </td>
+                        </tr>
+                      ) : ajustes.length === 0 ? (
+                        <tr>
+                          <td colSpan="5" style={{ textAlign: 'center', color: '#64748b' }}>
+                            Nenhum ajuste registrado.
+                          </td>
+                        </tr>
+                      ) : (
+                        ajustes.map((a) => (
+                          <tr key={a.id}>
+                            <td>{a.dataAjuste}</td>
+                            <td>{a.saldoAnterior}</td>
+                            <td>
+                              <strong>{a.saldoNovo}</strong>{' '}
+                              <span className={a.delta >= 0 ? styles.positiveQty : styles.zeroQty}>
+                                ({a.delta >= 0 ? '+' : ''}{a.delta})
+                              </span>
+                            </td>
+                            <td>{a.justificativa}</td>
+                            <td>{a.responsavel || '—'}</td>
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       )}

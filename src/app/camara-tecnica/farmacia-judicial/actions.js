@@ -225,6 +225,31 @@ export async function updateMedicamento(id, data) {
   }
 }
 
+// Excluir medicamento do catálogo.
+// Usa desativação (soft delete) para preservar o histórico de lotes/dispensações.
+export async function deleteMedicamento(id) {
+  try {
+    await requireRole(["GESTOR", "FARMACIA_ADMIN"]);
+
+    const medId = Number(id);
+    if (!Number.isSafeInteger(medId) || medId <= 0) {
+      throw new Error("Medicamento inválido.");
+    }
+
+    await prisma.$executeRaw`
+      UPDATE public.farmacia_medicamentos
+      SET ativo = false
+      WHERE id = ${medId}
+    `;
+
+    revalidatePath("/camara-tecnica/farmacia-judicial");
+    return { success: true };
+  } catch (error) {
+    console.error("Erro ao excluir medicamento:", error);
+    return { success: false, error: error.message };
+  }
+}
+
 export async function createLoteMedicamento(data) {
   try {
     await prisma.$executeRaw`
@@ -257,7 +282,17 @@ export async function getEstoqueAgrupado() {
         m.nome AS "medicamentoNome",
         m.dosagem AS dosagem,
         m.tipo AS tipo,
-        COALESCE(SUM(lm.qtd_inicial - COALESCE(entregas.total_entregue, 0)), 0)::integer AS "qtdTotal",
+        (
+          COALESCE(SUM(lm.qtd_inicial - COALESCE(entregas.total_entregue, 0)), 0)
+          + COALESCE(
+              (
+                SELECT SUM(a.delta)
+                FROM public.farmacia_ajustes_estoque a
+                WHERE a.medicamento_id = m.id
+              ),
+              0
+            )
+        )::integer AS "qtdTotal",
         COALESCE(
           (
             SELECT lm2.valor_unitario
@@ -335,6 +370,106 @@ export async function updateLoteMedicamento(loteId, data) {
     return { success: true };
   } catch (error) {
     console.error("Erro ao atualizar lote:", error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Saldo atual (lotes - dispensações + ajustes) de um medicamento.
+async function calcularSaldoMedicamento(medicamentoId) {
+  const rows = await prisma.$queryRaw`
+    SELECT (
+      COALESCE(
+        (
+          SELECT SUM(lm.qtd_inicial - COALESCE(e.total, 0))
+          FROM public.farmacia_lotes_medicamentos lm
+          LEFT JOIN (
+            SELECT lote_medicamento_id, SUM(qtd_entregue) AS total
+            FROM public.farmacia_dispensacoes_medicamentos
+            GROUP BY lote_medicamento_id
+          ) e ON e.lote_medicamento_id = lm.id
+          WHERE lm.medicamento_id = ${medicamentoId}
+        ),
+        0
+      )
+      + COALESCE(
+        (SELECT SUM(delta) FROM public.farmacia_ajustes_estoque WHERE medicamento_id = ${medicamentoId}),
+        0
+      )
+    )::integer AS saldo
+  `;
+  return Number(rows?.[0]?.saldo || 0);
+}
+
+// Histórico de ajustes de estoque de um medicamento.
+export async function getAjustesEstoque(medicamentoId) {
+  try {
+    const id = Number(medicamentoId);
+    if (!Number.isSafeInteger(id) || id <= 0) return [];
+
+    const rows = await prisma.$queryRaw`
+      SELECT
+        id,
+        saldo_anterior AS "saldoAnterior",
+        saldo_novo AS "saldoNovo",
+        delta,
+        justificativa,
+        responsavel,
+        TO_CHAR(created_at, 'DD/MM/YYYY HH24:MI') AS "dataAjuste"
+      FROM public.farmacia_ajustes_estoque
+      WHERE medicamento_id = ${id}
+      ORDER BY created_at DESC
+    `;
+    return serializeData(rows);
+  } catch (error) {
+    console.error("Erro ao buscar ajustes de estoque:", error);
+    return [];
+  }
+}
+
+// Ajusta o saldo do medicamento para um novo valor, registrando a justificativa.
+export async function ajustarEstoque(medicamentoId, data) {
+  try {
+    const session = await requireRole(["GESTOR", "FARMACIA_ADMIN"]);
+
+    const id = Number(medicamentoId);
+    if (!Number.isSafeInteger(id) || id <= 0) {
+      throw new Error("Medicamento inválido.");
+    }
+
+    const saldoNovo = Number(data.saldoNovo);
+    if (!Number.isSafeInteger(saldoNovo) || saldoNovo < 0) {
+      throw new Error("Informe um novo saldo válido (número não negativo).");
+    }
+
+    const justificativa = (data.justificativa || "").trim();
+    if (!justificativa) {
+      throw new Error("Informe a justificativa do ajuste.");
+    }
+
+    const saldoAnterior = await calcularSaldoMedicamento(id);
+    const delta = saldoNovo - saldoAnterior;
+
+    if (delta === 0) {
+      throw new Error("O novo saldo é igual ao saldo atual.");
+    }
+
+    const responsavel = session?.nome || null;
+
+    await prisma.ajusteEstoque.create({
+      data: {
+        medicamentoId: id,
+        saldoAnterior,
+        saldoNovo,
+        delta,
+        justificativa,
+        responsavel,
+      },
+    });
+
+    revalidatePath("/camara-tecnica/farmacia-judicial");
+    return { success: true };
+  } catch (error) {
+    console.error("Erro ao ajustar estoque:", error);
     return { success: false, error: error.message };
   }
 }
