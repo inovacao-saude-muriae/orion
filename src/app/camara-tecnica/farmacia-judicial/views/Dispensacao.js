@@ -1,24 +1,65 @@
 "use client";
 
-import { useState } from "react";
-import Image from "next/image";
+import { useState, useRef, useEffect } from "react";
 import styles from "./Dispensacao.module.css";
+import { documentoPaciente } from "@/app/regulacao/constants";
 
 export default function TabDispensacao({
   pacientes = [],
   estoqueLotes = [],
   onConfirmarDispensacao,
+  onGetMedicamentosPaciente = async () => ({ medicamentos: [], lotes: [] }),
 }) {
   const [search, setSearch] = useState("");
   const [selectedPaciente, setSelectedPaciente] = useState(null);
+  // Responsável pela entrega = usuário logado (preenchido automaticamente).
   const [responsavelEntrega, setResponsavelEntrega] = useState("");
   const [observacao, setObservacao] = useState("");
 
+  // Dropdown de busca de paciente (estilo tabela, como em Pacientes).
+  const [showPatientDropdown, setShowPatientDropdown] = useState(false);
+  const patientDropdownRef = useRef(null);
+
+  // Medicamentos vinculados ao paciente selecionado (com saldo total em estoque).
+  const [medicamentosPaciente, setMedicamentosPaciente] = useState([]);
+  const [carregandoMeds, setCarregandoMeds] = useState(false);
+
   const [carrinhoDispensacao, setCarrinhoDispensacao] = useState([]);
 
-  // 🎯 ESTADOS PARA BUSCA DIGITÁVEL E MENU SUSPENSO
-  const [searchMed, setSearchMed] = useState("");
-  const [selectedLoteId, setSelectedLoteId] = useState("");
+  // Fecha o dropdown de paciente ao clicar fora.
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (
+        patientDropdownRef.current &&
+        !patientDropdownRef.current.contains(e.target)
+      ) {
+        setShowPatientDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Carrega o usuário logado para preencher o responsável pela entrega.
+  useEffect(() => {
+    let ativo = true;
+    (async () => {
+      try {
+        const res = await fetch("/api/me");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (ativo) setResponsavelEntrega(data?.user?.nomeCompleto || "");
+      } catch {
+        /* silencioso: campo fica vazio se falhar */
+      }
+    })();
+    return () => {
+      ativo = false;
+    };
+  }, []);
+
+  // Seleção do medicamento vinculado + quantidade.
+  const [selectedMedId, setSelectedMedId] = useState("");
   const [qtdEntregue, setQtdEntregue] = useState("");
 
   // ESTADO DO MODAL DE CONFIRMAÇÃO
@@ -48,87 +89,86 @@ export default function TabDispensacao({
     return matchesText || matchesCpf;
   });
 
-  // FILTRO DE LOTES DISPONÍVEIS
-  const lotesComEstoque = estoqueLotes.filter((l) => l.qtdAtual > 0);
+  // Medicamento escolhido no dropdown (para saber o saldo total disponível).
+  const medSelecionado = medicamentosPaciente.find(
+    (m) => String(m.medicamentoId) === String(selectedMedId),
+  );
 
-  const filteredLotes = lotesComEstoque.filter((l) => {
-    const termo = normalizeSearchValue(searchMed);
-    const medNome = normalizeSearchValue(l.medicamentoNome);
-    const loteNum = normalizeSearchValue(l.numeroLote);
-    const dosagem = normalizeSearchValue(l.dosagem);
-    return (
-      medNome.includes(termo) ||
-      loteNum.includes(termo) ||
-      dosagem.includes(termo)
-    );
-  });
+  // Remove duplicados por CPF na lista de pacientes (uma pessoa pode ter várias pastas).
+  const removeDuplicadosPorCpf = (lista) => {
+    const vistos = new Set();
+    return lista.filter((p) => {
+      const cpf = (p.cpf || "").replace(/\D/g, "");
+      if (!cpf) return true;
+      if (vistos.has(cpf)) return false;
+      vistos.add(cpf);
+      return true;
+    });
+  };
 
-  const handleSelectPaciente = (p) => {
+  const handleSelectPaciente = async (p) => {
     setSelectedPaciente(p);
-    setSearch(`${p.numeroPasta} - ${p.patientName}`);
+    setSearch(`${p.patientName} (${documentoPaciente({ cpf: p.cpf, cns: p.cns })})`);
+    setShowPatientDropdown(false);
+    setCarrinhoDispensacao([]);
+    setSelectedMedId("");
+
+    // Carrega os medicamentos vinculados ao paciente.
+    setCarregandoMeds(true);
+    const res = await onGetMedicamentosPaciente(p.numeroPasta);
+    setMedicamentosPaciente(res?.medicamentos || []);
+    setCarregandoMeds(false);
   };
 
-  // 🎯 SELEÇÃO PELA BUSCA DIGITÁVEL
-  const handleSelectLoteDigitavel = (lote) => {
-    setSelectedLoteId(String(lote.loteId));
-    setSearchMed(
-      `${lote.medicamentoNome} (${lote.dosagem}) - Lote: ${lote.numeroLote}`,
-    );
+  const limparPaciente = () => {
+    setSelectedPaciente(null);
+    setSearch("");
+    setMedicamentosPaciente([]);
+    setCarrinhoDispensacao([]);
+    setShowPatientDropdown(false);
+    setSelectedMedId("");
   };
 
-  // 🎯 SELEÇÃO PELO MENU SUSPENSO (SELECT)
-  const handleSelectLoteDropdown = (e) => {
-    const loteId = e.target.value;
-    setSelectedLoteId(loteId);
-
-    if (!loteId) {
-      setSearchMed("");
-      return;
-    }
-
-    const lote = lotesComEstoque.find(
-      (l) => String(l.loteId) === String(loteId),
-    );
-    if (lote) {
-      setSearchMed(
-        `${lote.medicamentoNome} (${lote.dosagem}) - Lote: ${lote.numeroLote}`,
-      );
-    }
+  // Seleção do medicamento vinculado (dropdown).
+  const handleSelectMedicamento = (e) => {
+    setSelectedMedId(e.target.value);
   };
 
   const handleAddItem = (e) => {
     e.preventDefault();
-    if (!selectedLoteId || !qtdEntregue || Number(qtdEntregue) <= 0) {
-      return alert("Selecione um lote e informe uma quantidade válida.");
+    const qtd = Number(qtdEntregue);
+    if (!selectedMedId || !qtd || qtd <= 0 || !Number.isSafeInteger(qtd)) {
+      return alert("Selecione o medicamento e informe uma quantidade válida.");
     }
 
-    const lote = lotesComEstoque.find(
-      (l) => String(l.loteId) === String(selectedLoteId),
+    const med = medicamentosPaciente.find(
+      (m) => String(m.medicamentoId) === String(selectedMedId),
     );
-    if (!lote) return;
+    if (!med) return;
 
+    // Já reservado no carrinho para este medicamento.
     const reservado = carrinhoDispensacao
-      .filter((item) => String(item.loteId) === String(lote.loteId))
+      .filter((item) => String(item.medicamentoId) === String(med.medicamentoId))
       .reduce((total, item) => total + item.qtdEntregue, 0);
-    if (!Number.isSafeInteger(Number(qtdEntregue)) || Number(qtdEntregue) + reservado > lote.qtdAtual) {
+
+    const disponivel = Number(med.saldoTotal || 0) - reservado;
+    if (qtd > disponivel) {
       return alert(
-        `Quantidade excede o saldo em estoque deste lote (${lote.qtdAtual - reservado} disp).`,
+        `Quantidade excede o saldo em estoque deste medicamento (disponível: ${disponivel}).`,
       );
     }
 
     setCarrinhoDispensacao((prev) => [
       ...prev,
       {
-        loteId: lote.loteId,
-        medicamentoNome: lote.medicamentoNome,
-        dosagem: lote.dosagem,
-        numeroLote: lote.numeroLote,
-        qtdEntregue: Number(qtdEntregue),
+        medicamentoId: med.medicamentoId,
+        medicamentoNome: med.medicamentoNome,
+        dosagem: med.dosagem,
+        qtdEntregue: qtd,
       },
     ]);
 
-    setSelectedLoteId("");
-    setSearchMed("");
+    setSelectedMedId("");
     setQtdEntregue("");
   };
 
@@ -137,20 +177,151 @@ export default function TabDispensacao({
   };
 
   const gerarTermoDispensacaoImpressao = (dados) => {
-    const dataHoraAtual = new Date().toLocaleString("pt-BR");
+    const dataEntrega = new Date().toLocaleDateString("pt-BR");
 
-    const linhasMedicamentos = dados.itens
+    // Linhas da tabela principal (com data de entrega por item).
+    const linhasCompletas = dados.itens
       .map(
-        (item, index) => `
+        (item) => `
         <tr>
-          <td style="border: 1px solid #cbd5e1; padding: 8px; text-align: center;">${index + 1}</td>
-          <td style="border: 1px solid #cbd5e1; padding: 8px;"><strong>${item.medicamentoNome}</strong> (${item.dosagem})</td>
-          <td style="border: 1px solid #cbd5e1; padding: 8px; text-align: center;">${item.numeroLote}</td>
-          <td style="border: 1px solid #cbd5e1; padding: 8px; text-align: center;"><strong>${item.qtdEntregue}</strong></td>
+          <td>
+            <span class="med-nome">${item.medicamentoNome}</span>
+            <span class="med-dose">${item.dosagem || ""}</span>
+          </td>
+          <td class="col-qtd">${item.qtdEntregue}</td>
+          <td class="col-data">${dataEntrega}</td>
         </tr>
       `,
       )
       .join("");
+
+    // Linhas da via de recorte (só medicamento e quantidade).
+    const linhasSimples = dados.itens
+      .map(
+        (item) => `
+        <tr>
+          <td>
+            <span class="med-nome">${item.medicamentoNome}</span>
+            <span class="med-dose">${item.dosagem || ""}</span>
+          </td>
+          <td class="col-qtd">${item.qtdEntregue}</td>
+        </tr>
+      `,
+      )
+      .join("");
+
+    const observacaoHtml = dados.observacao ? dados.observacao : "Nenhuma";
+
+    const responsavel = dados.responsavelEntrega || "—";
+
+    // ── VIA PRINCIPAL (Farmácia) ──────────────────────────────────────────
+    const viaPrincipal = `
+      <div class="via">
+        <div class="cabecalho">
+          <div class="cabecalho-titulo">
+            <h1>Farmácia Judicial de Muriaé</h1>
+            <p>Comprovante de Dispensação de Medicamentos</p>
+          </div>
+          <div class="cabecalho-meta">
+            <span class="via-selo">1ª via — Farmácia</span>
+            <span>Secretaria Municipal de Saúde</span>
+            <span>Muriaé — MG</span>
+          </div>
+        </div>
+
+        <div class="secao">
+          <div class="secao-titulo">Dados do Paciente</div>
+          <div class="dados-grid">
+            <div class="dado"><span class="dado-label">Paciente</span><span class="dado-valor">${dados.paciente.patientName}</span></div>
+            <div class="dado"><span class="dado-label">CPF</span><span class="dado-valor">${dados.paciente.cpf || "—"}</span></div>
+            <div class="dado"><span class="dado-label">Telefone</span><span class="dado-valor">${dados.paciente.telefone || "—"}</span></div>
+            <div class="dado"><span class="dado-label">Código / Pasta</span><span class="dado-valor">${dados.paciente.numeroPasta || "—"}</span></div>
+            <div class="dado"><span class="dado-label">Data de entrega</span><span class="dado-valor">${dataEntrega}</span></div>
+            <div class="dado"><span class="dado-label">Responsável</span><span class="dado-valor">${responsavel}</span></div>
+          </div>
+        </div>
+
+        <div class="secao">
+          <div class="secao-titulo">Medicamentos Dispensados</div>
+          <table>
+            <thead>
+              <tr>
+                <th>Medicamento</th>
+                <th class="col-qtd">Qtd. dispensada</th>
+                <th class="col-data">Data de entrega</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${linhasCompletas}
+            </tbody>
+          </table>
+        </div>
+
+        <div class="obs-box">
+          <span class="obs-title">Observações</span>
+          <div>${observacaoHtml}</div>
+        </div>
+
+        <div class="assinaturas">
+          <div class="assinatura">
+            <div class="assinatura-linha"></div>
+            <div class="assinatura-nome">${responsavel}</div>
+            <div class="assinatura-label">Responsável pela entrega</div>
+          </div>
+          <div class="assinatura">
+            <div class="assinatura-linha"></div>
+            <div class="assinatura-nome">${dados.paciente.patientName}</div>
+            <div class="assinatura-label">Paciente / Receptor</div>
+          </div>
+        </div>
+      </div>
+    `;
+
+    // ── VIA DE RECORTE (Comprovante de entrega) ───────────────────────────
+    const viaRecorte = `
+      <div class="via via-recorte">
+        <div class="cabecalho cabecalho-compacto">
+          <div class="cabecalho-titulo">
+            <h2>Farmácia Judicial de Muriaé</h2>
+            <p>Comprovante de Entrega de Medicamento</p>
+          </div>
+          <div class="cabecalho-meta">
+            <span class="via-selo">2ª via — Paciente</span>
+            <span>Data de entrega</span>
+            <span class="meta-forte">${dataEntrega}</span>
+          </div>
+        </div>
+
+        <div class="dados-linha">
+          <strong>Paciente:</strong> ${dados.paciente.patientName}
+        </div>
+
+        <table>
+          <thead>
+            <tr>
+              <th>Medicamento</th>
+              <th class="col-qtd">Qtd. dispensada</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${linhasSimples}
+          </tbody>
+        </table>
+
+        <div class="obs-box">
+          <span class="obs-title">Observações</span>
+          <div>${observacaoHtml}</div>
+        </div>
+
+        <div class="assinaturas assinaturas-uma">
+          <div class="assinatura">
+            <div class="assinatura-linha"></div>
+            <div class="assinatura-nome">${dados.paciente.patientName}</div>
+            <div class="assinatura-label">Paciente / Receptor</div>
+          </div>
+        </div>
+      </div>
+    `;
 
     const iframeAntigo = document.getElementById("iframe-impressao-termo");
     if (iframeAntigo) {
@@ -174,73 +345,208 @@ export default function TabDispensacao({
       <html lang="pt-BR">
       <head>
         <meta charset="UTF-8">
-        <title>Recibo de Dispensação - ${dados.paciente.patientName}</title>
+        <title>Comprovante de Dispensação - ${dados.paciente.patientName}</title>
         <style>
-          body { font-family: Arial, sans-serif; padding: 30px; color: #0f172a; font-size: 13px; line-height: 1.4; }
-          .header { text-align: center; border-bottom: 2px solid #0f172a; padding-bottom: 15px; margin-bottom: 20px; }
-          .header h2 { margin: 0; font-size: 18px; text-transform: uppercase; }
-          .header p { margin: 4px 0 0 0; color: #475569; font-size: 12px; }
-          .info-block { background-color: #f8fafc; border: 1px solid #e2e8f0; padding: 15px; border-radius: 8px; margin-bottom: 20px; }
-          .info-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-          table { width: 100%; border-collapse: collapse; margin-bottom: 25px; }
-          th { background-color: #f1f5f9; border: 1px solid #cbd5e1; padding: 8px; text-align: left; font-size: 11px; text-transform: uppercase; }
-          .obs-box { margin-bottom: 30px; padding: 10px; background-color: #fffbe3; border: 1px solid #fef08a; border-radius: 6px; font-size: 12px; }
-          
-          .signatures-container { margin-top: 80px; display: flex; justify-content: space-between; gap: 40px; page-break-inside: avoid; }
-          .signature-box { flex: 1; text-align: center; }
-          .signature-line { border-top: 1px solid #000000; margin-bottom: 6px; width: 100%; }
-          .signature-name { font-weight: bold; font-size: 12px; color: #0f172a; margin-bottom: 2px; }
-          .signature-title { font-size: 11px; color: #64748b; }
-          @media print { body { padding: 0; } }
+          * { box-sizing: border-box; }
+          body {
+            font-family: 'Segoe UI', Arial, sans-serif;
+            padding: 32px;
+            color: #334155;
+            font-size: 12.5px;
+            line-height: 1.5;
+            margin: 0;
+          }
+
+          /* Cada via: borda fina, cantos arredondados, respiro interno */
+          .via {
+            border: 1px solid #cbd5e1;
+            border-radius: 12px;
+            padding: 26px 30px;
+          }
+
+          /* Cabeçalho institucional */
+          .cabecalho {
+            display: flex;
+            align-items: flex-start;
+            justify-content: space-between;
+            gap: 20px;
+            border-bottom: 2px solid #1e3a5f;
+            padding-bottom: 14px;
+            margin-bottom: 20px;
+          }
+          .cabecalho-titulo h1 {
+            margin: 0;
+            font-size: 19px;
+            font-weight: 700;
+            color: #1e3a5f;
+            letter-spacing: 0.01em;
+          }
+          .cabecalho-titulo h2 {
+            margin: 0;
+            font-size: 15px;
+            font-weight: 700;
+            color: #1e3a5f;
+          }
+          .cabecalho-titulo p {
+            margin: 3px 0 0;
+            font-size: 12px;
+            color: #64748b;
+          }
+          .cabecalho-meta {
+            text-align: right;
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            font-size: 10.5px;
+            color: #64748b;
+            white-space: nowrap;
+          }
+          .cabecalho-meta .meta-forte { font-size: 13px; font-weight: 700; color: #1e3a5f; }
+          .via-selo {
+            display: inline-block;
+            align-self: flex-end;
+            background: #1e3a5f;
+            color: #ffffff;
+            font-size: 9.5px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            padding: 3px 10px;
+            border-radius: 999px;
+            margin-bottom: 4px;
+          }
+          .cabecalho-compacto { border-bottom-width: 1px; padding-bottom: 12px; margin-bottom: 16px; }
+
+          /* Seções */
+          .secao { margin-bottom: 20px; }
+          .secao-titulo {
+            font-size: 10.5px;
+            text-transform: uppercase;
+            letter-spacing: 0.08em;
+            color: #4a6fa5;
+            font-weight: 700;
+            margin: 0 0 10px;
+          }
+
+          /* Dados do paciente em grid 2 colunas */
+          .dados-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px 28px;
+          }
+          .dado { display: flex; flex-direction: column; gap: 1px; }
+          .dado-label {
+            font-size: 9.5px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #94a3b8;
+            font-weight: 700;
+          }
+          .dado-valor { font-size: 12.5px; color: #1e293b; font-weight: 600; }
+
+          .dados-linha { font-size: 12.5px; margin-bottom: 12px; color: #1e293b; }
+          .dados-linha strong { color: #334155; }
+
+          /* Tabelas */
+          table {
+            width: 100%;
+            border-collapse: collapse;
+            border: 1px solid #e2e8f0;
+            border-radius: 8px;
+            overflow: hidden;
+          }
+          thead th {
+            background: #1e3a5f;
+            color: #ffffff;
+            padding: 9px 12px;
+            text-align: left;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 700;
+          }
+          tbody td {
+            padding: 10px 12px;
+            border-bottom: 1px solid #eef2f7;
+            font-size: 12.5px;
+            vertical-align: middle;
+          }
+          tbody tr:last-child td { border-bottom: none; }
+          tbody tr:nth-child(even) td { background: #f8fafc; }
+          .col-qtd { width: 130px; text-align: center; }
+          .col-data { width: 130px; text-align: center; }
+          thead .col-qtd, thead .col-data { text-align: center; }
+          tbody .col-qtd, tbody .col-data { font-weight: 700; color: #1e3a5f; }
+          .med-nome { font-weight: 700; color: #1e293b; }
+          .med-dose { color: #64748b; font-weight: 400; margin-left: 4px; }
+
+          /* Observações */
+          .obs-box {
+            border: 1px solid #e2e8f0;
+            border-left: 3px solid #4a6fa5;
+            border-radius: 6px;
+            padding: 10px 14px;
+            font-size: 12px;
+            color: #475569;
+            margin: 16px 0 0;
+          }
+          .obs-title {
+            display: block;
+            font-size: 9.5px;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            font-weight: 700;
+            color: #4a6fa5;
+            margin-bottom: 2px;
+          }
+
+          /* Assinaturas: próximas e centralizadas, largura controlada */
+          .assinaturas {
+            display: flex;
+            justify-content: center;
+            gap: 48px;
+            margin-top: 44px;
+          }
+          .assinatura { width: 220px; text-align: center; }
+          .assinatura-linha {
+            border-top: 1px solid #475569;
+            margin-bottom: 5px;
+          }
+          .assinatura-nome {
+            font-size: 12px;
+            font-weight: 700;
+            color: #1e293b;
+          }
+          .assinatura-label {
+            font-size: 10.5px;
+            color: #64748b;
+            margin-top: 1px;
+          }
+
+          /* Divisor de recorte (entre as duas vias) */
+          .recorte {
+            text-align: center;
+            font-size: 10.5px;
+            font-weight: 700;
+            color: #94a3b8;
+            letter-spacing: 0.06em;
+            text-transform: uppercase;
+            margin: 16px 0;
+          }
+
+          @media print {
+            body { padding: 16px; }
+            .via { page-break-inside: avoid; }
+            thead th { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            tbody tr:nth-child(even) td { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+            .via-selo { -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+          }
         </style>
       </head>
       <body>
-        <div class="header">
-          <h2>Recibo de Entrega de Medicamentos Judiciais</h2>
-          <p>Secretaria Municipal de Saúde / Farmácia Judicial | Muriaé - MG</p>
-        </div>
-
-        <div class="info-block">
-          <div class="info-grid">
-            <div><strong>Paciente:</strong> ${dados.paciente.patientName}</div>
-            <div><strong>CPF:</strong> ${dados.paciente.cpf}</div>
-            <div><strong>Nº da Pasta:</strong> ${dados.paciente.numeroPasta}</div>
-            <div><strong>Nº do Processo:</strong> ${dados.paciente.numeroProcesso}</div>
-            <div><strong>Data/Hora de Emissão:</strong> ${dataHoraAtual}</div>
-            <div><strong>Servidor Responsável:</strong> ${dados.responsavelEntrega}</div>
-          </div>
-        </div>
-
-        <h3 style="font-size: 13px; text-transform: uppercase; color: #334155; margin-bottom: 8px;">Medicamentos Entregues</h3>
-        <table>
-          <thead>
-            <tr>
-              <th style="width: 40px; text-align: center;">Item</th>
-              <th>Medicamento e Dosagem</th>
-              <th style="width: 120px; text-align: center;">Nº Lote</th>
-              <th style="width: 100px; text-align: center;">Qtd Entregue</th>
-            </tr>
-          </thead>
-          <tbody>
-            ${linhasMedicamentos}
-          </tbody>
-        </table>
-
-        ${dados.observacao ? `<div class="obs-box"><strong>Observações:</strong> ${dados.observacao}</div>` : ""}
-
-        <div class="signatures-container">
-          <div class="signature-box">
-            <div class="signature-line"></div>
-            <div class="signature-name">${dados.responsavelEntrega}</div>
-            <div class="signature-title">Servidor / Quem Fez a Entrega</div>
-          </div>
-
-          <div class="signature-box">
-            <div class="signature-line"></div>
-            <div class="signature-name">${dados.paciente.patientName}</div>
-            <div class="signature-title">Paciente / Representante (Quem Recebeu)</div>
-          </div>
-        </div>
+        ${viaPrincipal}
+        <div class="recorte">✂ RECORTE AQUI — COMPROVANTE DE ENTREGA</div>
+        ${viaRecorte}
       </body>
       </html>
     `);
@@ -258,8 +564,6 @@ export default function TabDispensacao({
     if (!selectedPaciente) return alert("Selecione o paciente.");
     if (carrinhoDispensacao.length === 0)
       return alert("Adicione pelo menos um medicamento para dispensar.");
-    if (!responsavelEntrega.trim())
-      return alert("Informe o nome do Responsável pela Entrega.");
 
     setShowModal(true);
   };
@@ -281,16 +585,20 @@ export default function TabDispensacao({
         if (result?.success === false) {
           throw new Error(result.error || "Falha ao registrar dispensação.");
         }
+        // O responsável oficial é definido no servidor (usuário logado).
+        if (result?.responsavelEntrega) {
+          dadosDispensacao.responsavelEntrega = result.responsavelEntrega;
+        }
       }
 
       setShowModal(false);
 
       gerarTermoDispensacaoImpressao(dadosDispensacao);
 
+      // Mantém o responsável (usuário logado); limpa o restante.
       setSelectedPaciente(null);
       setSearch("");
       setCarrinhoDispensacao([]);
-      setResponsavelEntrega("");
       setObservacao("");
     } catch (error) {
       console.error("Erro ao processar dispensação:", error);
@@ -307,50 +615,94 @@ export default function TabDispensacao({
       </h2>
 
       <div className={styles.formContainer}>
-        {/* BUSCA DE PACIENTE */}
+        {/* BUSCA DE PACIENTE (dropdown em tabela, igual à aba Pacientes) */}
         <div className={styles.fieldGroup}>
-          <label>Buscar Paciente Judicial (Pasta, Nome ou CPF) *</label>
-          <div className={styles.searchInputWrapper}>
-            <Image
-              src="/img/icon/lupa.png"
-              alt="Buscar"
-              width={18}
-              height={18}
-              className={styles.searchIcon}
-            />
-            <input
-              type="text"
-              className={styles.inputWithIcon}
-              placeholder="Digite para buscar paciente..."
-              value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                setSelectedPaciente(null);
-              }}
-            />
-          </div>
+          <label>Buscar Paciente Judicial (Nome ou CPF) *</label>
+          <div className={styles.searchRowInline}>
+            <div className={styles.searchSelectWrapper} ref={patientDropdownRef}>
+              <input
+                type="text"
+                className={styles.selectLikeInput}
+                placeholder="Selecionar ou digitar nome/CPF..."
+                value={search}
+                onChange={(e) => {
+                  setSearch(e.target.value);
+                  setShowPatientDropdown(true);
+                }}
+                onFocus={() => setShowPatientDropdown(true)}
+              />
+              <span
+                className={styles.arrowIcon}
+                onClick={() => setShowPatientDropdown(!showPatientDropdown)}
+              >
+                {showPatientDropdown ? "▲" : "▼"}
+              </span>
 
-          {search && !selectedPaciente && filteredPacientes.length > 0 && (
-            <ul className={styles.suggestionsList}>
-              {filteredPacientes.map((p) => (
-                <li
-                  key={p.numeroPasta}
-                  onClick={() => handleSelectPaciente(p)}
-                  className={styles.suggestionItem}
-                >
-                  <div>
-                    <strong>Pasta #{p.numeroPasta}</strong> - {p.patientName}
+              {showPatientDropdown && (
+                <div className={styles.tableDropdownMenu}>
+                  <div className={styles.tableContainerScroll}>
+                    <table className={styles.patientTableDropdown}>
+                      <thead>
+                        <tr>
+                          <th>CPF / CNS</th>
+                          <th>Usuário</th>
+                          <th>Nome da mãe</th>
+                          <th>Data nasc.</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {removeDuplicadosPorCpf(filteredPacientes).length > 0 ? (
+                          removeDuplicadosPorCpf(filteredPacientes).map((p) => (
+                            <tr
+                              key={p.numeroPasta}
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                handleSelectPaciente(p);
+                              }}
+                              className={
+                                selectedPaciente?.numeroPasta === p.numeroPasta
+                                  ? styles.selectedRow
+                                  : ""
+                              }
+                            >
+                              <td>{documentoPaciente({ cpf: p.cpf, cns: p.cns })}</td>
+                              <td className={styles.boldName}>{p.patientName}</td>
+                              <td>{p.motherName || "Não informada"}</td>
+                              <td>
+                                {p.dataNascimento
+                                  ? p.dataNascimento.split("-").reverse().join("/")
+                                  : "-"}
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan="4" className={styles.noDataTd}>
+                              Nenhum paciente judicial encontrado.
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
                   </div>
-                  <small style={{ color: "#64748b" }}>
-                    CPF: {p.cpf} | Processo: {p.numeroProcesso}
-                  </small>
-                </li>
-              ))}
-            </ul>
-          )}
+                </div>
+              )}
+            </div>
+
+            {selectedPaciente && (
+              <button
+                type="button"
+                className={styles.clearBtn}
+                onClick={limparPaciente}
+                title="Limpar"
+              >
+                Limpar
+              </button>
+            )}
+          </div>
         </div>
 
-        {/* CARD RESUMO DO PACIENTE */}
+        {/* CARD RESUMO DO PACIENTE + MEDICAMENTOS VINCULADOS */}
         {selectedPaciente && (
           <div className={styles.patientSummaryBox}>
             <div className={styles.patientBadgeGroup}>
@@ -358,7 +710,7 @@ export default function TabDispensacao({
                 Pasta #{selectedPaciente.numeroPasta}
               </span>
               <span className={styles.badgeCpf}>
-                CPF: {selectedPaciente.cpf}
+                {documentoPaciente({ cpf: selectedPaciente.cpf, cns: selectedPaciente.cns })}
               </span>
             </div>
             <div className={styles.patientDetails}>
@@ -367,11 +719,6 @@ export default function TabDispensacao({
               </p>
               <p>
                 <strong>Nº Processo:</strong> {selectedPaciente.numeroProcesso}
-              </p>
-              <p>
-                <strong>Medicamentos em Tratamento:</strong>{" "}
-                {selectedPaciente.medicamentosTratamento ||
-                  "Nenhum medicamento pré-cadastrado"}
               </p>
             </div>
           </div>
@@ -382,77 +729,46 @@ export default function TabDispensacao({
           <h4>Adicionar Medicamento para Entrega</h4>
 
           <div className={styles.addMedGrid}>
-            {/* 1. BUSCA DIGITÁVEL POR TEXTO */}
+            {/* 1. MEDICAMENTO VINCULADO AO PACIENTE (DROPDOWN) */}
             <div className={styles.fieldGroup}>
-              <label>Filtrar / Digitar Medicamento ou Lote</label>
-              <div className={styles.searchInputWrapper}>
-                <Image
-                  src="/img/icon/lupa.png"
-                  alt="Buscar"
-                  width={18}
-                  height={18}
-                  className={styles.searchIcon}
-                />
-                <input
-                  type="text"
-                  className={styles.inputWithIcon}
-                  placeholder="Digite nome, dosagem ou lote..."
-                  value={searchMed}
-                  onChange={(e) => {
-                    setSearchMed(e.target.value);
-                    setSelectedLoteId("");
-                  }}
-                />
-              </div>
-
-              {searchMed && !selectedLoteId && filteredLotes.length > 0 && (
-                <ul className={styles.suggestionsList}>
-                  {filteredLotes.map((lote) => (
-                    <li
-                      key={lote.loteId}
-                      onClick={() => handleSelectLoteDigitavel(lote)}
-                      className={styles.suggestionItem}
-                    >
-                      <div>
-                        <strong>{lote.medicamentoNome}</strong> ({lote.dosagem})
-                      </div>
-                      <small style={{ color: "#64748b" }}>
-                        Lote: {lote.numeroLote} | Saldo:{" "}
-                        <strong>{lote.qtdAtual}</strong> un | Val:{" "}
-                        {lote.dataValidade}
-                      </small>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </div>
-
-            {/* 2. MENU SUSPENSO (SELECT) */}
-            <div className={styles.fieldGroup}>
-              <label>Ou Escolha no Menu Suspenso *</label>
+              <label>Medicamento *</label>
               <select
-                value={selectedLoteId}
-                onChange={handleSelectLoteDropdown}
+                value={selectedMedId}
+                onChange={handleSelectMedicamento}
+                disabled={!selectedPaciente || medicamentosPaciente.length === 0}
               >
-                <option value="">-- Selecione o Lote do Estoque --</option>
-                {lotesComEstoque.map((l) => (
-                  <option key={l.loteId} value={l.loteId}>
-                    {l.medicamentoNome} ({l.dosagem}) - Lote: {l.numeroLote} |
-                    Disp: {l.qtdAtual} | Val: {l.dataValidade}
+                <option value="">
+                  {!selectedPaciente
+                    ? "Selecione o paciente primeiro"
+                    : medicamentosPaciente.length === 0
+                      ? "Nenhum medicamento vinculado"
+                      : "-- Selecione o medicamento --"}
+                </option>
+                {medicamentosPaciente.map((m) => (
+                  <option key={m.medicamentoId} value={m.medicamentoId}>
+                    {m.medicamentoNome}{m.dosagem ? ` (${m.dosagem})` : ""}
                   </option>
                 ))}
               </select>
             </div>
 
-            {/* 3. QTD ENTREGUE */}
+            {/* 2. QTD ENTREGUE */}
             <div className={styles.fieldGroup}>
-              <label>Qtd Entregue *</label>
+              <label>
+                Qtd Entregue *
+                {medSelecionado && (
+                  <span className={styles.saldoHint}>
+                    {" "}(disponível: {medSelecionado.saldoTotal})
+                  </span>
+                )}
+              </label>
               <input
                 type="number"
                 min="1"
                 placeholder="Ex: 30"
                 value={qtdEntregue}
                 onChange={(e) => setQtdEntregue(e.target.value)}
+                disabled={!selectedMedId}
               />
             </div>
 
@@ -473,8 +789,7 @@ export default function TabDispensacao({
             <thead>
               <tr>
                 <th>Medicamento</th>
-                <th>Dosagem</th>
-                <th>Lote</th>
+                <th>Concentração</th>
                 <th>Qtd a Entregar</th>
                 <th style={{ textAlign: "right" }}>Ação</th>
               </tr>
@@ -482,7 +797,7 @@ export default function TabDispensacao({
             <tbody>
               {carrinhoDispensacao.length === 0 ? (
                 <tr>
-                  <td colSpan="5" className={styles.emptyTableTd}>
+                  <td colSpan="4" className={styles.emptyTableTd}>
                     Nenhum medicamento inserido na lista de entrega.
                   </td>
                 </tr>
@@ -493,7 +808,6 @@ export default function TabDispensacao({
                       <strong>{item.medicamentoNome}</strong>
                     </td>
                     <td>{item.dosagem}</td>
-                    <td>{item.numeroLote}</td>
                     <td>
                       <strong>{item.qtdEntregue}</strong>
                     </td>
@@ -516,13 +830,14 @@ export default function TabDispensacao({
         {/* GRID INFERIOR (RESPONSÁVEL + OBSERVAÇÃO) */}
         <div className={styles.bottomFieldsGrid}>
           <div className={styles.fieldGroup}>
-            <label>Responsável pela Entrega / Servidor *</label>
+            <label>Responsável pela Entrega / Servidor</label>
             <input
               type="text"
-              placeholder="Ex: Farmacêutico João Pedro"
               value={responsavelEntrega}
-              onChange={(e) => setResponsavelEntrega(e.target.value)}
-              required
+              placeholder="Usuário logado"
+              readOnly
+              disabled
+              title="Preenchido automaticamente com o usuário logado"
             />
           </div>
 

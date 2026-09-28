@@ -20,6 +20,7 @@ export async function getPacientesJudiciais() {
         pfj.numero_processo AS "numeroProcesso",
         pfj.status AS status,
         p.cpf AS cpf,
+        p.cns AS cns,
         p.nome_completo AS "patientName",
         p.nome_mae AS "motherName",
         p.telefone AS telefone,
@@ -477,47 +478,180 @@ export async function ajustarEstoque(medicamentoId, data) {
 // ==========================================
 // 4. DISPENSAÇÃO DE MEDICAMENTOS
 // ==========================================
+
+// Medicamentos vinculados a um paciente (tratamento) + lotes disponíveis em estoque.
+export async function getMedicamentosDoPaciente(numeroPasta) {
+  try {
+    if (!numeroPasta) return [];
+
+    // Medicamentos vinculados ao paciente + saldo TOTAL em estoque (soma dos lotes).
+    const meds = await prisma.$queryRaw`
+      SELECT
+        tp.medicamento_id AS "medicamentoId",
+        m.nome AS "medicamentoNome",
+        m.dosagem AS dosagem,
+        m.tipo AS tipo,
+        tp.qtd_prescrita_mensal AS "qtdPrescritaMensal",
+        tp.ativo AS ativo,
+        (
+          COALESCE(
+            (
+              SELECT SUM(lm.qtd_inicial - COALESCE(e.total, 0))
+              FROM public.farmacia_lotes_medicamentos lm
+              LEFT JOIN (
+                SELECT lote_medicamento_id, SUM(qtd_entregue) AS total
+                FROM public.farmacia_dispensacoes_medicamentos
+                GROUP BY lote_medicamento_id
+              ) e ON e.lote_medicamento_id = lm.id
+              WHERE lm.medicamento_id = tp.medicamento_id
+            ),
+            0
+          )
+          + COALESCE(
+            (
+              SELECT SUM(a.delta)
+              FROM public.farmacia_ajustes_estoque a
+              WHERE a.medicamento_id = tp.medicamento_id
+            ),
+            0
+          )
+        )::integer AS "saldoTotal"
+      FROM public.farmacia_tratamentos_pacientes tp
+      JOIN public.farmacia_medicamentos m ON tp.medicamento_id = m.id
+      WHERE tp.paciente_pasta = ${numeroPasta} AND tp.ativo = true
+      ORDER BY m.nome ASC
+    `;
+
+    return serializeData({ medicamentos: meds });
+  } catch (error) {
+    console.error("Erro ao buscar medicamentos do paciente:", error);
+    return { medicamentos: [], lotes: [] };
+  }
+}
+
 export async function registrarDispensacao(data) {
   try {
-    await requireRole(["GESTOR", "FARMACIA_ADMIN"]);
+    const usuario = await requireRole(["GESTOR", "FARMACIA_ADMIN"]);
     if (!Array.isArray(data?.itens) || data.itens.length === 0) {
       throw new Error("Informe os medicamentos da dispensação.");
     }
-    const totais = new Map();
+
+    // Responsável pela entrega é sempre o usuário logado (não editável).
+    const responsavelEntrega = usuario?.nome || "Usuário do sistema";
+
+    // Agrupa a quantidade total solicitada por medicamento (débito do total, não por lote).
+    const totaisPorMedicamento = new Map();
     for (const item of data.itens) {
-      const id = Number(item.loteId);
+      const medId = Number(item.medicamentoId);
       const qtd = Number(item.qtdEntregue);
-      if (!Number.isSafeInteger(id) || id <= 0 || !Number.isSafeInteger(qtd) || qtd <= 0) {
-        throw new Error("Lote ou quantidade inválida.");
+      if (!Number.isSafeInteger(medId) || medId <= 0 || !Number.isSafeInteger(qtd) || qtd <= 0) {
+        throw new Error("Medicamento ou quantidade inválida.");
       }
-      totais.set(id, (totais.get(id) || 0) + qtd);
+      totaisPorMedicamento.set(medId, (totaisPorMedicamento.get(medId) || 0) + qtd);
     }
+
+    const obs = `Responsável pela Entrega: ${responsavelEntrega}${data.observacao ? " | Obs: " + data.observacao : ""}`;
+
     await prisma.$transaction(async (tx) => {
-      // Ordem estável evita deadlocks; a consulta seguinte vê entregas já confirmadas.
-      for (const [id, quantidade] of [...totais].sort(([a], [b]) => a - b)) {
+      // Ordem estável de medicamentos evita deadlocks.
+      for (const [medId, quantidadeSolicitada] of [...totaisPorMedicamento].sort(([a], [b]) => a - b)) {
+        // Lotes do medicamento com saldo, em ordem FEFO (validade mais próxima primeiro).
+        // Obs.: PostgreSQL não permite FOR UPDATE com GROUP BY; por isso o saldo
+        // é calculado por subquery (sem agregação na query principal).
         const lotes = await tx.$queryRaw`
-          SELECT id, qtd_inicial AS "qtdInicial"
-          FROM public.farmacia_lotes_medicamentos WHERE id = ${id} FOR UPDATE
+          SELECT
+            lm.id AS "loteId",
+            (
+              lm.qtd_inicial - COALESCE(
+                (
+                  SELECT SUM(dm.qtd_entregue)
+                  FROM public.farmacia_dispensacoes_medicamentos dm
+                  WHERE dm.lote_medicamento_id = lm.id
+                ),
+                0
+              )
+            )::integer AS saldo
+          FROM public.farmacia_lotes_medicamentos lm
+          WHERE lm.medicamento_id = ${medId}
+            AND (
+              lm.qtd_inicial - COALESCE(
+                (
+                  SELECT SUM(dm.qtd_entregue)
+                  FROM public.farmacia_dispensacoes_medicamentos dm
+                  WHERE dm.lote_medicamento_id = lm.id
+                ),
+                0
+              )
+            ) > 0
+          ORDER BY lm.data_validade ASC, lm.id ASC
+          FOR UPDATE
         `;
-        if (!lotes.length) throw new Error("Lote não encontrado.");
-        const entregas = await tx.dispensacaoMedicamento.aggregate({
-          where: { loteMedicamentoId: id }, _sum: { qtdEntregue: true },
-        });
-        const saldo = lotes[0].qtdInicial - (entregas._sum.qtdEntregue || 0);
-        if (quantidade > saldo) throw new Error(`Saldo insuficiente no lote ${id}. Disponível: ${saldo}.`);
-      }
-      for (const [id, quantidade] of totais) {
-        await tx.dispensacaoMedicamento.create({ data: {
-          pacientePasta: data.numeroPasta,
-          loteMedicamentoId: id,
-          qtdEntregue: quantidade,
-          dataDispensacao: new Date(),
-          observacao: `Responsável pela Entrega: ${data.responsavelEntrega}${data.observacao ? " | Obs: " + data.observacao : ""}`,
-        } });
+
+        const saldoLotes = lotes.reduce((s, l) => s + Number(l.saldo), 0);
+
+        // Ajustes de saldo (aba "Ajustar Saldo") também compõem o disponível.
+        const ajustesRows = await tx.$queryRaw`
+          SELECT COALESCE(SUM(delta), 0)::integer AS total
+          FROM public.farmacia_ajustes_estoque
+          WHERE medicamento_id = ${medId}
+        `;
+        const ajustesDelta = Number(ajustesRows?.[0]?.total || 0);
+
+        const disponivelTotal = saldoLotes + ajustesDelta;
+        if (quantidadeSolicitada > disponivelTotal) {
+          throw new Error(
+            `Saldo insuficiente em estoque para o medicamento (disponível: ${disponivelTotal}, solicitado: ${quantidadeSolicitada}).`,
+          );
+        }
+
+        // Distribui a quantidade entre os lotes (consome o mais antigo primeiro).
+        let restante = quantidadeSolicitada;
+        for (const lote of lotes) {
+          if (restante <= 0) break;
+          const consumir = Math.min(restante, Number(lote.saldo));
+          if (consumir <= 0) continue;
+          await tx.dispensacaoMedicamento.create({
+            data: {
+              pacientePasta: data.numeroPasta,
+              loteMedicamentoId: Number(lote.loteId),
+              qtdEntregue: consumir,
+              dataDispensacao: new Date(),
+              observacao: obs,
+            },
+          });
+          restante -= consumir;
+        }
+
+        // Se o disponível vinha de um ajuste positivo (saldo acima do físico dos
+        // lotes), registra o restante no lote mais recente para manter o débito.
+        if (restante > 0) {
+          const loteRecente = await tx.$queryRaw`
+            SELECT id FROM public.farmacia_lotes_medicamentos
+            WHERE medicamento_id = ${medId}
+            ORDER BY data_entrada DESC, id DESC
+            LIMIT 1
+          `;
+          if (!loteRecente.length) {
+            throw new Error(
+              "Não há lote para debitar a dispensação deste medicamento.",
+            );
+          }
+          await tx.dispensacaoMedicamento.create({
+            data: {
+              pacientePasta: data.numeroPasta,
+              loteMedicamentoId: Number(loteRecente[0].id),
+              qtdEntregue: restante,
+              dataDispensacao: new Date(),
+              observacao: obs,
+            },
+          });
+          restante = 0;
+        }
       }
     }, { isolationLevel: "ReadCommitted" });
+
     revalidatePath("/camara-tecnica/farmacia-judicial");
-    return { success: true };
+    return { success: true, responsavelEntrega };
   } catch (error) {
     console.error("Erro ao registrar dispensação:", error);
     return { success: false, error: error.message };

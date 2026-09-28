@@ -16,6 +16,7 @@ import {
   updateLoteMedicamento,
   ajustarEstoque,
   getAjustesEstoque,
+  getMedicamentosDoPaciente,
   registrarDispensacao,
   getDashboardMetrics,
   getRelatorioEntradas,
@@ -206,6 +207,10 @@ function FarmaciaJudicialPageContent() {
     return await getAjustesEstoque(medicamentoId);
   };
 
+  const handleGetMedicamentosPaciente = async (numeroPasta) => {
+    return await getMedicamentosDoPaciente(numeroPasta);
+  };
+
   // Catálogo (aba Medicamentos): cria/atualiza sem sair da aba.
   const handleCreateMedicamentoCatalogo = async (formData) => {
     const res = await createMedicamento(formData);
@@ -271,6 +276,7 @@ function FarmaciaJudicialPageContent() {
           pacientes={pacientes}
           estoqueLotes={estoqueLotes}
           onConfirmarDispensacao={handleConfirmarDispensacao}
+          onGetMedicamentosPaciente={handleGetMedicamentosPaciente}
         />
       )}
 

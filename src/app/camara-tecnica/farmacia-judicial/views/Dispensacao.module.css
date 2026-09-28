@@ -210,12 +210,12 @@
 }
 
 .table th {
-  background-color: #f8fafc;
+  background-color: #4a6fa5;
   padding: 0.75rem 1rem;
   text-align: left;
-  color: #475569;
+  color: #ffffff;
   font-weight: 700;
-  border-bottom: 1px solid #e2e8f0;
+  border-bottom: 1px solid #4a6fa5;
 }
 
 .table td {
@@ -377,4 +377,189 @@
   .primaryBtn {
     width: 100%;
   }
+}
+
+/* ── Busca de paciente estilo tabela (igual à aba Pacientes) ────────────── */
+.searchRowInline {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.searchSelectWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  flex: 1;
+}
+
+.selectLikeInput {
+  width: 100%;
+  padding: 0.65rem 2rem 0.65rem 0.85rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: #1e293b;
+  background-color: #ffffff;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.selectLikeInput:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+}
+
+.arrowIcon {
+  position: absolute;
+  right: 0.85rem;
+  font-size: 0.75rem;
+  color: #64748b;
+  cursor: pointer;
+  user-select: none;
+}
+
+.clearBtn {
+  background-color: #ffffff;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.clearBtn:hover {
+  background-color: #f1f5f9;
+}
+
+.tableDropdownMenu {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  right: 0;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  padding: 0.5rem;
+  z-index: 100;
+}
+
+.tableContainerScroll {
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1px solid #f1f5f9;
+  border-radius: 6px;
+}
+
+.patientTableDropdown {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.825rem;
+  text-align: left;
+}
+
+.patientTableDropdown thead {
+  position: sticky;
+  top: 0;
+  background-color: #f8fafc;
+  z-index: 10;
+}
+
+.patientTableDropdown th {
+  padding: 0.6rem 0.75rem;
+  color: #475569;
+  font-weight: 700;
+  border-bottom: 2px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.patientTableDropdown td {
+  padding: 0.6rem 0.75rem;
+  color: #334155;
+  border-bottom: 1px solid #f1f5f9;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.patientTableDropdown tbody tr:hover td {
+  background-color: #2563eb;
+  color: #ffffff;
+}
+
+.boldName {
+  font-weight: 600;
+}
+
+.selectedRow {
+  background-color: #eff6ff;
+}
+
+.noDataTd {
+  text-align: center;
+  padding: 1.5rem !important;
+  color: #94a3b8;
+  cursor: default !important;
+}
+
+.patientTableDropdown tbody tr:hover .noDataTd {
+  background-color: transparent !important;
+  color: #94a3b8 !important;
+}
+
+/* ── Medicamentos vinculados ao paciente ────────────────────────────────── */
+.linkedMedsBlock {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px dashed #bae6fd;
+}
+
+.linkedMedsTitle {
+  margin: 0 0 0.6rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #0369a1;
+}
+
+.linkedMedsEmpty {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #64748b;
+}
+
+.linkedMedsTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.linkedMedsTable th {
+  background-color: #f8fafc;
+  padding: 0.55rem 0.75rem;
+  text-align: left;
+  color: #475569;
+  font-weight: 700;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.linkedMedsTable td {
+  padding: 0.55rem 0.75rem;
+  border-bottom: 1px solid #f1f5f9;
+  color: #1e293b;
+}
+
+.saldoHint {
+  font-weight: 500;
+  color: #64748b;
+  font-size: 0.78rem;
 }
