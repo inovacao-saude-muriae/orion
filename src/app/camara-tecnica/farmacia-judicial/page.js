@@ -21,6 +21,7 @@ import {
   getDashboardMetrics,
   getRelatorioEntradas,
   getRelatorioSaidas,
+  getRelatorioSaidaPorMedicamento,
 } from "./actions";
 
 import Dashboard from "./views/Dashboard";
@@ -57,6 +58,7 @@ function FarmaciaJudicialPageContent() {
   const [estoqueAgrupado, setEstoqueAgrupado] = useState([]);
   const [relatorioEntradas, setRelatorioEntradas] = useState([]);
   const [relatorioSaidas, setRelatorioSaidas] = useState([]);
+  const [relatorioSaidaPorMed, setRelatorioSaidaPorMed] = useState([]);
   const [catalogo, setCatalogo] = useState([]);
   const [catalogoCompleto, setCatalogoCompleto] = useState([]);
   const [metrics, setMetrics] = useState({});
@@ -65,7 +67,7 @@ function FarmaciaJudicialPageContent() {
   const reloadData = async () => {
     setLoading(true);
     try {
-      const [pacData, estData, agrData, catData, catFull, metData, entData, saiData] =
+      const [pacData, estData, agrData, catData, catFull, metData, entData, saiData, saiMedData] =
         await Promise.all([
           getPacientesJudiciais(),
           getMedicamentosEEstoque(),
@@ -75,6 +77,7 @@ function FarmaciaJudicialPageContent() {
           getDashboardMetrics(),
           getRelatorioEntradas(),
           getRelatorioSaidas(),
+          getRelatorioSaidaPorMedicamento(),
         ]);
       setPacientes(pacData || []);
       setEstoqueLotes(estData || []);
@@ -84,6 +87,7 @@ function FarmaciaJudicialPageContent() {
       setMetrics(metData || {});
       setRelatorioEntradas(entData || []);
       setRelatorioSaidas(saiData || []);
+      setRelatorioSaidaPorMed(saiMedData || []);
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
     } finally {
@@ -98,7 +102,7 @@ function FarmaciaJudicialPageContent() {
     const loadInitialData = async () => {
       setLoading(true);
       try {
-        const [pacData, estData, agrData, catData, catFull, metData, entData, saiData] =
+        const [pacData, estData, agrData, catData, catFull, metData, entData, saiData, saiMedData] =
           await Promise.all([
             getPacientesJudiciais(),
             getMedicamentosEEstoque(),
@@ -108,6 +112,7 @@ function FarmaciaJudicialPageContent() {
             getDashboardMetrics(),
             getRelatorioEntradas(),
             getRelatorioSaidas(),
+            getRelatorioSaidaPorMedicamento(),
           ]);
 
         if (isMounted) {
@@ -119,6 +124,7 @@ function FarmaciaJudicialPageContent() {
           setMetrics(metData || {});
           setRelatorioEntradas(entData || []);
           setRelatorioSaidas(saiData || []);
+          setRelatorioSaidaPorMed(saiMedData || []);
         }
       } catch (error) {
         console.error("Erro ao carregar dados:", error);
@@ -303,7 +309,11 @@ function FarmaciaJudicialPageContent() {
       )}
 
       {activeTab === "RELATORIOS" && (
-        <Relatorios entradas={relatorioEntradas} saidas={relatorioSaidas} />
+        <Relatorios
+          entradas={relatorioEntradas}
+          saidas={relatorioSaidas}
+          saidaPorMedicamento={relatorioSaidaPorMed}
+        />
       )}
     </div>
   );

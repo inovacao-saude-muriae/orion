@@ -1,6 +1,7 @@
 'use client';
 
 import { useState } from 'react';
+import * as XLSX from 'xlsx';
 import styles from './SaldoEstoque.module.css';
 
 const LOTE_VAZIO = {
@@ -30,6 +31,20 @@ const formatBR = (iso) => {
   const [a, m, d] = iso.split('-');
   if (!a || !m || !d) return iso;
   return `${d}/${m}/${a}`;
+};
+
+// Helper para gerar download de planilha com 1 aba
+const baixarPlanilhaSimples = (dadosFormatados, nomeAba, nomeArquivo) => {
+  if (!dadosFormatados || dadosFormatados.length === 0) {
+    return alert('Nenhum dado para exportar.');
+  }
+  const worksheet = XLSX.utils.json_to_sheet(dadosFormatados);
+  const workbook = XLSX.utils.book_new();
+  XLSX.utils.book_append_sheet(workbook, worksheet, nomeAba);
+  worksheet['!cols'] = Object.keys(dadosFormatados[0]).map((key) => ({
+    wch: Math.max(key.length + 5, 18),
+  }));
+  XLSX.writeFile(workbook, nomeArquivo);
 };
 
 export default function TabSaldoEstoque({
@@ -173,13 +188,138 @@ export default function TabSaldoEstoque({
     }
   };
 
+  // ── EXPORTAÇÃO CONSOLIDADA EM EXCEL (2 ABAS: SALDO + AJUSTES MANUAIS) ──
+  const exportarEstoqueEAjustesExcel = async () => {
+    if (estoqueAgrupado.length === 0) {
+      return alert('Nenhum medicamento cadastrado para exportar.');
+    }
+
+    // 1. Formata dados da Aba 1: Saldo de Estoque
+    const dadosEstoque = estoqueAgrupado.map((med) => {
+      const temEstoque = Number(med.qtdTotal) > 0;
+      return {
+        Medicamento: med.medicamentoNome || '—',
+        Concentração: med.dosagem || '—',
+        Tipo: med.tipo || '—',
+        'Qtd. em Estoque': Number(med.qtdTotal || 0),
+        'Valor Unitário (R$)': Number(med.valorUnitario || 0),
+        'Valor Total (R$)': Number(med.qtdTotal || 0) * Number(med.valorUnitario || 0),
+        Status: temEstoque ? 'Com estoque' : 'Sem estoque',
+      };
+    });
+
+    // 2. Busca e formata dados da Aba 2: Histórico de Ajustes Manuais
+    let todosAjustes = [];
+    if (typeof onGetAjustes === 'function') {
+      try {
+        const res = await onGetAjustes();
+        if (Array.isArray(res)) {
+          todosAjustes = res;
+        } else if (ajustes.length > 0) {
+          todosAjustes = ajustes;
+        }
+      } catch (err) {
+        console.error('Erro ao buscar ajustes para relatório:', err);
+      }
+    }
+
+    const dadosAjustes = todosAjustes.map((a) => ({
+      Medicamento: a.medicamentoNome || ajusteMed?.medicamentoNome || '—',
+      Data: a.dataAjuste || '—',
+      'Saldo Anterior': Number(a.saldoAnterior || 0),
+      'Novo Saldo': Number(a.saldoNovo || 0),
+      Diferença: Number(a.delta) >= 0 ? `+${a.delta}` : `${a.delta}`,
+      Justificativa: a.justificativa || '—',
+      Responsável: a.responsavel || '—',
+    }));
+
+    // 3. Monta a planilha com 2 abas
+    const workbook = XLSX.utils.book_new();
+
+    const wsEstoque = XLSX.utils.json_to_sheet(dadosEstoque);
+    wsEstoque['!cols'] = Object.keys(dadosEstoque[0] || {}).map((key) => ({
+      wch: Math.max(key.length + 5, 18),
+    }));
+    XLSX.utils.book_append_sheet(workbook, wsEstoque, 'Saldo de Estoque');
+
+    if (dadosAjustes.length > 0) {
+      const wsAjustes = XLSX.utils.json_to_sheet(dadosAjustes);
+      wsAjustes['!cols'] = Object.keys(dadosAjustes[0] || {}).map((key) => ({
+        wch: Math.max(key.length + 5, 18),
+      }));
+      XLSX.utils.book_append_sheet(workbook, wsAjustes, 'Ajustes Manuais');
+    }
+
+    // 4. Efetua o download do arquivo .xlsx
+    const dataHoje = hoje();
+    XLSX.writeFile(workbook, `Relatorio_Estoque_e_Ajustes_${dataHoje}.xlsx`);
+  };
+
+  // ── EXPORTAR HISTÓRICO DE AJUSTES APENAS DO MEDICAMENTO SELECIONADO NA MODAL ──
+  const exportarAjustesMedicamentoEspecifico = async () => {
+    if (!ajusteMed) return;
+
+    let listaParaExportar = ajustes;
+
+    if (listaParaExportar.length === 0) {
+      setCarregandoAjustes(true);
+      const res = await onGetAjustes(ajusteMed.medicamentoId);
+      listaParaExportar = Array.isArray(res) ? res : [];
+      setAjustes(listaParaExportar);
+      setCarregandoAjustes(false);
+    }
+
+    if (listaParaExportar.length === 0) {
+      return alert('Nenhum ajuste registrado para este medicamento.');
+    }
+
+    const dadosFormatados = listaParaExportar.map((a) => ({
+      Medicamento: ajusteMed.medicamentoNome || '—',
+      Data: a.dataAjuste || '—',
+      'Saldo Anterior': Number(a.saldoAnterior || 0),
+      'Novo Saldo': Number(a.saldoNovo || 0),
+      Diferença: a.delta >= 0 ? `+${a.delta}` : `${a.delta}`,
+      Justificativa: a.justificativa || '—',
+      Responsável: a.responsavel || '—',
+    }));
+
+    const nomeMed = (ajusteMed.medicamentoNome || 'Medicamento').replace(/[^a-zA-Z0-9]/g, '_');
+    baixarPlanilhaSimples(dadosFormatados, 'Ajustes', `Ajustes_Estoque_${nomeMed}.xlsx`);
+  };
+
   return (
     <div className={styles.card}>
       <div className={styles.headerRow}>
         <h3 className={styles.sectionTitle}>Estoque de Medicamentos</h3>
-        <button type="button" className={styles.addBtn} onClick={abrirEntrada}>
-          + Registrar nova entrada
-        </button>
+
+        {/* BOTÃO DE EXPORTAR CONSOLIDADO (SALDO + AJUSTES) E REGISTRAR ENTRADA */}
+        <div style={{ display: 'flex', gap: '0.5rem' }}>
+          <button
+            type="button"
+            className={styles.exportExcelBtn}
+            onClick={exportarEstoqueEAjustesExcel}
+            disabled={loading || estoqueAgrupado.length === 0}
+          >
+            <svg
+              className={styles.exportIcon}
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="2.2"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+              <polyline points="7 10 12 15 17 10" />
+              <line x1="12" y1="15" x2="12" y2="3" />
+            </svg>
+            <span>Exportar Excel</span>
+          </button>
+
+          <button type="button" className={styles.addBtn} onClick={abrirEntrada}>
+            + Registrar nova entrada
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -556,21 +696,36 @@ export default function TabSaldoEstoque({
               </button>
             </div>
 
-            <div className={styles.ajusteTabs}>
-              <button
-                type="button"
-                className={`${styles.ajusteTab} ${ajusteTab === 'AJUSTAR' ? styles.ajusteTabActive : ''}`}
-                onClick={() => trocarTabAjuste('AJUSTAR')}
-              >
-                Ajustar Saldo
-              </button>
-              <button
-                type="button"
-                className={`${styles.ajusteTab} ${ajusteTab === 'HISTORICO' ? styles.ajusteTabActive : ''}`}
-                onClick={() => trocarTabAjuste('HISTORICO')}
-              >
-                Histórico
-              </button>
+            <div className={styles.ajusteTabs} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: '0.5rem' }}>
+                <button
+                  type="button"
+                  className={`${styles.ajusteTab} ${ajusteTab === 'AJUSTAR' ? styles.ajusteTabActive : ''}`}
+                  onClick={() => trocarTabAjuste('AJUSTAR')}
+                >
+                  Ajustar Saldo
+                </button>
+                <button
+                  type="button"
+                  className={`${styles.ajusteTab} ${ajusteTab === 'HISTORICO' ? styles.ajusteTabActive : ''}`}
+                  onClick={() => trocarTabAjuste('HISTORICO')}
+                >
+                  Histórico
+                </button>
+              </div>
+
+              {/* BOTÃO EXPORTAR AJUSTES DAQUELE MEDICAMENTO EM EXCEL */}
+              {ajusteTab === 'HISTORICO' && (
+                <button
+                  type="button"
+                  onClick={exportarAjustesMedicamentoEspecifico}
+                  className={styles.historyBtn}
+                  disabled={carregandoAjustes}
+                  style={{ backgroundColor: '#16a34a', color: '#fff' }}
+                >
+                  Exportar Ajustes (Excel)
+                </button>
+              )}
             </div>
 
             {ajusteTab === 'AJUSTAR' ? (

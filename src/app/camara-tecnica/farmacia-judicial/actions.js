@@ -1,16 +1,17 @@
+// src/app/camara-tecnica/farmacia-judicial/actions.js
 "use server";
 
 import { requireRole } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 
-// Helper para converter tipos speciais do Prisma (BigInt/Dates) para objetos JS simples
+// Helper para converter tipos especiais do Prisma (BigInt/Dates) para objetos JS simples
 function serializeData(data) {
   return JSON.parse(JSON.stringify(data));
 }
 
 // ==========================================
-// 1. BUSCAR PACIENTES JUDICIAIS (POSTGRESQL)
+// 1. PACIENTES JUDICIAIS
 // ==========================================
 export async function getPacientesJudiciais() {
   try {
@@ -45,10 +46,6 @@ export async function getPacientesJudiciais() {
   }
 }
 
-// ==========================================
-// 2. CADASTRAR PACIENTE JUDICIAL (POSTGRESQL)
-// ==========================================
-// Normaliza o status vindo da UI (Ativo/Inativo/Falecido) para o padrão do banco.
 function normalizarStatusPaciente(status) {
   const st = (status || "").toUpperCase();
   if (st === "INATIVO") return "INATIVO";
@@ -67,21 +64,19 @@ export async function createPacienteJudicial(data) {
       throw new Error("Informe o número da pasta e do processo.");
     }
 
-    // A pessoa deve estar previamente cadastrada em Gerenciamento > Cadastro de Pessoas.
     const pessoa = await prisma.pessoa.findUnique({
       where: { cpf: cleanCpf },
       select: { cpf: true },
     });
     if (!pessoa) {
       throw new Error(
-        "Pessoa não encontrada. Cadastre-a primeiro em Gerenciamento > Cadastro de Pessoas.",
+        "Pessoa não encontrada. Cadastre-a primeiro em Gerenciamento > Cadastro de Pessoas."
       );
     }
 
     const statusDb = normalizarStatusPaciente(data.status);
 
     await prisma.$transaction(async (tx) => {
-      // 1. Cadastrar/atualizar o vínculo do paciente judicial (dados do processo).
       await tx.$executeRaw`
         INSERT INTO public.farmacia_pacientes (numero_pasta, pessoa_cpf, numero_processo, status)
         VALUES (${data.numeroPasta}, ${cleanCpf}, ${data.numeroProcesso}, ${statusDb})
@@ -91,7 +86,6 @@ export async function createPacienteJudicial(data) {
           status = EXCLUDED.status
       `;
 
-      // 2. Recriar os tratamentos do mês (limpa antes para não duplicar).
       await tx.tratamentoPaciente.deleteMany({
         where: { pacientePasta: data.numeroPasta },
       });
@@ -123,7 +117,7 @@ export async function createPacienteJudicial(data) {
 }
 
 // ==========================================
-// 3. ESTOQUE E MEDICAMENTOS
+// 2. ESTOQUE E MEDICAMENTOS
 // ==========================================
 export async function getMedicamentosEEstoque() {
   try {
@@ -169,21 +163,6 @@ export async function getCatalogoMedicamentos() {
   }
 }
 
-export async function createMedicamento(data) {
-  try {
-    await prisma.$executeRaw`
-      INSERT INTO public.farmacia_medicamentos (nome, tipo, dosagem, ativo)
-      VALUES (${data.nome}, ${data.tipo}, ${data.dosagem}, true)
-    `;
-    revalidatePath("/camara-tecnica/farmacia-judicial");
-    return { success: true };
-  } catch (error) {
-    console.error("Erro ao cadastrar medicamento:", error);
-    return { success: false, error: error.message };
-  }
-}
-
-// Catálogo completo (para a aba Medicamentos): nome, concentração, tipo.
 export async function getCatalogoCompleto() {
   try {
     const rows = await prisma.$queryRaw`
@@ -199,7 +178,20 @@ export async function getCatalogoCompleto() {
   }
 }
 
-// Editar um medicamento do catálogo (nome, tipo, concentração).
+export async function createMedicamento(data) {
+  try {
+    await prisma.$executeRaw`
+      INSERT INTO public.farmacia_medicamentos (nome, tipo, dosagem, ativo)
+      VALUES (${data.nome}, ${data.tipo}, ${data.dosagem}, true)
+    `;
+    revalidatePath("/camara-tecnica/farmacia-judicial");
+    return { success: true };
+  } catch (error) {
+    console.error("Erro ao cadastrar medicamento:", error);
+    return { success: false, error: error.message };
+  }
+}
+
 export async function updateMedicamento(id, data) {
   try {
     await requireRole(["GESTOR", "FARMACIA_ADMIN"]);
@@ -226,8 +218,6 @@ export async function updateMedicamento(id, data) {
   }
 }
 
-// Excluir medicamento do catálogo.
-// Usa desativação (soft delete) para preservar o histórico de lotes/dispensações.
 export async function deleteMedicamento(id) {
   try {
     await requireRole(["GESTOR", "FARMACIA_ADMIN"]);
@@ -254,7 +244,7 @@ export async function deleteMedicamento(id) {
 export async function createLoteMedicamento(data) {
   try {
     await prisma.$executeRaw`
-          INSERT INTO public.farmacia_lotes_medicamentos 
+      INSERT INTO public.farmacia_lotes_medicamentos 
         (medicamento_id, numero_lote, fornecedor, qtd_inicial, valor_unitario, data_entrada, data_validade)
       VALUES (
         ${Number(data.medicamentoId)}, 
@@ -266,7 +256,7 @@ export async function createLoteMedicamento(data) {
         ${data.dataValidade}::date
       )
     `;
-    revalidatePath("/farmacia");
+    revalidatePath("/camara-tecnica/farmacia-judicial");
     return { success: true };
   } catch (error) {
     console.error("Erro ao dar entrada no lote:", error);
@@ -274,7 +264,57 @@ export async function createLoteMedicamento(data) {
   }
 }
 
-// Estoque agrupado por medicamento (uma linha por medicamento, somando lotes).
+export async function updateLoteMedicamento(loteId, data) {
+  try {
+    await requireRole(["GESTOR", "FARMACIA_ADMIN"]);
+
+    const id = Number(loteId);
+    if (!Number.isSafeInteger(id) || id <= 0) {
+      throw new Error("Lote inválido.");
+    }
+    if (!data.numeroLote || !data.fornecedor) {
+      throw new Error("Informe o número do lote e o fornecedor.");
+    }
+    if (!data.dataEntrada || !data.dataValidade) {
+      throw new Error("Informe a data de entrada e a validade.");
+    }
+
+    const qtdInicial = Number(data.qtdInicial);
+    if (!Number.isSafeInteger(qtdInicial) || qtdInicial < 0) {
+      throw new Error("Quantidade inválida.");
+    }
+
+    const entregas = await prisma.dispensacaoMedicamento.aggregate({
+      where: { loteMedicamentoId: id },
+      _sum: { qtdEntregue: true },
+    });
+    const totalEntregue = entregas._sum.qtdEntregue || 0;
+    if (qtdInicial < totalEntregue) {
+      throw new Error(
+        `A quantidade não pode ser menor que o já dispensado (${totalEntregue}).`
+      );
+    }
+
+    await prisma.$executeRaw`
+      UPDATE public.farmacia_lotes_medicamentos
+      SET
+        numero_lote = ${data.numeroLote},
+        fornecedor = ${data.fornecedor},
+        qtd_inicial = ${qtdInicial},
+        valor_unitario = ${data.valorUnitario ? Number(data.valorUnitario) : 0},
+        data_entrada = ${data.dataEntrada}::date,
+        data_validade = ${data.dataValidade}::date
+      WHERE id = ${id}
+    `;
+
+    revalidatePath("/camara-tecnica/farmacia-judicial");
+    return { success: true };
+  } catch (error) {
+    console.error("Erro ao atualizar lote:", error);
+    return { success: false, error: error.message };
+  }
+}
+
 export async function getEstoqueAgrupado() {
   try {
     const rows = await prisma.$queryRaw`
@@ -322,60 +362,9 @@ export async function getEstoqueAgrupado() {
   }
 }
 
-// Editar um lote (entrada) existente: data entrada, validade, lote, qtd, valor, fornecedor.
-export async function updateLoteMedicamento(loteId, data) {
-  try {
-    await requireRole(["GESTOR", "FARMACIA_ADMIN"]);
-
-    const id = Number(loteId);
-    if (!Number.isSafeInteger(id) || id <= 0) {
-      throw new Error("Lote inválido.");
-    }
-    if (!data.numeroLote || !data.fornecedor) {
-      throw new Error("Informe o número do lote e o fornecedor.");
-    }
-    if (!data.dataEntrada || !data.dataValidade) {
-      throw new Error("Informe a data de entrada e a validade.");
-    }
-
-    const qtdInicial = Number(data.qtdInicial);
-    if (!Number.isSafeInteger(qtdInicial) || qtdInicial < 0) {
-      throw new Error("Quantidade inválida.");
-    }
-
-    // Não permite reduzir a quantidade abaixo do que já foi dispensado.
-    const entregas = await prisma.dispensacaoMedicamento.aggregate({
-      where: { loteMedicamentoId: id },
-      _sum: { qtdEntregue: true },
-    });
-    const totalEntregue = entregas._sum.qtdEntregue || 0;
-    if (qtdInicial < totalEntregue) {
-      throw new Error(
-        `A quantidade não pode ser menor que o já dispensado (${totalEntregue}).`,
-      );
-    }
-
-    await prisma.$executeRaw`
-      UPDATE public.farmacia_lotes_medicamentos
-      SET
-        numero_lote = ${data.numeroLote},
-        fornecedor = ${data.fornecedor},
-        qtd_inicial = ${qtdInicial},
-        valor_unitario = ${data.valorUnitario ? Number(data.valorUnitario) : 0},
-        data_entrada = ${data.dataEntrada}::date,
-        data_validade = ${data.dataValidade}::date
-      WHERE id = ${id}
-    `;
-
-    revalidatePath("/camara-tecnica/farmacia-judicial");
-    return { success: true };
-  } catch (error) {
-    console.error("Erro ao atualizar lote:", error);
-    return { success: false, error: error.message };
-  }
-}
-
-// Saldo atual (lotes - dispensações + ajustes) de um medicamento.
+// ==========================================
+// 3. AJUSTE DE ESTOQUE (SALDO)
+// ==========================================
 async function calcularSaldoMedicamento(medicamentoId) {
   const rows = await prisma.$queryRaw`
     SELECT (
@@ -401,33 +390,6 @@ async function calcularSaldoMedicamento(medicamentoId) {
   return Number(rows?.[0]?.saldo || 0);
 }
 
-// Histórico de ajustes de estoque de um medicamento.
-export async function getAjustesEstoque(medicamentoId) {
-  try {
-    const id = Number(medicamentoId);
-    if (!Number.isSafeInteger(id) || id <= 0) return [];
-
-    const rows = await prisma.$queryRaw`
-      SELECT
-        id,
-        saldo_anterior AS "saldoAnterior",
-        saldo_novo AS "saldoNovo",
-        delta,
-        justificativa,
-        responsavel,
-        TO_CHAR(created_at, 'DD/MM/YYYY HH24:MI') AS "dataAjuste"
-      FROM public.farmacia_ajustes_estoque
-      WHERE medicamento_id = ${id}
-      ORDER BY created_at DESC
-    `;
-    return serializeData(rows);
-  } catch (error) {
-    console.error("Erro ao buscar ajustes de estoque:", error);
-    return [];
-  }
-}
-
-// Ajusta o saldo do medicamento para um novo valor, registrando a justificativa.
 export async function ajustarEstoque(medicamentoId, data) {
   try {
     const session = await requireRole(["GESTOR", "FARMACIA_ADMIN"]);
@@ -475,16 +437,38 @@ export async function ajustarEstoque(medicamentoId, data) {
   }
 }
 
-// ==========================================
-// 4. DISPENSAÇÃO DE MEDICAMENTOS
-// ==========================================
+export async function getAjustesEstoque(medicamentoId) {
+  try {
+    const id = Number(medicamentoId);
+    if (!Number.isSafeInteger(id) || id <= 0) return [];
 
-// Medicamentos vinculados a um paciente (tratamento) + lotes disponíveis em estoque.
+    const rows = await prisma.$queryRaw`
+      SELECT
+        id,
+        saldo_anterior AS "saldoAnterior",
+        saldo_novo AS "saldoNovo",
+        delta,
+        justificativa,
+        responsavel,
+        TO_CHAR(created_at, 'DD/MM/YYYY HH24:MI') AS "dataAjuste"
+      FROM public.farmacia_ajustes_estoque
+      WHERE medicamento_id = ${id}
+      ORDER BY created_at DESC
+    `;
+    return serializeData(rows);
+  } catch (error) {
+    console.error("Erro ao buscar ajustes de estoque:", error);
+    return [];
+  }
+}
+
+// ==========================================
+// 4. DISPENSAÇÃO DE MEDICAMENTOS (FEFO)
+// ==========================================
 export async function getMedicamentosDoPaciente(numeroPasta) {
   try {
     if (!numeroPasta) return [];
 
-    // Medicamentos vinculados ao paciente + saldo TOTAL em estoque (soma dos lotes).
     const meds = await prisma.$queryRaw`
       SELECT
         tp.medicamento_id AS "medicamentoId",
@@ -532,134 +516,72 @@ export async function getMedicamentosDoPaciente(numeroPasta) {
 export async function registrarDispensacao(data) {
   try {
     const usuario = await requireRole(["GESTOR", "FARMACIA_ADMIN"]);
+    
     if (!Array.isArray(data?.itens) || data.itens.length === 0) {
-      throw new Error("Informe os medicamentos da dispensação.");
+      throw new Error("Informe os medicamentos para dispensação.");
     }
 
-    // Responsável pela entrega é sempre o usuário logado (não editável).
-    const responsavelEntrega = usuario?.nome || "Usuário do sistema";
-
-    // Agrupa a quantidade total solicitada por medicamento (débito do total, não por lote).
-    const totaisPorMedicamento = new Map();
-    for (const item of data.itens) {
-      const medId = Number(item.medicamentoId);
-      const qtd = Number(item.qtdEntregue);
-      if (!Number.isSafeInteger(medId) || medId <= 0 || !Number.isSafeInteger(qtd) || qtd <= 0) {
-        throw new Error("Medicamento ou quantidade inválida.");
-      }
-      totaisPorMedicamento.set(medId, (totaisPorMedicamento.get(medId) || 0) + qtd);
-    }
-
-    const obs = `Responsável pela Entrega: ${responsavelEntrega}${data.observacao ? " | Obs: " + data.observacao : ""}`;
+    const responsavelEntrega = usuario?.nome || "Operador do Sistema";
 
     await prisma.$transaction(async (tx) => {
-      // Ordem estável de medicamentos evita deadlocks.
-      for (const [medId, quantidadeSolicitada] of [...totaisPorMedicamento].sort(([a], [b]) => a - b)) {
-        // Lotes do medicamento com saldo, em ordem FEFO (validade mais próxima primeiro).
-        // Obs.: PostgreSQL não permite FOR UPDATE com GROUP BY; por isso o saldo
-        // é calculado por subquery (sem agregação na query principal).
+      for (const item of data.itens) {
+        const medId = Number(item.medicamentoId);
+        const qtdSolicitada = Number(item.qtdEntregue);
+
+        if (!medId || qtdSolicitada <= 0) {
+          throw new Error("Medicamento ou quantidade inválida.");
+        }
+
         const lotes = await tx.$queryRaw`
-          SELECT
-            lm.id AS "loteId",
-            (
-              lm.qtd_inicial - COALESCE(
-                (
-                  SELECT SUM(dm.qtd_entregue)
-                  FROM public.farmacia_dispensacoes_medicamentos dm
-                  WHERE dm.lote_medicamento_id = lm.id
-                ),
-                0
-              )
-            )::integer AS saldo
+          SELECT 
+            lm.id,
+            lm.qtd_inicial - COALESCE(SUM(dm.qtd_entregue), 0) AS saldo_disponivel
           FROM public.farmacia_lotes_medicamentos lm
-          WHERE lm.medicamento_id = ${medId}
-            AND (
-              lm.qtd_inicial - COALESCE(
-                (
-                  SELECT SUM(dm.qtd_entregue)
-                  FROM public.farmacia_dispensacoes_medicamentos dm
-                  WHERE dm.lote_medicamento_id = lm.id
-                ),
-                0
-              )
-            ) > 0
-          ORDER BY lm.data_validade ASC, lm.id ASC
+          LEFT JOIN public.farmacia_dispensacoes_medicamentos dm ON dm.lote_medicamento_id = lm.id
+          WHERE lm.medicamento_id = ${medId} AND lm.data_validade >= CURRENT_DATE
+          GROUP BY lm.id
+          HAVING (lm.qtd_inicial - COALESCE(SUM(dm.qtd_entregue), 0)) > 0
+          ORDER BY lm.data_validade ASC
           FOR UPDATE
         `;
 
-        const saldoLotes = lotes.reduce((s, l) => s + Number(l.saldo), 0);
+        let restante = qtdSolicitada;
 
-        // Ajustes de saldo (aba "Ajustar Saldo") também compõem o disponível.
-        const ajustesRows = await tx.$queryRaw`
-          SELECT COALESCE(SUM(delta), 0)::integer AS total
-          FROM public.farmacia_ajustes_estoque
-          WHERE medicamento_id = ${medId}
-        `;
-        const ajustesDelta = Number(ajustesRows?.[0]?.total || 0);
-
-        const disponivelTotal = saldoLotes + ajustesDelta;
-        if (quantidadeSolicitada > disponivelTotal) {
-          throw new Error(
-            `Saldo insuficiente em estoque para o medicamento (disponível: ${disponivelTotal}, solicitado: ${quantidadeSolicitada}).`,
-          );
-        }
-
-        // Distribui a quantidade entre os lotes (consome o mais antigo primeiro).
-        let restante = quantidadeSolicitada;
         for (const lote of lotes) {
           if (restante <= 0) break;
-          const consumir = Math.min(restante, Number(lote.saldo));
-          if (consumir <= 0) continue;
+
+          const saldoLote = Number(lote.saldo_disponivel);
+          const qtdAEntregar = Math.min(restante, saldoLote);
+
           await tx.dispensacaoMedicamento.create({
             data: {
               pacientePasta: data.numeroPasta,
-              loteMedicamentoId: Number(lote.loteId),
-              qtdEntregue: consumir,
+              loteMedicamentoId: lote.id,
+              qtdEntregue: qtdAEntregar,
               dataDispensacao: new Date(),
-              observacao: obs,
-            },
+              observacao: `Entregue por: ${responsavelEntrega} | Obs: ${data.observacao || 'S/N'}`
+            }
           });
-          restante -= consumir;
+
+          restante -= qtdAEntregar;
         }
 
-        // Se o disponível vinha de um ajuste positivo (saldo acima do físico dos
-        // lotes), registra o restante no lote mais recente para manter o débito.
         if (restante > 0) {
-          const loteRecente = await tx.$queryRaw`
-            SELECT id FROM public.farmacia_lotes_medicamentos
-            WHERE medicamento_id = ${medId}
-            ORDER BY data_entrada DESC, id DESC
-            LIMIT 1
-          `;
-          if (!loteRecente.length) {
-            throw new Error(
-              "Não há lote para debitar a dispensação deste medicamento.",
-            );
-          }
-          await tx.dispensacaoMedicamento.create({
-            data: {
-              pacientePasta: data.numeroPasta,
-              loteMedicamentoId: Number(loteRecente[0].id),
-              qtdEntregue: restante,
-              dataDispensacao: new Date(),
-              observacao: obs,
-            },
-          });
-          restante = 0;
+          throw new Error(`Estoque insuficiente para o medicamento solicitado.`);
         }
       }
-    }, { isolationLevel: "ReadCommitted" });
+    });
 
     revalidatePath("/camara-tecnica/farmacia-judicial");
     return { success: true, responsavelEntrega };
   } catch (error) {
-    console.error("Erro ao registrar dispensação:", error);
+    console.error("Erro na transação de dispensação:", error);
     return { success: false, error: error.message };
   }
 }
 
 // ==========================================
-// 5. RELATÓRIOS (ENTRADAS E SAÍDAS)
+// 5. RELATÓRIOS
 // ==========================================
 export async function getRelatorioEntradas() {
   try {
@@ -715,8 +637,42 @@ export async function getRelatorioSaidas() {
   }
 }
 
+export async function getRelatorioSaidaPorMedicamento() {
+  try {
+    const rows = await prisma.$queryRaw`
+      SELECT
+        m.id AS "medicamentoId",
+        m.nome AS "medicamentoNome",
+        m.dosagem AS dosagem,
+        m.tipo AS tipo,
+        COALESCE(SUM(dm.qtd_entregue), 0)::integer AS "totalSaida",
+        COUNT(DISTINCT DATE_TRUNC('month', dm.data_dispensacao))::integer AS "mesesComSaida",
+        MIN(TO_CHAR(dm.data_dispensacao, 'DD/MM/YYYY')) AS "primeiraSaida",
+        MAX(TO_CHAR(dm.data_dispensacao, 'DD/MM/YYYY')) AS "ultimaSaida"
+      FROM public.farmacia_medicamentos m
+      JOIN public.farmacia_lotes_medicamentos lm ON lm.medicamento_id = m.id
+      JOIN public.farmacia_dispensacoes_medicamentos dm ON dm.lote_medicamento_id = lm.id
+      GROUP BY m.id, m.nome, m.dosagem, m.tipo
+      HAVING SUM(dm.qtd_entregue) > 0
+      ORDER BY "totalSaida" DESC, m.nome ASC
+    `;
+
+    return serializeData(rows).map((r) => {
+      const meses = Number(r.mesesComSaida) || 1;
+      const total = Number(r.totalSaida) || 0;
+      return {
+        ...r,
+        mediaMensal: Math.round((total / meses) * 100) / 100,
+      };
+    });
+  } catch (error) {
+    console.error("Erro ao buscar saída por medicamento:", error);
+    return [];
+  }
+}
+
 // ==========================================
-// 6. DASHBOARD & BUSCA
+// 6. DASHBOARD
 // ==========================================
 export async function getDashboardMetrics() {
   try {
@@ -774,11 +730,15 @@ export async function getDashboardMetrics() {
     };
   }
 }
+// src/app/camara-tecnica/farmacia-judicial/actions.js
 
+// ... (todas as outras funções que você já tem no arquivo) ...
+
+// ==========================================
+// 7. BUSCA DE PESSOA NO BANCO (PESSOAS)
+// ==========================================
 export async function buscarPessoaExistente(termo) {
   try {
-    // Termo vazio ou muito curto: traz os primeiros registros (para o dropdown
-    // já aparecer ao clicar no campo, como na Regulação).
     const searchTerm = `%${(termo || "").trim()}%`;
     const rows = await prisma.$queryRaw`
       SELECT 

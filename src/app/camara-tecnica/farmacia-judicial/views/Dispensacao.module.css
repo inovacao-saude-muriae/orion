@@ -34,25 +34,6 @@
   color: #475569;
 }
 
-/* CONTAINER DA LUPA NO CAMPO DE BUSCA */
-.searchInputWrapper {
-  position: relative;
-  display: flex;
-  align-items: center;
-  width: 100%;
-}
-
-.searchIcon {
-  position: absolute;
-  left: 0.85rem;
-  pointer-events: none;
-  opacity: 0.6;
-}
-
-.inputWithIcon {
-  padding-left: 2.5rem !important;
-}
-
 .fieldGroup input,
 .fieldGroup select {
   width: 100%;
@@ -71,44 +52,6 @@
 .fieldGroup select:focus {
   border-color: #2563eb;
   box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.1);
-}
-
-.suggestionsList {
-  position: absolute;
-  top: 100%;
-  left: 0;
-  right: 0;
-  background-color: #ffffff;
-  border: 1px solid #cbd5e1;
-  border-radius: 8px;
-  box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
-  margin-top: 0.25rem;
-  max-height: 220px;
-  overflow-y: auto;
-  z-index: 50;
-  list-style: none;
-  padding: 0;
-}
-
-.suggestionItem {
-  padding: 0.75rem 1rem;
-  cursor: pointer;
-  border-bottom: 1px solid #f1f5f9;
-  font-size: 0.875rem;
-  color: #334155;
-  transition: background-color 0.15s ease;
-  display: flex;
-  flex-direction: column;
-  gap: 0.2rem;
-}
-
-.suggestionItem:last-child {
-  border-bottom: none;
-}
-
-.suggestionItem:hover {
-  background-color: #eff6ff;
-  color: #1d4ed8;
 }
 
 .patientSummaryBox {
@@ -361,25 +304,7 @@
   background-color: #15803d;
 }
 
-@media (max-width: 768px) {
-  .addMedGrid {
-    grid-template-columns: 1fr;
-  }
-  
-  .bottomFieldsGrid {
-    grid-template-columns: 1fr;
-  }
-
-  .addBtn {
-    width: 100%;
-  }
-
-  .primaryBtn {
-    width: 100%;
-  }
-}
-
-/* ── Busca de paciente estilo tabela (igual à aba Pacientes) ────────────── */
+/* BUSCA DE PACIENTE ESTILO TABELA DROPDOWN */
 .searchRowInline {
   display: flex;
   gap: 0.5rem;
@@ -511,55 +436,20 @@
   color: #94a3b8 !important;
 }
 
-/* ── Medicamentos vinculados ao paciente ────────────────────────────────── */
-.linkedMedsBlock {
-  margin-top: 1rem;
-  padding-top: 1rem;
-  border-top: 1px dashed #bae6fd;
-}
-
-.linkedMedsTitle {
-  margin: 0 0 0.6rem;
-  font-size: 0.8rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.03em;
-  color: #0369a1;
-}
-
-.linkedMedsEmpty {
-  margin: 0;
-  font-size: 0.85rem;
-  color: #64748b;
-}
-
-.linkedMedsTable {
-  width: 100%;
-  border-collapse: collapse;
-  font-size: 0.85rem;
-  background-color: #ffffff;
-  border: 1px solid #e2e8f0;
-  border-radius: 8px;
-  overflow: hidden;
-}
-
-.linkedMedsTable th {
-  background-color: #f8fafc;
-  padding: 0.55rem 0.75rem;
-  text-align: left;
-  color: #475569;
-  font-weight: 700;
-  border-bottom: 1px solid #e2e8f0;
-}
-
-.linkedMedsTable td {
-  padding: 0.55rem 0.75rem;
-  border-bottom: 1px solid #f1f5f9;
-  color: #1e293b;
-}
-
 .saldoHint {
   font-weight: 500;
   color: #64748b;
   font-size: 0.78rem;
+}
+
+@media (max-width: 768px) {
+  .addMedGrid,
+  .bottomFieldsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .addBtn,
+  .primaryBtn {
+    width: 100%;
+  }
 }

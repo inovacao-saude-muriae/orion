@@ -139,6 +139,51 @@
   cursor: pointer;
 }
 
+/* ── BOTÃO DE EXPORTAR EXCEL (CORRIGIDO) ────────────────────────────────── */
+.exportExcelBtn {
+  display: inline-flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0.45rem !important;
+  background-color: #ffffff !important;
+  color: #2e7d32 !important;
+  border: 1.5px solid #81c784 !important;
+  border-radius: 8px !important;
+  padding: 0.55rem 1.1rem !important;
+  font-size: 0.875rem !important;
+  font-weight: 600 !important;
+  cursor: pointer !important;
+  white-space: nowrap !important;
+  transition: all 0.2s ease-in-out !important;
+  height: 40px !important;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03) !important;
+}
+
+.exportExcelBtn:hover:not(:disabled) {
+  background-color: #f1f8e9 !important;
+  border-color: #4caf50 !important;
+  color: #1b5e20 !important;
+}
+
+.exportExcelBtn:disabled {
+  opacity: 0.5 !important;
+  cursor: not-allowed !important;
+  border-color: #e0e0e0 !important;
+  color: #9e9e9e !important;
+}
+
+.exportIcon {
+  width: 16px !important;
+  height: 16px !important;
+  min-width: 16px !important;
+  min-height: 16px !important;
+  max-width: 16px !important;
+  max-height: 16px !important;
+  stroke: currentColor !important;
+  display: block !important;
+}
+
 /* ── Modal de histórico ─────────────────────────────────────────────────── */
 .modalOverlay {
   position: fixed;
@@ -211,21 +256,19 @@
   vertical-align: middle;
 }
 
-/* Largura por campo para os inputs de edição não ficarem espremidos,
-   sem estourar a largura do modal (evita rolagem horizontal). */
 .editingRow td:nth-child(1),
 .editingRow td:nth-child(2) {
-  width: 130px; /* datas */
+  width: 130px;
 }
 
 .editingRow td:nth-child(3),
 .editingRow td:nth-child(6) {
-  width: 110px; /* lote / fornecedor */
+  width: 110px;
 }
 
 .editingRow td:nth-child(4),
 .editingRow td:nth-child(5) {
-  width: 72px; /* qtd / valor */
+  width: 72px;
 }
 
 .cellInput,
@@ -290,6 +333,7 @@
   cursor: pointer;
   white-space: nowrap;
   transition: background-color 0.2s ease;
+  height: 40px;
 }
 
 .addBtn:hover {
@@ -461,7 +505,6 @@
   overflow-y: auto;
 }
 
-/* Histórico de ajustes dentro do modal: cabe na largura do modal (sem scroll horizontal) */
 .ajusteBody .tableWrapper {
   overflow-x: hidden;
 }
@@ -481,27 +524,27 @@
 
 .ajusteBody .table th:nth-child(1),
 .ajusteBody .table td:nth-child(1) {
-  width: 22%; /* Data */
+  width: 22%;
 }
 
 .ajusteBody .table th:nth-child(2),
 .ajusteBody .table td:nth-child(2) {
-  width: 13%; /* Saldo ant. */
+  width: 13%;
 }
 
 .ajusteBody .table th:nth-child(3),
 .ajusteBody .table td:nth-child(3) {
-  width: 20%; /* Novo saldo */
+  width: 20%;
 }
 
 .ajusteBody .table th:nth-child(4),
 .ajusteBody .table td:nth-child(4) {
-  width: 30%; /* Justificativa */
+  width: 30%;
 }
 
 .ajusteBody .table th:nth-child(5),
 .ajusteBody .table td:nth-child(5) {
-  width: 15%; /* Responsável */
+  width: 15%;
 }
 
 /* Cards de saldo (atual → novo) */

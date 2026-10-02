@@ -1,0 +1,195 @@
+/* Estilos visíveis Apenas na Impressão */
+.termoImpressao {
+  display: none;
+}
+
+@media print {
+  /* Oculta tudo na tela normal na hora de imprimir */
+  body * {
+    visibility: hidden !important;
+  }
+
+  /* Exibe exclusivamente este container e seus filhos */
+  .termoImpressao,
+  .termoImpressao * {
+    visibility: visible !important;
+  }
+
+  .termoImpressao {
+    display: block !important;
+    position: absolute;
+    left: 0;
+    top: 0;
+    width: 100%;
+    margin: 0;
+    padding: 16px;
+    background: #ffffff;
+    color: #334155;
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 12.5px;
+    line-height: 1.5;
+  }
+
+  .printVia {
+    border: 1px solid #cbd5e1;
+    border-radius: 12px;
+    padding: 24px;
+    page-break-inside: avoid;
+  }
+
+  .printCabecalho {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    border-bottom: 2px solid #1e3a5f;
+    padding-bottom: 12px;
+    margin-bottom: 16px;
+  }
+
+  .printCabecalho h1 {
+    margin: 0;
+    font-size: 18px;
+    font-weight: 700;
+    color: #1e3a5f;
+  }
+
+  .printCabecalho h2 {
+    margin: 0;
+    font-size: 15px;
+    font-weight: 700;
+    color: #1e3a5f;
+  }
+
+  .printCabecalho p {
+    margin: 2px 0 0;
+    font-size: 12px;
+    color: #64748b;
+  }
+
+  .printMeta {
+    text-align: right;
+    font-size: 10.5px;
+    color: #64748b;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+  }
+
+  .printSelo {
+    background: #1e3a5f !important;
+    color: #ffffff !important;
+    font-size: 9.5px;
+    font-weight: 700;
+    text-transform: uppercase;
+    padding: 3px 10px;
+    border-radius: 999px;
+    margin-bottom: 4px;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .printSecaoTitulo {
+    font-size: 10.5px;
+    text-transform: uppercase;
+    color: #4a6fa5;
+    font-weight: 700;
+    margin-bottom: 8px;
+  }
+
+  .printDadosGrid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px 24px;
+    margin-bottom: 16px;
+  }
+
+  .printDado {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .printLabel {
+    font-size: 9.5px;
+    text-transform: uppercase;
+    color: #94a3b8;
+    font-weight: 700;
+  }
+
+  .printValor {
+    font-size: 12.5px;
+    color: #1e293b;
+    font-weight: 600;
+  }
+
+  .printTable {
+    width: 100%;
+    border-collapse: collapse;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+
+  .printTable th {
+    background: #1e3a5f !important;
+    color: #ffffff !important;
+    padding: 8px 12px;
+    font-size: 10px;
+    text-transform: uppercase;
+    text-align: left;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .printTable td {
+    padding: 8px 12px;
+    border-bottom: 1px solid #eef2f7;
+    font-size: 12px;
+  }
+
+  .printTable tr:nth-child(even) td {
+    background: #f8fafc !important;
+    -webkit-print-color-adjust: exact;
+    print-color-adjust: exact;
+  }
+
+  .colCenter {
+    text-align: center;
+  }
+
+  .printObs {
+    border: 1px solid #e2e8f0;
+    border-left: 3px solid #4a6fa5;
+    border-radius: 6px;
+    padding: 8px 12px;
+    font-size: 12px;
+    color: #475569;
+    margin-top: 12px;
+  }
+
+  .printAssinaturas {
+    display: flex;
+    justify-content: center;
+    gap: 48px;
+    margin-top: 40px;
+  }
+
+  .printAssinatura {
+    width: 200px;
+    text-align: center;
+  }
+
+  .printLinha {
+    border-top: 1px solid #475569;
+    margin-bottom: 4px;
+  }
+
+  .printRecorte {
+    text-align: center;
+    font-size: 10px;
+    font-weight: 700;
+    color: #94a3b8;
+    text-transform: uppercase;
+    margin: 16px 0;
+  }
+}
