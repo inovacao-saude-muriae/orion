@@ -12,6 +12,7 @@ import {
 
 import CadastroPacienteJunta from "./views/CadastroPacienteJunta";
 import AtendimentoServico from "./components/AtendimentoServico";
+import AgendaServico from "./views/AgendaServico";
 import ProntuarioRelatorio from "./views/ProntuarioRelatorio";
 
 import styles from "./page.module.css";
@@ -40,6 +41,8 @@ function JuntaReguladoraPageContent() {
   const [pacientesServico, setPacientesServico] = useState([]);
   const [prontuarioData, setProntuarioData] = useState(null);
   const [loadingServico, setLoadingServico] = useState(false);
+  // Aba interna dentro de um serviço: recepção/atendimento ou agenda.
+  const [abaServico, setAbaServico] = useState("ATENDIMENTO");
 
   // Busca de pacientes no banco ao selecionar/mudar de serviço
   useEffect(() => {
@@ -145,7 +148,27 @@ function JuntaReguladoraPageContent() {
 
       {activeTab === "SERVICOS" && (
         <>
-          {loadingServico ? (
+          {/* Alternância: Recepção/Atendimento ou Agenda */}
+          <div className={styles.servicoTabs}>
+            <button
+              type="button"
+              className={`${styles.servicoTab} ${abaServico === "ATENDIMENTO" ? styles.servicoTabActive : ""}`}
+              onClick={() => setAbaServico("ATENDIMENTO")}
+            >
+              Recepção / Atendimento
+            </button>
+            <button
+              type="button"
+              className={`${styles.servicoTab} ${abaServico === "AGENDA" ? styles.servicoTabActive : ""}`}
+              onClick={() => setAbaServico("AGENDA")}
+            >
+              Agenda
+            </button>
+          </div>
+
+          {abaServico === "AGENDA" ? (
+            <AgendaServico servicoNome={servicoNomeFormatado} />
+          ) : loadingServico ? (
             <div style={{ textAlign: "center", padding: "2rem", color: "#64748b" }}>
               Carregando pacientes do serviço {servicoNomeFormatado}...
             </div>

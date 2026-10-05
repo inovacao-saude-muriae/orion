@@ -219,12 +219,17 @@ model PlanejamentoCidade {
 // ── CADASTRO: SERVIÇOS E ESPECIALIDADES (`cad_`) ─────────────────────────
 model Servico {
   id             Int             @id @default(autoincrement())
-  nome           String          @db.VarChar(150)
+  nome           String          @unique @db.VarChar(150)
+  descricao      String?
   ativo          Boolean         @default(true)
   createdAt      DateTime        @default(now()) @map("created_at") @db.Timestamptz(6)
-  especialidades Especialidade[]
 
-  @@map("cad_servicos")
+  especialidades Especialidade[]
+  pacientes      PacienteJuntaServico[]
+  atendimentos   JuntaAtendimento[]
+  agendamentos   AgendamentoJunta[]
+
+  @@map("junta_servicos")
 }
 
 model Especialidade {
@@ -237,7 +242,7 @@ model Especialidade {
   servico Servico @relation(fields: [servicoId], references: [id], onDelete: Cascade, map: "fk_especialidade_servico")
 
   @@index([servicoId], map: "idx_especialidade_servico")
-  @@map("cad_especialidades")
+  @@map("junta_especialidades")
 }
 
 // ── MÓDULO: FARMÁCIA JUDICIAL (`farmacia_`) ──────────────────────────────
@@ -341,21 +346,9 @@ model PacienteJunta {
   pessoa       Pessoa                 @relation(fields: [pessoaCpf], references: [cpf], onDelete: Cascade)
   servicos     PacienteJuntaServico[]
   atendimentos JuntaAtendimento[]
+  agendamentos AgendamentoJunta[]
 
   @@map("junta_pacientes")
-}
-
-model JuntaServico {
-  id        Int       @id @default(autoincrement())
-  nome      String    @unique @db.VarChar(100)
-  descricao String?
-  ativo     Boolean?  @default(true)
-  createdAt DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
-
-  pacientes    PacienteJuntaServico[]
-  atendimentos JuntaAtendimento[]
-
-  @@map("junta_servicos")
 }
 
 model PacienteJuntaServico {
@@ -365,7 +358,7 @@ model PacienteJuntaServico {
   ativo           Boolean?  @default(true)
 
   pacientePacienteJunta PacienteJunta @relation(fields: [pacienteJuntaId], references: [id], onDelete: Cascade)
-  servico               JuntaServico  @relation(fields: [servicoId], references: [id], onDelete: Cascade)
+  servico               Servico       @relation(fields: [servicoId], references: [id], onDelete: Cascade)
 
   @@id([pacienteJuntaId, servicoId])
   @@map("junta_paciente_servicos")
@@ -383,9 +376,26 @@ model JuntaAtendimento {
   createdAt               DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
 
   pacienteJunta PacienteJunta @relation(fields: [pacienteJuntaId], references: [id], onDelete: Cascade)
-  servico       JuntaServico  @relation(fields: [servicoId], references: [id], onDelete: Cascade)
+  servico       Servico       @relation(fields: [servicoId], references: [id], onDelete: Cascade)
 
   @@map("junta_atendimentos")
+}
+
+model AgendamentoJunta {
+  id              Int      @id @default(autoincrement())
+  servicoId       Int      @map("servico_id")
+  pacienteJuntaId Int      @map("paciente_junta_id")
+  especialidade   String   @db.VarChar(150)
+  data            DateTime @db.Date
+  hora            String   @db.VarChar(5)
+  observacao      String?
+  createdAt       DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  servico       Servico       @relation(fields: [servicoId], references: [id], onDelete: Cascade)
+  pacienteJunta PacienteJunta @relation(fields: [pacienteJuntaId], references: [id], onDelete: Cascade)
+
+  @@index([servicoId, data], map: "idx_agenda_servico_data")
+  @@map("junta_agendamentos")
 }
 
 // ── MÓDULO: CCZ / ZOONOSES (`ccz_`) ─────────────────────────────────────

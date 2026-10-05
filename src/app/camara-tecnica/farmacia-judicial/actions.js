@@ -532,16 +532,36 @@ export async function registrarDispensacao(data) {
           throw new Error("Medicamento ou quantidade inválida.");
         }
 
+        // Lotes com saldo, em ordem FEFO (validade mais próxima primeiro).
+        // Obs.: PostgreSQL não permite FOR UPDATE com GROUP BY; por isso o saldo
+        // é calculado por subquery (sem agregação na query principal).
         const lotes = await tx.$queryRaw`
-          SELECT 
+          SELECT
             lm.id,
-            lm.qtd_inicial - COALESCE(SUM(dm.qtd_entregue), 0) AS saldo_disponivel
+            (
+              lm.qtd_inicial - COALESCE(
+                (
+                  SELECT SUM(dm.qtd_entregue)
+                  FROM public.farmacia_dispensacoes_medicamentos dm
+                  WHERE dm.lote_medicamento_id = lm.id
+                ),
+                0
+              )
+            ) AS saldo_disponivel
           FROM public.farmacia_lotes_medicamentos lm
-          LEFT JOIN public.farmacia_dispensacoes_medicamentos dm ON dm.lote_medicamento_id = lm.id
-          WHERE lm.medicamento_id = ${medId} AND lm.data_validade >= CURRENT_DATE
-          GROUP BY lm.id
-          HAVING (lm.qtd_inicial - COALESCE(SUM(dm.qtd_entregue), 0)) > 0
-          ORDER BY lm.data_validade ASC
+          WHERE lm.medicamento_id = ${medId}
+            AND lm.data_validade >= CURRENT_DATE
+            AND (
+              lm.qtd_inicial - COALESCE(
+                (
+                  SELECT SUM(dm.qtd_entregue)
+                  FROM public.farmacia_dispensacoes_medicamentos dm
+                  WHERE dm.lote_medicamento_id = lm.id
+                ),
+                0
+              )
+            ) > 0
+          ORDER BY lm.data_validade ASC, lm.id ASC
           FOR UPDATE
         `;
 

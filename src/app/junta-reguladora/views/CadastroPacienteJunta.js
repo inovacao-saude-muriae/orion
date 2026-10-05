@@ -1,9 +1,10 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import Image from 'next/image';
 import { buscarPessoaExistente } from '../actions';
 import { useConfirm } from '@/components/ConfirmDialog';
+import { documentoPaciente } from '@/app/regulacao/constants';
 import styles from './CadastroPacienteJunta.module.css';
 
 const LOCAIS_DISPONIVEIS = [
@@ -30,6 +31,18 @@ export default function CadastroPacienteJunta({ onCadastrar }) {
   const [tiposDeficiencia, setTiposDeficiencia] = useState([]);
   const [locaisEncaminhados, setLocaisEncaminhados] = useState([]);
   const [salvando, setSalvando] = useState(false);
+  const dropdownRef = useRef(null);
+
+  // Fecha o dropdown ao clicar fora.
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setShowDropdown(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   const formatCPF = (cpf) => {
     if (!cpf) return '';
@@ -49,23 +62,35 @@ export default function CadastroPacienteJunta({ onCadastrar }) {
     });
   };
 
+  // Carrega uma lista inicial ao montar (dropdown já aparece ao clicar no campo).
+  useEffect(() => {
+    let ativo = true;
+    (async () => {
+      try {
+        const resultados = await buscarPessoaExistente('');
+        if (ativo) setSearchResults(removeDuplicadosPorCPF(resultados || []));
+      } catch {
+        if (ativo) setSearchResults([]);
+      }
+    })();
+    return () => {
+      ativo = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   const handleInputChange = async (valor) => {
     setSearchTerm(valor);
-    if (valor.trim().length >= 2) {
-      setIsSearching(true);
-      setShowDropdown(true);
-      try {
-        const resultados = await buscarPessoaExistente(valor.trim());
-        setSearchResults(removeDuplicadosPorCPF(resultados || []));
-      } catch (error) {
-        console.error('Erro ao buscar pessoa:', error);
-        setSearchResults([]);
-      } finally {
-        setIsSearching(false);
-      }
-    } else {
+    setShowDropdown(true);
+    setIsSearching(true);
+    try {
+      const resultados = await buscarPessoaExistente(valor.trim());
+      setSearchResults(removeDuplicadosPorCPF(resultados || []));
+    } catch (error) {
+      console.error('Erro ao buscar pessoa:', error);
       setSearchResults([]);
-      setShowDropdown(false);
+    } finally {
+      setIsSearching(false);
     }
   };
 
@@ -74,7 +99,6 @@ export default function CadastroPacienteJunta({ onCadastrar }) {
     setSearchTerm(`${p.nomeCompleto || p.nome} (${formatCPF(p.cpf)})`);
     setShowDropdown(false);
     // Pré-carrega dados de Junta já existentes, se vierem na busca.
-    // tipoDeficiencia é salvo como string ("Física, Visual") — separa de volta.
     const existentes = (p.tipoDeficiencia || '')
       .split(',')
       .map((t) => t.trim())
@@ -129,86 +153,172 @@ export default function CadastroPacienteJunta({ onCadastrar }) {
   };
 
   return (
-    <div className={styles.card}>
-      {/* BUSCA DA PESSOA */}
-      <div className={styles.searchSectionContainer}>
-        <div className={styles.fieldGroup} style={{ marginBottom: '0.5rem' }}>
-          <label>Buscar Pessoa no Banco (CPF ou Nome)</label>
-        </div>
+    <div className={styles.container}>
+      <div className={styles.mainWrapper}>
+        {/* SEÇÃO 1: IDENTIFICAÇÃO DO PACIENTE (estilo Novo Pedido) */}
+        <div className={styles.identSection}>
+          <div className={styles.identHeader}>
+            <h4>1. Identificação do Paciente</h4>
+          </div>
 
-        <div className={styles.searchActionRow}>
-          <div className={styles.autocompleteWrapper}>
-            <input
-              type="text"
-              placeholder="Digite o CPF ou Nome..."
-              value={searchTerm}
-              onChange={(e) => handleInputChange(e.target.value)}
-            />
-            {showDropdown && searchResults.length > 0 && (
-              <ul className={styles.suggestionsDropdown}>
-                {searchResults.map((p, index) => (
-                  <li key={p.cpf ? `${p.cpf}-${index}` : index} onClick={() => handleSelectPessoa(p)}>
-                    <strong>{p.nomeCompleto || p.nome}</strong> — CPF: {formatCPF(p.cpf)}
-                  </li>
-                ))}
-              </ul>
+          <div className={styles.searchFieldWrapper}>
+            <label className={styles.searchLabel}>Buscar Paciente *</label>
+
+          <div className={styles.searchBarRow}>
+            <div className={styles.searchSelectWrapper} ref={dropdownRef}>
+              <input
+                type="text"
+                className={styles.selectLikeInput}
+                placeholder="Selecionar ou digitar nome/CPF..."
+                value={searchTerm}
+                onChange={(e) => handleInputChange(e.target.value)}
+                onFocus={() => setShowDropdown(true)}
+              />
+              <span className={styles.arrowIcon} onClick={() => setShowDropdown(!showDropdown)}>
+                {showDropdown ? '▲' : '▼'}
+              </span>
+
+              {showDropdown && (
+                <div className={styles.tableDropdownMenu}>
+                  <div className={styles.tableContainerScroll}>
+                    <table className={styles.patientTableDropdown}>
+                      <thead>
+                        <tr>
+                          <th>CPF / CNS</th>
+                          <th>Usuário</th>
+                          <th>Nome da mãe</th>
+                          <th>Data nasc.</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {searchResults.length > 0 ? (
+                          searchResults.map((p, index) => (
+                            <tr
+                              key={p.cpf ? `${p.cpf}-${index}` : index}
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                handleSelectPessoa(p);
+                              }}
+                              className={pessoa?.cpf === p.cpf ? styles.selectedRow : ''}
+                            >
+                              <td>{documentoPaciente({ cpf: p.cpf, cns: p.cns })}</td>
+                              <td className={styles.boldName}>{p.nomeCompleto || p.nome}</td>
+                              <td>{p.nomeMae || 'Não informada'}</td>
+                              <td>
+                                {p.dataNascimento
+                                  ? p.dataNascimento.split('-').reverse().join('/')
+                                  : '-'}
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan="4" className={styles.noDataTd}>
+                              {isSearching ? 'Consultando banco de dados...' : 'Nenhuma pessoa encontrada.'}
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            {pessoa && (
+              <button type="button" className={styles.iconBtn} onClick={handleClear} title="Limpar">
+                <Image src="/img/icon/cancelar.png" alt="Limpar" width={18} height={18} />
+              </button>
             )}
           </div>
 
-          <button type="button" className={`${styles.iconSquareBtn} ${styles.btnBlue}`} title="Buscar">
-            <Image src="/img/icon/lupa.png" alt="Buscar" width={22} height={22} className={styles.iconImg} />
-          </button>
+            <p className={styles.helperNote}>
+              A pessoa precisa estar cadastrada em <strong>Gerenciamento &gt; Cadastro de Pessoas</strong>.
+            </p>
+          </div>
 
-          {pessoa && (
-            <button
-              type="button"
-              className={`${styles.iconSquareBtn} ${styles.btnOrange}`}
-              title="Limpar"
-              onClick={handleClear}
-            >
-              <Image src="/img/icon/cancelar.png" alt="Limpar" width={22} height={22} className={styles.iconImg} />
-            </button>
-          )}
+        {/* DADOS PESSOAIS (somente leitura) */}
+        <div className={styles.dataGrid}>
+          <div className={`${styles.field} ${styles.colCpf}`}>
+            <label>CPF</label>
+            <input type="text" value={pessoa ? formatCPF(pessoa.cpf) : ''} disabled readOnly placeholder="000.000.000-00" />
+          </div>
+          <div className={`${styles.field} ${styles.colName}`}>
+            <label>Nome completo</label>
+            <input type="text" value={pessoa?.nomeCompleto || pessoa?.nome || ''} disabled readOnly placeholder="—" />
+          </div>
+          <div className={`${styles.field} ${styles.colSmall}`}>
+            <label>Sexo</label>
+            <input type="text" value={pessoa?.sexo || ''} disabled readOnly placeholder="—" />
+          </div>
+          <div className={`${styles.field} ${styles.colSmall}`}>
+            <label>Data de nascimento</label>
+            <input
+              type="text"
+              value={pessoa?.dataNascimento ? pessoa.dataNascimento.split('-').reverse().join('/') : ''}
+              disabled
+              readOnly
+              placeholder="dd/mm/aaaa"
+            />
+          </div>
+          <div className={`${styles.field} ${styles.colMother}`}>
+            <label>Nome da mãe</label>
+            <input type="text" value={pessoa?.nomeMae || ''} disabled readOnly placeholder="—" />
+          </div>
+          <div className={`${styles.field} ${styles.colMed}`}>
+            <label>Telefone / WhatsApp</label>
+            <input type="text" value={pessoa?.telefone || ''} disabled readOnly placeholder="(00) 00000-0000" />
+          </div>
+          <div className={`${styles.field} ${styles.colMed}`}>
+            <label>CNS (Cartão SUS)</label>
+            <input type="text" value={pessoa?.cns || ''} disabled readOnly placeholder="—" />
+          </div>
+          <div className={`${styles.field} ${styles.colMed}`}>
+            <label>UBS de referência</label>
+            <input type="text" value={pessoa?.ubsReferencia || ''} disabled readOnly placeholder="—" />
+          </div>
         </div>
 
-        {isSearching && (
-          <div style={{ marginTop: '0.5rem', fontSize: '0.85rem', color: '#64748b' }}>
-            Consultando banco de dados...
+        {/* ENDEREÇO (somente leitura) */}
+        <div className={styles.dataGrid} style={{ marginTop: '0.75rem' }}>
+          <div className={`${styles.field} ${styles.colCep}`}>
+            <label>CEP</label>
+            <input type="text" value={pessoa?.cep || ''} disabled readOnly placeholder="00000-000" />
           </div>
-        )}
-        <p style={{ marginTop: '0.5rem', fontSize: '0.75rem', color: '#64748b' }}>
-          A pessoa precisa estar cadastrada em <strong>Gerenciamento &gt; Cadastro de Pessoas</strong>.
-        </p>
-      </div>
-
-      {pessoa && (
-        <form onSubmit={handleSubmit} className={styles.patientFormContainer}>
-          {/* RESUMO DA PESSOA (somente leitura) */}
-          <div className={styles.formSection}>
-            <div className={styles.formSectionHeader}>
-              <h4>Paciente selecionado</h4>
-            </div>
-            <div className={styles.formGridStrict}>
-              <div className={`${styles.fieldGroup} ${styles.colName}`}>
-                <label>Nome</label>
-                <input type="text" value={pessoa.nomeCompleto || pessoa.nome || ''} disabled />
-              </div>
-              <div className={`${styles.fieldGroup} ${styles.colCpf}`}>
-                <label>CPF</label>
-                <input type="text" value={formatCPF(pessoa.cpf)} disabled />
-              </div>
-              <div className={`${styles.fieldGroup} ${styles.colPhone}`}>
-                <label>Telefone</label>
-                <input type="text" value={pessoa.telefone || '-'} disabled />
-              </div>
-            </div>
+          <div className={`${styles.field} ${styles.colLogradouro}`}>
+            <label>Logradouro / Rua</label>
+            <input type="text" value={pessoa?.logradouro || ''} disabled readOnly placeholder="—" />
           </div>
+          <div className={`${styles.field} ${styles.colNumero}`}>
+            <label>Número</label>
+            <input type="text" value={pessoa?.numero || ''} disabled readOnly placeholder="—" />
+          </div>
+          <div className={`${styles.field} ${styles.colComplemento}`}>
+            <label>Complemento</label>
+            <input type="text" value={pessoa?.complemento || ''} disabled readOnly placeholder="—" />
+          </div>
+          <div className={`${styles.field} ${styles.colBairro}`}>
+            <label>Bairro</label>
+            <input type="text" value={pessoa?.bairro || ''} disabled readOnly placeholder="—" />
+          </div>
+          <div className={`${styles.field} ${styles.colCidade}`}>
+            <label>Cidade</label>
+            <input type="text" value={pessoa?.cidade || ''} disabled readOnly placeholder="—" />
+          </div>
+          <div className={`${styles.field} ${styles.colUf}`}>
+            <label>UF</label>
+            <input type="text" value={pessoa?.uf || ''} disabled readOnly placeholder="—" />
+          </div>
+        </div>
+        </div>
+        {/* FIM DA SEÇÃO 1 */}
 
-          {/* DADOS DA JUNTA */}
-          <div className={styles.formSection}>
-            <div className={styles.formSectionHeader}>
-              <h4>Tipo de Deficiência * (pode selecionar mais de um)</h4>
-            </div>
+        <form onSubmit={handleSubmit} className={styles.formContainer}>
+          {/* TIPO DE DEFICIÊNCIA */}
+          <div className={styles.cardSection}>
+            <h3 className={styles.sectionHeaderTitle}>
+              Tipo de Deficiência * (pode selecionar mais de um)
+            </h3>
             <div className={styles.checkboxGrid}>
               {TIPOS_DEFICIENCIA.map((tipo) => (
                 <label key={tipo} className={styles.checkboxLabel}>
@@ -224,10 +334,10 @@ export default function CadastroPacienteJunta({ onCadastrar }) {
           </div>
 
           {/* LOCAIS DE ENCAMINHAMENTO */}
-          <div className={styles.formSection}>
-            <div className={styles.formSectionHeader}>
-              <h4>Locais de Encaminhamento / Vinculados</h4>
-            </div>
+          <div className={styles.cardSection}>
+            <h3 className={styles.sectionHeaderTitle}>
+              Locais de Encaminhamento / Vinculados
+            </h3>
             <div className={styles.checkboxGrid}>
               {LOCAIS_DISPONIVEIS.map((local) => (
                 <label key={local} className={styles.checkboxLabel}>
@@ -243,15 +353,15 @@ export default function CadastroPacienteJunta({ onCadastrar }) {
           </div>
 
           <div className={styles.formActions}>
-            <button type="button" className={styles.btnRedAction} onClick={handleClear} disabled={salvando}>
+            <button type="button" onClick={handleClear} className={styles.secondaryBtn} disabled={salvando}>
               Cancelar
             </button>
-            <button type="submit" className={styles.primaryBtn} disabled={salvando}>
+            <button type="submit" className={styles.primaryBtn} disabled={salvando || !pessoa}>
               {salvando ? 'Salvando...' : 'Salvar Dados da Junta'}
             </button>
           </div>
         </form>
-      )}
+      </div>
     </div>
   );
 }

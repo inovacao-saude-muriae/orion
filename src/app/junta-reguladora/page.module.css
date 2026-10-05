@@ -1,10 +1,7 @@
 .container {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 2rem 1.5rem;
+  width: 100%;
   font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   color: #1e293b;
-  min-height: 100vh;
 }
 
 .header {
@@ -39,4 +36,33 @@
   .header p {
     font-size: 0.85rem;
   }
+}
+
+/* Abas internas de um serviço (Atendimento / Agenda) */
+.servicoTabs {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1.25rem;
+}
+
+.servicoTab {
+  background-color: #ffffff;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+  padding: 0.55rem 1.1rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s, border-color 0.15s;
+}
+
+.servicoTab:hover {
+  background-color: #f1f5f9;
+}
+
+.servicoTabActive {
+  background-color: #4a6fa5;
+  color: #ffffff;
+  border-color: #4a6fa5;
 }

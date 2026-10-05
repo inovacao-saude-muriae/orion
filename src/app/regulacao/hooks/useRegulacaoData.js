@@ -521,7 +521,20 @@ export function useRegulacaoData(setActiveTab) {
       patientName: pessoa.nomeCompleto,
       motherName: pessoa.nomeMae || "",
       cpf: pessoa.cpf,
-      susCard: "",
+      cns: pessoa.cns || "",
+      susCard: pessoa.cns || "",
+      sexo: pessoa.sexo || "",
+      dataNascimento: pessoa.dataNascimento || "",
+      telefone: pessoa.telefone || "",
+      ubsReferencia: pessoa.ubsReferencia || "",
+      ubsResponsavelId: pessoa.ubsReferenciaId ? String(pessoa.ubsReferenciaId) : "",
+      cep: pessoa.cep || "",
+      logradouro: pessoa.logradouro || "",
+      numero: pessoa.numero || "",
+      complemento: pessoa.complemento || "",
+      bairro: pessoa.bairro || "",
+      cidade: pessoa.cidade || "",
+      uf: pessoa.uf || "",
     }));
   };
 

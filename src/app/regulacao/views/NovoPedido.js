@@ -184,19 +184,8 @@ export default function NovoPedido({
             </div>
           </div>
 
-          {/* DADOS CONFIRMADOS DO PACIENTE */}
+          {/* DADOS COMPLETOS DO PACIENTE (somente leitura) */}
           <div className={styles.formGridStrict}>
-            <div className={`${styles.fieldGroup} ${styles.colMother}`}>
-              <label>Nome da Mãe</label>
-              <input
-                type="text"
-                value={newRequest.motherName || ''}
-                readOnly
-                placeholder="Nome da Mãe"
-                className={styles.readOnlyInput}
-              />
-            </div>
-
             <div className={`${styles.fieldGroup} ${styles.colCpf}`}>
               <label>CPF *</label>
               <input
@@ -209,6 +198,50 @@ export default function NovoPedido({
               />
             </div>
 
+            <div className={`${styles.fieldGroup} ${styles.colMother}`}>
+              <label>Nome da Mãe</label>
+              <input
+                type="text"
+                value={newRequest.motherName || ''}
+                readOnly
+                placeholder="Nome da Mãe"
+                className={styles.readOnlyInput}
+              />
+            </div>
+
+            <div className={`${styles.fieldGroup} ${styles.colSmall}`}>
+              <label>Sexo</label>
+              <input
+                type="text"
+                value={newRequest.sexo || ''}
+                readOnly
+                placeholder="—"
+                className={styles.readOnlyInput}
+              />
+            </div>
+
+            <div className={`${styles.fieldGroup} ${styles.colSmall}`}>
+              <label>Data de nascimento</label>
+              <input
+                type="text"
+                value={newRequest.dataNascimento || ''}
+                readOnly
+                placeholder="dd/mm/aaaa"
+                className={styles.readOnlyInput}
+              />
+            </div>
+
+            <div className={`${styles.fieldGroup} ${styles.colSmall}`}>
+              <label>Telefone</label>
+              <input
+                type="text"
+                value={newRequest.telefone || ''}
+                readOnly
+                placeholder="(00) 00000-0000"
+                className={styles.readOnlyInput}
+              />
+            </div>
+
             <div className={`${styles.fieldGroup} ${styles.colSus}`}>
               <label>Cartão SUS</label>
               <input
@@ -217,6 +250,49 @@ export default function NovoPedido({
                 onChange={(e) => setNewRequest({ ...newRequest, susCard: e.target.value })}
                 placeholder="700000000000000"
               />
+            </div>
+
+            <div className={`${styles.fieldGroup} ${styles.colUbsRef}`}>
+              <label>UBS de referência</label>
+              <input
+                type="text"
+                value={newRequest.ubsReferencia || ''}
+                readOnly
+                placeholder="—"
+                className={styles.readOnlyInput}
+              />
+            </div>
+          </div>
+
+          {/* ENDEREÇO DO PACIENTE (somente leitura) */}
+          <div className={styles.formGridStrict}>
+            <div className={`${styles.fieldGroup} ${styles.colCep}`}>
+              <label>CEP</label>
+              <input type="text" value={newRequest.cep || ''} readOnly placeholder="00000-000" className={styles.readOnlyInput} />
+            </div>
+            <div className={`${styles.fieldGroup} ${styles.colLogradouro}`}>
+              <label>Logradouro / Rua</label>
+              <input type="text" value={newRequest.logradouro || ''} readOnly placeholder="—" className={styles.readOnlyInput} />
+            </div>
+            <div className={`${styles.fieldGroup} ${styles.colNumero}`}>
+              <label>Número</label>
+              <input type="text" value={newRequest.numero || ''} readOnly placeholder="—" className={styles.readOnlyInput} />
+            </div>
+            <div className={`${styles.fieldGroup} ${styles.colComplemento}`}>
+              <label>Complemento</label>
+              <input type="text" value={newRequest.complemento || ''} readOnly placeholder="—" className={styles.readOnlyInput} />
+            </div>
+            <div className={`${styles.fieldGroup} ${styles.colBairro}`}>
+              <label>Bairro</label>
+              <input type="text" value={newRequest.bairro || ''} readOnly placeholder="—" className={styles.readOnlyInput} />
+            </div>
+            <div className={`${styles.fieldGroup} ${styles.colCidade}`}>
+              <label>Cidade</label>
+              <input type="text" value={newRequest.cidade || ''} readOnly placeholder="—" className={styles.readOnlyInput} />
+            </div>
+            <div className={`${styles.fieldGroup} ${styles.colUf}`}>
+              <label>UF</label>
+              <input type="text" value={newRequest.uf || ''} readOnly placeholder="—" className={styles.readOnlyInput} />
             </div>
           </div>
         </div>
@@ -289,22 +365,6 @@ export default function NovoPedido({
                       {m.nome} (CRM: {m.crm})
                     </option>
                   ))}
-              </select>
-            </div>
-
-            <div className={`${styles.fieldGroup} ${styles.colUbs}`}>
-              <label>UBS Solicitante *</label>
-              <select
-                value={newRequest.ubsResponsavelId || ''}
-                onChange={(e) => setNewRequest({ ...newRequest, ubsResponsavelId: e.target.value })}
-                required
-              >
-                <option value="">Selecione a UBS</option>
-                {auxData.ubsList?.map((ubs) => (
-                  <option key={ubs.id} value={ubs.id}>
-                    {ubs.nome} (CNES: {ubs.cnes})
-                  </option>
-                ))}
               </select>
             </div>
 

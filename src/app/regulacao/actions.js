@@ -181,7 +181,10 @@ export async function getAuxiliaryData() {
           orderBy: { nome: "asc" },
         }),
         prisma.pessoa.findMany({
-          include: { enderecos: { where: { enderecoAtual: true } } },
+          include: {
+            enderecos: { where: { enderecoAtual: true } },
+            ubsReferencia: true,
+          },
           orderBy: { nomeCompleto: "asc" },
           take: 100,
         }),
@@ -212,8 +215,11 @@ export async function getAuxiliaryData() {
           cns: p.cns || "",
           nomeCompleto: p.nomeCompleto,
           nomeMae: p.nomeMae,
+          sexo: p.sexo || "",
           telefone: p.telefone,
           dataNascimento: formatDateToBR(p.dataNascimento),
+          ubsReferenciaId: p.ubsReferenciaId || "",
+          ubsReferencia: p.ubsReferencia?.nome || "",
           logradouro: endereco?.logradouro || "",
           numero: endereco?.numero || "",
           complemento: endereco?.complemento || "",

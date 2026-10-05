@@ -110,6 +110,8 @@ export default function ComprovanteDispensacao({
 
         <p style={{ margin: "0 0 12px 0" }}>
           <strong>Paciente:</strong> {paciente.patientName} (Pasta #{paciente.numeroPasta})
+          <br />
+          <strong>CPF:</strong> {paciente.cpf || "—"}
         </p>
 
         <table className={styles.printTable}>

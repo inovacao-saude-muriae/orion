@@ -9,26 +9,31 @@ function serializeData(data) {
 
 /* ── 1. BUSCA DE PESSOAS NO BANCO (SEM DUPLICAÇÃO DE DADOS) ── */
 export async function buscarPessoaExistente(termo) {
-  if (!termo || String(termo).trim().length < 2) {
-    return [];
-  }
-
   try {
-    const termoClean = String(termo).trim();
+    const termoClean = String(termo || '').trim();
     const apenasNumeros = termoClean.replace(/\D/g, '');
 
+    // Termo vazio/curto: lista os primeiros registros (para o dropdown já
+    // aparecer ao focar o campo, como na Farmácia Judicial).
+    const where =
+      termoClean.length === 0
+        ? undefined
+        : {
+            OR: [
+              { nomeCompleto: { contains: termoClean, mode: 'insensitive' } },
+              ...(apenasNumeros.length > 0 ? [{ cpf: { contains: apenasNumeros } }] : []),
+            ],
+          };
+
     const pessoas = await prisma.pessoa.findMany({
-      where: {
-        OR: [
-          { nomeCompleto: { contains: termoClean, mode: 'insensitive' } },
-          ...(apenasNumeros.length > 0 ? [{ cpf: { contains: apenasNumeros } }] : []),
-        ],
-      },
+      where,
+      orderBy: { nomeCompleto: 'asc' },
       include: {
         enderecos: {
           where: { enderecoAtual: true },
           take: 1,
         },
+        ubsReferencia: true,
         pacienteJunta: {
           include: {
             servicos: { include: { servico: true } },
@@ -38,6 +43,14 @@ export async function buscarPessoaExistente(termo) {
       take: 10,
     });
 
+    // Formata a data de nascimento como YYYY-MM-DD (string), para a UI exibir dd/mm/aaaa.
+    const toYMD = (d) => {
+      if (!d) return '';
+      const dt = new Date(d);
+      if (Number.isNaN(dt.getTime())) return '';
+      return dt.toISOString().split('T')[0];
+    };
+
     return pessoas.map((p) => {
       const enderecoAtual = p.enderecos?.[0] || {};
       const servicosAtivos = (p.pacienteJunta?.servicos || [])
@@ -45,12 +58,14 @@ export async function buscarPessoaExistente(termo) {
         .map((v) => v.servico.nome);
       return {
         cpf: p.cpf,
+        cns: p.cns || '',
         nomeCompleto: p.nomeCompleto,
         nome: p.nomeCompleto,
         sexo: p.sexo || 'Masculino',
-        dataNascimento: p.dataNascimento,
+        dataNascimento: toYMD(p.dataNascimento),
         nomeMae: p.nomeMae,
         telefone: p.telefone,
+        ubsReferencia: p.ubsReferencia?.nome || '',
         logradouro: enderecoAtual.logradouro || '',
         numero: enderecoAtual.numero || '',
         complemento: enderecoAtual.complemento || '',
@@ -120,11 +135,11 @@ export async function cadastrarPacienteJunta(data) {
       if (locaisEncaminhados.length > 0) {
         const servicoIds = [];
         for (const localNome of locaisEncaminhados) {
-          let servico = await tx.juntaServico.findFirst({
+          let servico = await tx.servico.findFirst({
             where: { nome: { equals: localNome.trim(), mode: 'insensitive' } },
           });
           if (!servico) {
-            servico = await tx.juntaServico.create({
+            servico = await tx.servico.create({
               data: { nome: localNome.trim(), ativo: true },
             });
           }
@@ -157,7 +172,7 @@ export async function getPacientesPorServico(servicoNome) {
 
     const termo = String(servicoNome).trim();
 
-    const servico = await prisma.juntaServico.findFirst({
+    const servico = await prisma.servico.findFirst({
       where: {
         OR: [
           { nome: { equals: termo, mode: 'insensitive' } },
@@ -270,12 +285,12 @@ export async function registrarAtendimentoServico(data) {
     if (!nomeDoServico) return { success: false, error: 'Nome do serviço não informado.' };
     if (!idDoPaciente) return { success: false, error: 'Paciente não selecionado.' };
 
-    let juntaServico = await prisma.juntaServico.findFirst({
+    let juntaServico = await prisma.servico.findFirst({
       where: { nome: { equals: nomeDoServico, mode: 'insensitive' } },
     });
 
     if (!juntaServico) {
-      juntaServico = await prisma.juntaServico.create({
+      juntaServico = await prisma.servico.create({
         data: { nome: nomeDoServico, ativo: true },
       });
     }
@@ -298,6 +313,38 @@ export async function registrarAtendimentoServico(data) {
   } catch (error) {
     console.error('Erro ao registrar atendimento:', error);
     return { success: false, error: error.message };
+  }
+}
+
+/* ── ESPECIALIDADES CADASTRADAS (Gerenciamento > Serviços e Especialidades) ── */
+// Retorna as especialidades do serviço cujo nome bate (case-insensitive).
+// Se não encontrar um serviço com esse nome, retorna todas as especialidades.
+export async function getEspecialidadesPorServico(servicoNome) {
+  try {
+    const nome = String(servicoNome || '').trim();
+
+    const servico = nome
+      ? await prisma.servico.findFirst({
+          where: { nome: { equals: nome, mode: 'insensitive' } },
+        })
+      : null;
+
+    const especialidades = await prisma.especialidade.findMany({
+      where: servico ? { servicoId: servico.id } : {},
+      include: { servico: true },
+      orderBy: { nome: 'asc' },
+    });
+
+    return serializeData(
+      especialidades.map((e) => ({
+        id: e.id,
+        nome: e.nome,
+        servicoNome: e.servico?.nome || '',
+      })),
+    );
+  } catch (error) {
+    console.error('Erro ao buscar especialidades por serviço:', error);
+    return [];
   }
 }
 
@@ -343,7 +390,7 @@ export async function getProntuarioUnificado(termoBusca) {
 
       if (vinculos.length > 0) {
         const servicoIds = vinculos.map((v) => v.servicoId).filter(Boolean);
-        const listaServicos = await prisma.juntaServico.findMany({
+        const listaServicos = await prisma.servico.findMany({
           where: { id: { in: servicoIds } },
         });
         servicosAtivos = listaServicos.map((s) => s.nome);
@@ -357,7 +404,7 @@ export async function getProntuarioUnificado(termoBusca) {
 
       if (atendimentos.length > 0) {
         const servicoIdsAtend = atendimentos.map((a) => a.servicoId).filter(Boolean);
-        const servicosMap = await prisma.juntaServico.findMany({
+        const servicosMap = await prisma.servico.findMany({
           where: { id: { in: servicoIdsAtend } },
         });
 
@@ -431,6 +478,109 @@ export async function getProntuarioUnificado(termoBusca) {
     };
   } catch (error) {
     console.error('Erro ao buscar prontuário:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+
+/* ── AGENDA POR SERVIÇO (calendário mensal) ── */
+
+// Resolve o id do serviço pelo nome (cria se não existir).
+async function resolverServicoIdPorNome(servicoNome) {
+  const nome = String(servicoNome || '').trim();
+  if (!nome) throw new Error('Serviço não informado.');
+  let servico = await prisma.servico.findFirst({
+    where: { nome: { equals: nome, mode: 'insensitive' } },
+  });
+  if (!servico) {
+    servico = await prisma.servico.create({ data: { nome, ativo: true } });
+  }
+  return servico.id;
+}
+
+// Lista os agendamentos de um serviço num mês/ano (1-12).
+export async function getAgendamentosDoMes(servicoNome, ano, mes) {
+  try {
+    const nome = String(servicoNome || '').trim();
+    const servico = nome
+      ? await prisma.servico.findFirst({
+          where: { nome: { equals: nome, mode: 'insensitive' } },
+        })
+      : null;
+    if (!servico) return [];
+
+    const y = Number(ano);
+    const m = Number(mes); // 1-12
+    const inicio = new Date(y, m - 1, 1);
+    const fim = new Date(y, m, 1); // primeiro dia do mês seguinte
+
+    const rows = await prisma.agendamentoJunta.findMany({
+      where: {
+        servicoId: servico.id,
+        data: { gte: inicio, lt: fim },
+      },
+      include: {
+        pacienteJunta: { include: { pessoa: true } },
+      },
+      orderBy: [{ data: 'asc' }, { hora: 'asc' }],
+    });
+
+    return serializeData(
+      rows.map((a) => ({
+        id: a.id,
+        pacienteJuntaId: a.pacienteJuntaId,
+        pacienteNome: a.pacienteJunta?.pessoa?.nomeCompleto || '—',
+        especialidade: a.especialidade,
+        hora: a.hora,
+        observacao: a.observacao || '',
+        // 'YYYY-MM-DD' para casar com os dias do calendário no cliente
+        data: a.data.toISOString().split('T')[0],
+      })),
+    );
+  } catch (error) {
+    console.error('Erro ao buscar agendamentos do mês:', error);
+    return [];
+  }
+}
+
+// Cria um agendamento (paciente + especialidade + data + hora).
+export async function criarAgendamentoJunta(dados) {
+  try {
+    const servicoId = await resolverServicoIdPorNome(dados.servicoNome);
+
+    const pacienteJuntaId = Number(dados.pacienteJuntaId);
+    if (!pacienteJuntaId) return { success: false, error: 'Selecione o paciente.' };
+    if (!dados.especialidade) return { success: false, error: 'Selecione a especialidade.' };
+    if (!dados.data) return { success: false, error: 'Informe a data.' };
+    if (!dados.hora) return { success: false, error: 'Informe o horário.' };
+
+    await prisma.agendamentoJunta.create({
+      data: {
+        servicoId,
+        pacienteJuntaId,
+        especialidade: dados.especialidade,
+        data: new Date(`${dados.data}T00:00:00`),
+        hora: dados.hora,
+        observacao: dados.observacao || null,
+      },
+    });
+
+    return { success: true };
+  } catch (error) {
+    console.error('Erro ao criar agendamento:', error);
+    return { success: false, error: error.message };
+  }
+}
+
+// Exclui um agendamento.
+export async function excluirAgendamentoJunta(id) {
+  try {
+    const agId = Number(id);
+    if (!agId) return { success: false, error: 'Agendamento inválido.' };
+    await prisma.agendamentoJunta.delete({ where: { id: agId } });
+    return { success: true };
+  } catch (error) {
+    console.error('Erro ao excluir agendamento:', error);
     return { success: false, error: error.message };
   }
 }

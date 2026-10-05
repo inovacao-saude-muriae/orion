@@ -223,14 +223,25 @@
 
 /* Larguras do Grid */
 .colName { grid-column: span 5; }
-.colMother { grid-column: span 4; }
+.colMother { grid-column: span 5; }
 .colCpf { grid-column: span 3; }
-.colSus { grid-column: span 3; }
+.colSus { grid-column: span 4; }
+.colSmall { grid-column: span 2; }
+.colUbsRef { grid-column: span 4; }
+
+/* Endereço do paciente */
+.colCep { grid-column: span 2; }
+.colLogradouro { grid-column: span 5; }
+.colNumero { grid-column: span 2; }
+.colComplemento { grid-column: span 3; }
+.colBairro { grid-column: span 4; }
+.colCidade { grid-column: span 4; }
+.colUf { grid-column: span 2; }
 
 .colExamType { grid-column: span 4; }
 .colProcedure { grid-column: span 5; }
 .colLocal { grid-column: span 3; }
-.colDoctor { grid-column: span 6; }
+.colDoctor { grid-column: span 9; }
 .colUbs { grid-column: span 6; }
 .colRisk { grid-column: span 3; }
 
@@ -263,7 +274,9 @@
 
 /* ── Responsividade ── */
 @media (max-width: 900px) {
-  .colName, .colMother, .colCpf, .colSus, .colExamType, .colProcedure, .colLocal, .colDoctor, .colUbs, .colRisk {
+  .colName, .colMother, .colCpf, .colSus, .colSmall, .colUbsRef,
+  .colCep, .colLogradouro, .colNumero, .colComplemento, .colBairro, .colCidade, .colUf,
+  .colExamType, .colProcedure, .colLocal, .colDoctor, .colUbs, .colRisk {
     grid-column: span 12;
   }
 }

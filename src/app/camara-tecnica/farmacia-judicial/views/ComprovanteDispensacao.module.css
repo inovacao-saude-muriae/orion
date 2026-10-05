@@ -131,14 +131,13 @@
   }
 
   .printTable th {
-    background: #1e3a5f !important;
-    color: #ffffff !important;
+    background: transparent;
+    color: #1e3a5f;
     padding: 8px 12px;
     font-size: 10px;
     text-transform: uppercase;
     text-align: left;
-    -webkit-print-color-adjust: exact;
-    print-color-adjust: exact;
+    border-bottom: 1px solid #eef2f7;
   }
 
   .printTable td {
@@ -153,7 +152,8 @@
     print-color-adjust: exact;
   }
 
-  .colCenter {
+  .printTable th.colCenter,
+  .printTable td.colCenter {
     text-align: center;
   }
 

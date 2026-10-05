@@ -1,8 +1,9 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import styles from './AtendimentoServico.module.css';
 import { useConfirm } from '@/components/ConfirmDialog';
+import { getEspecialidadesPorServico } from '../actions';
 
 export default function AtendimentoServico({ servicoNome, pacientes = [], atendimentos = [], onRegistrar }) {
   const confirm = useConfirm();
@@ -13,6 +14,20 @@ export default function AtendimentoServico({ servicoNome, pacientes = [], atendi
     status: 'PRESENCA',
     observacao: ''
   });
+
+  // Especialidades cadastradas (Gerenciamento > Serviços e Especialidades).
+  const [especialidades, setEspecialidades] = useState([]);
+
+  useEffect(() => {
+    let ativo = true;
+    (async () => {
+      const lista = await getEspecialidadesPorServico(servicoNome);
+      if (ativo) setEspecialidades(Array.isArray(lista) ? lista : []);
+    })();
+    return () => {
+      ativo = false;
+    };
+  }, [servicoNome]);
 
   // Filtra pacientes vinculados ao serviço (testando de forma segura todas as propriedades possíveis)
   const pacientesDoServico = Array.isArray(pacientes)
@@ -72,13 +87,22 @@ export default function AtendimentoServico({ servicoNome, pacientes = [], atendi
 
         <div className={styles.fieldGroup}>
           <label>Especialidade do Atendimento *</label>
-          <input
-            type="text"
-            placeholder="Ex: Fonoaudiologia, Terapia Ocupacional..."
+          <select
             value={form.especialidade}
             onChange={(e) => setForm({ ...form, especialidade: e.target.value })}
             required
-          />
+          >
+            <option value="">
+              {especialidades.length > 0
+                ? '-- Selecione a especialidade --'
+                : 'Nenhuma especialidade cadastrada'}
+            </option>
+            {especialidades.map((esp) => (
+              <option key={esp.id} value={esp.nome}>
+                {esp.nome}
+              </option>
+            ))}
+          </select>
         </div>
 
         <div className={styles.fieldGroup}>

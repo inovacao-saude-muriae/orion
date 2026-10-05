@@ -860,7 +860,7 @@
 
 .dataGrid {
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(12, 1fr);
   gap: 1rem;
 }
 
@@ -874,28 +874,69 @@
   grid-column: span 2;
 }
 
+/* Larguras do grid de dados do paciente (12 colunas, estilo Novo Pedido) */
+.field.colCpf { grid-column: span 3; }
+.field.colName { grid-column: span 6; }
+.field.colMother { grid-column: span 5; }
+.field.colSmall { grid-column: span 3; }
+.field.colMed { grid-column: span 4; }
+
+.field.colCep { grid-column: span 2; }
+.field.colLogradouro { grid-column: span 5; }
+.field.colNumero { grid-column: span 2; }
+.field.colComplemento { grid-column: span 3; }
+.field.colBairro { grid-column: span 4; }
+.field.colCidade { grid-column: span 4; }
+.field.colUf { grid-column: span 2; }
+
 .field label {
-  font-size: 0.8rem;
+  font-size: 0.825rem;
   font-weight: 600;
   color: #475569;
 }
 
 .field input {
   width: 100%;
-  padding: 0.6rem 0.75rem;
+  padding: 0.65rem 0.85rem;
   border: 1px solid #e2e8f0;
   border-radius: 8px;
-  font-size: 0.9rem;
+  font-size: 0.875rem;
   color: #334155;
   background-color: #f8fafc;
   box-sizing: border-box;
 }
 
 @media (max-width: 900px) {
-  .dataGrid {
-    grid-template-columns: repeat(2, 1fr);
+  .field.colCpf, .field.colName, .field.colMother, .field.colSmall, .field.colMed,
+  .field.colCep, .field.colLogradouro, .field.colNumero, .field.colComplemento,
+  .field.colBairro, .field.colCidade, .field.colUf {
+    grid-column: span 12;
   }
-  .field.colWide {
-    grid-column: span 2;
-  }
+}
+
+/* SEÇÃO 1 — IDENTIFICAÇÃO DO PACIENTE (estilo Novo Pedido) */
+.identSection {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 1.25rem;
+}
+
+.identHeader {
+  margin: 0 0 1rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.identHeader h4 {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: #1e293b;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin: 0;
+}
+
+.searchFieldWrapper {
+  margin-bottom: 1.25rem;
 }
