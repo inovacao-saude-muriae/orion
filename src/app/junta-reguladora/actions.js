@@ -543,6 +543,47 @@ export async function getAgendamentosDoMes(servicoNome, ano, mes) {
   }
 }
 
+// Agendamentos de um serviço numa data específica ('YYYY-MM-DD').
+export async function getAgendamentosDoDia(servicoNome, dataYMD) {
+  try {
+    const nome = String(servicoNome || '').trim();
+    const servico = nome
+      ? await prisma.servico.findFirst({
+          where: { nome: { equals: nome, mode: 'insensitive' } },
+        })
+      : null;
+    if (!servico || !dataYMD) return [];
+
+    const inicio = new Date(`${dataYMD}T00:00:00`);
+    const fim = new Date(inicio);
+    fim.setDate(fim.getDate() + 1);
+
+    const rows = await prisma.agendamentoJunta.findMany({
+      where: {
+        servicoId: servico.id,
+        data: { gte: inicio, lt: fim },
+      },
+      include: { pacienteJunta: { include: { pessoa: true } } },
+      orderBy: [{ hora: 'asc' }],
+    });
+
+    return serializeData(
+      rows.map((a) => ({
+        id: a.id,
+        pacienteJuntaId: a.pacienteJuntaId,
+        pacienteNome: a.pacienteJunta?.pessoa?.nomeCompleto || '—',
+        pacienteCpf: a.pacienteJunta?.pessoa?.cpf || '',
+        especialidade: a.especialidade,
+        hora: a.hora,
+        observacao: a.observacao || '',
+      })),
+    );
+  } catch (error) {
+    console.error('Erro ao buscar agendamentos do dia:', error);
+    return [];
+  }
+}
+
 // Cria um agendamento (paciente + especialidade + data + hora).
 export async function criarAgendamentoJunta(dados) {
   try {
