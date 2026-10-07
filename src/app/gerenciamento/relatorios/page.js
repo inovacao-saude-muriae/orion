@@ -23,6 +23,18 @@ const formatarData = (valor) => {
   return data.toLocaleDateString("pt-BR");
 };
 
+// Exibe o status do paciente da Farmácia Judicial de forma legível.
+// O backend já normaliza para ATIVO/INATIVO/ÓBITO.
+const formatarStatusFarmacia = (status) => {
+  const st = String(status || "").toUpperCase();
+  if (st === "ATIVO") return "Ativo";
+  if (st === "INATIVO") return "Inativo";
+  if (st === "ÓBITO" || st === "OBITO" || st === "FALECIDO")
+    return "Óbito (Falecido)";
+  if (!st) return "—";
+  return st.charAt(0) + st.slice(1).toLowerCase();
+};
+
 export default function RelatoriosGeraisPage() {
   const [usuarios, setUsuarios] = useState([]);
   const [carregando, setCarregando] = useState(true);
@@ -217,7 +229,7 @@ export default function RelatoriosGeraisPage() {
     }
     if (resumo.farmacia) {
       linhasResumo.push(
-        `Farmácia Judicial: Processo ${resumo.farmacia.numeroProcesso || "—"} · ${resumo.farmacia.medicamentos?.length || 0} medicamento(s) vinculado(s) · status ${resumo.farmacia.status}`,
+        `Farmácia Judicial: Processo ${resumo.farmacia.numeroProcesso || "—"} · ${resumo.farmacia.medicamentos?.length || 0} medicamento(s) vinculado(s) · status ${formatarStatusFarmacia(resumo.farmacia.status)}`,
       );
     }
     if (resumo.junta) {
@@ -348,6 +360,9 @@ export default function RelatoriosGeraisPage() {
 
         tituloModulo("Farmácia Judicial");
         linhaTexto(`Número do processo: ${farmacia.numeroProcesso || "—"}`);
+        linhaTexto(
+          `Status do paciente: ${formatarStatusFarmacia(farmacia.status)}`,
+        );
 
         const medicamentos = farmacia.medicamentos || [];
         subtitulo("Medicamentos vinculados");
@@ -632,7 +647,7 @@ export default function RelatoriosGeraisPage() {
                 </span>
                 <small>
                   {resumo.farmacia
-                    ? `Processo ${resumo.farmacia.numeroProcesso || "—"} · ${resumo.farmacia.status}`
+                    ? `Processo ${resumo.farmacia.numeroProcesso || "—"} · ${formatarStatusFarmacia(resumo.farmacia.status)}`
                     : "Sem cadastro judicial"}
                 </small>
               </div>

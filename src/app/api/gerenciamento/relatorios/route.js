@@ -61,19 +61,6 @@ export async function GET() {
               createdAt: true,
             },
           },
-          dispensacoes: {
-            select: {
-              id: true,
-              qtdEntregue: true,
-              dataDispensacao: true,
-              lote: {
-                select: {
-                  numeroLote: true,
-                  medicamento: { select: { nome: true } },
-                },
-              },
-            },
-          },
         },
       }),
       prisma.pacienteJunta.findMany({
@@ -86,15 +73,6 @@ export async function GET() {
               servico: { select: { nome: true } },
               dataVinculo: true,
               ativo: true,
-            },
-          },
-          atendimentos: {
-            select: {
-              id: true,
-              especialidade: true,
-              status: true,
-              dataAtendimento: true,
-              servico: { select: { nome: true } },
             },
           },
         },
@@ -174,15 +152,6 @@ export async function GET() {
           data: tratamento.createdAt,
         }),
       );
-      paciente.dispensacoes.forEach((dispensacao) =>
-        adicionarEvento(paciente.pessoaCpf, {
-          id: `farmacia-dispensacao-${dispensacao.id}`,
-          modulo: "Farmácia Judicial",
-          tipo: "Medicamento dispensado",
-          descricao: `${dispensacao.lote?.medicamento?.nome || "Medicamento"} - ${dispensacao.qtdEntregue} unidade(s), lote ${dispensacao.lote?.numeroLote || "-"}`,
-          data: dispensacao.dataDispensacao,
-        }),
-      );
     });
 
     pacientesJunta.forEach((paciente) => {
@@ -204,15 +173,6 @@ export async function GET() {
           data: vinculo.dataVinculo,
         });
       });
-      paciente.atendimentos.forEach((atendimento) =>
-        adicionarEvento(paciente.pessoaCpf, {
-          id: `junta-atendimento-${atendimento.id}`,
-          modulo: "Junta Reguladora",
-          tipo: "Atendimento realizado",
-          descricao: `${atendimento.servico?.nome || "Serviço"} - ${atendimento.especialidade} (${atendimento.status})`,
-          data: atendimento.dataAtendimento,
-        }),
-      );
     });
 
     const tutoresCcz = new Set(tutores.map((tutor) => tutor.pessoaCpf));
@@ -334,7 +294,6 @@ export async function GET() {
                   qtdPrescritaMensal: item.qtdPrescritaMensal,
                   ativo: item.ativo,
                 })),
-                dispensacoes: farmaciaDaPessoa.dispensacoes.length,
               }
             : null,
           junta: juntaDaPessoa
@@ -348,7 +307,6 @@ export async function GET() {
                   servicos,
                   totalServicos: servicos.length,
                   ativos: servicos.filter((s) => s.ativo).length,
-                  atendimentos: juntaDaPessoa.atendimentos.length,
                 };
               })()
             : null,
