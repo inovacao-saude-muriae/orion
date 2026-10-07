@@ -5,6 +5,7 @@ import { requireRole } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import {
   soDigitos,
+  validarCpf,
   normalizarPessoa,
   criarPessoaTx,
   atualizarPessoaTx,
@@ -113,6 +114,12 @@ export async function listarPessoas(termo = "") {
 export async function criarPessoa(data) {
   try {
     await requireRole(ROLES_CADASTRO);
+
+    // Valida os dígitos verificadores do CPF antes de cadastrar.
+    if (!validarCpf(data.cpf)) {
+      return { success: false, error: "CPF inválido. Verifique os dígitos informados." };
+    }
+
     const pessoaData = normalizarPessoa(data);
 
     const existente = await prisma.pessoa.findUnique({

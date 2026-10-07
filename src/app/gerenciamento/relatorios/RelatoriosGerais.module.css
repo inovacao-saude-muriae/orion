@@ -12,6 +12,76 @@
   gap: 1rem;
   margin-bottom: 1.5rem;
 }
+
+/* Card branco que engloba busca + relatório completo */
+.cardWrapper {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+/* Detalhamento por módulo (tabelas) */
+.modulosDetalhe {
+  margin-top: 1.5rem;
+}
+.modulosDetalhe > h3 {
+  margin: 0 0 1rem;
+  font-size: 1.05rem;
+  color: #0f172a;
+}
+.moduloBloco {
+  margin-bottom: 1.5rem;
+}
+.moduloTitulo {
+  margin: 0 0 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  color: #2563eb;
+  padding-bottom: 0.4rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+.moduloSub {
+  margin: 0.75rem 0 0.4rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #475569;
+}
+.moduloInfoLinha {
+  margin: 0.25rem 0;
+  font-size: 0.88rem;
+  color: #334155;
+}
+.tabelaWrapper {
+  overflow-x: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+.tabela {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+.tabela thead th {
+  background-color: transparent;
+  color: #64748b;
+  text-align: left;
+  font-weight: 700;
+  font-size: 0.78rem;
+  padding: 0.55rem 0.75rem;
+  white-space: nowrap;
+  border-bottom: 1px solid #e2e8f0;
+}
+.tabela tbody td {
+  padding: 0.55rem 0.75rem;
+  color: #334155;
+  border-top: 1px solid #eef2f7;
+}
+.tabela tbody tr:nth-child(even) td {
+  background-color: #f8fafc;
+}
 .eyebrow {
   margin: 0 0 0.35rem;
   color: #516f8a;

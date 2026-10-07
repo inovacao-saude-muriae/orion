@@ -108,7 +108,7 @@ export default function TabMedicamentos({
       <div className={styles.headerRow}>
         <h3 className={styles.sectionTitle}>Medicamentos do Catálogo</h3>
         <button type="button" className={styles.addBtn} onClick={abrirNovo}>
-          + Adicionar novo medicamento
+          Cadastrar medicamento
         </button>
       </div>
 

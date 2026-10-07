@@ -91,6 +91,51 @@
   color: #334155;
 }
 
+/* Grade de campos em caixa (estilo formulário) para os dados do paciente */
+.dadosGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem 1rem;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+  min-width: 0;
+}
+
+/* Campo que ocupa a linha inteira (endereço, diagnóstico, etc.) */
+.campoFull {
+  grid-column: 1 / -1;
+}
+
+.campo label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #334155;
+  letter-spacing: 0.01em;
+}
+
+.campo .valorBox {
+  min-height: 36px;
+  display: flex;
+  align-items: center;
+  padding: 0.45rem 0.65rem;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: #1e293b;
+  word-break: break-word;
+}
+
+@media (max-width: 720px) {
+  .dadosGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
 .badgesGroup {
   display: flex;
   flex-wrap: wrap;
@@ -176,4 +221,273 @@
   .searchRow {
     flex-direction: column;
   }
+}
+
+/* ── Barra de filtro de competência + exportar ── */
+.filtroBar {
+  display: flex;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.filtroCampos {
+  display: flex;
+  align-items: flex-end;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.filtroCampo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.filtroCampo label {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.filtroCampo select {
+  padding: 0.5rem 0.7rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  color: #1e293b;
+  background: #ffffff;
+  outline: none;
+  min-width: 130px;
+}
+
+.filtroCampo select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+}
+
+.filtroInfo {
+  font-size: 0.85rem;
+  color: #475569;
+  padding-bottom: 0.55rem;
+}
+
+.limparFiltro {
+  align-self: flex-end;
+  background: #ffffff;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  padding: 0.5rem 0.85rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.limparFiltro:hover {
+  background: #f1f5f9;
+}
+
+.filtroCampo input[type="date"] {
+  padding: 0.5rem 0.7rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  color: #1e293b;
+  background: #ffffff;
+  outline: none;
+}
+
+.filtroCampo input[type="date"]:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+}
+
+/* Botão exportar + dropdown */
+.exportWrapper {
+  position: relative;
+}
+
+.exportBtn {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background-color: #0f766e;
+  color: #ffffff;
+  border: none;
+  border-radius: 8px;
+  padding: 0.6rem 1.1rem;
+  font-size: 0.875rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.exportBtn:hover {
+  background-color: #0d5f58;
+}
+
+.exportCaret {
+  font-size: 0.7rem;
+}
+
+.exportMenu {
+  position: absolute;
+  top: calc(100% + 0.35rem);
+  right: 0;
+  min-width: 240px;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.15);
+  padding: 0.3rem;
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+}
+
+.exportMenu button {
+  text-align: left;
+  background: none;
+  border: none;
+  padding: 0.6rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: #334155;
+  cursor: pointer;
+}
+
+.exportMenu button:hover {
+  background-color: #f1f5f9;
+  color: #0f172a;
+}
+
+/* ── Busca de paciente da Junta (dropdown em tabela) ── */
+.buscaWrapper {
+  margin-bottom: 1.5rem;
+}
+
+.buscaLabel {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: #334155;
+  margin-bottom: 0.5rem;
+}
+
+.searchSelectWrapper {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.selectLikeInput {
+  width: 100%;
+  padding: 0.65rem 2rem 0.65rem 0.85rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  color: #1e293b;
+  background-color: #ffffff;
+  outline: none;
+  box-sizing: border-box;
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.selectLikeInput:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+}
+
+.arrowIcon {
+  position: absolute;
+  right: 0.85rem;
+  font-size: 0.75rem;
+  color: #64748b;
+  cursor: pointer;
+  user-select: none;
+}
+
+.tableDropdownMenu {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  right: 0;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+  padding: 0.5rem;
+  z-index: 100;
+}
+
+.tableContainerScroll {
+  max-height: 260px;
+  overflow-y: auto;
+  border: 1px solid #f1f5f9;
+  border-radius: 6px;
+}
+
+.patientTableDropdown {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.825rem;
+  text-align: left;
+}
+
+.patientTableDropdown thead {
+  position: sticky;
+  top: 0;
+  background-color: #f8fafc;
+  z-index: 10;
+}
+
+.patientTableDropdown th {
+  padding: 0.6rem 0.75rem;
+  color: #475569;
+  font-weight: 700;
+  border-bottom: 2px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.patientTableDropdown td {
+  padding: 0.6rem 0.75rem;
+  color: #334155;
+  border-bottom: 1px solid #f1f5f9;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.patientTableDropdown tbody tr:hover td {
+  background-color: #2563eb;
+  color: #ffffff;
+}
+
+.boldName {
+  font-weight: 600;
+}
+
+.selectedRow {
+  background-color: #eff6ff;
+}
+
+.noDataTd {
+  text-align: center;
+  padding: 1.5rem !important;
+  color: #94a3b8;
+  cursor: default !important;
+}
+
+.patientTableDropdown tbody tr:hover .noDataTd {
+  background-color: transparent !important;
+  color: #94a3b8 !important;
 }

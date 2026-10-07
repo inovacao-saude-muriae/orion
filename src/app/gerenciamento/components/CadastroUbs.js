@@ -30,7 +30,8 @@ export default function CadastroUbs({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const termoBusca = (formUbs.search || "").toLowerCase().trim();
+  // O campo "Nome da Unidade" é também a busca: filtra por nome ou CNES.
+  const termoBusca = (formUbs.nome || "").toLowerCase().trim();
   const ubsFiltradas = (auxData.ubsList || []).filter((u) => {
     if (!termoBusca) return true;
     return (
@@ -85,27 +86,94 @@ export default function CadastroUbs({
         onCancel={() => setDeleteConfig(null)}
       />
 
-      <div className={styles.searchSectionContainer}>
-        <div className={styles.fieldGroup}>
-          <label>Buscar Unidade no Banco (CNES ou Nome)</label>
-          <div className={styles.searchActionRow}>
-            <div className={styles.selectSearchWrapper} ref={dropdownRef}>
-              <input
-                type="text"
-                className={styles.selectLikeInput}
-                value={formUbs.search || ""}
-                placeholder="Selecionar ou digitar CNES/Nome..."
-                onChange={(e) => {
-                  setFormUbs((prev) => ({ ...prev, search: e.target.value }));
-                  setDropAberto(true);
-                }}
-                onFocus={() => setDropAberto(true)}
-              />
-              <span className={styles.selectArrow} onClick={() => setDropAberto(!dropAberto)}>
-                {dropAberto ? "▲" : "▼"}
-              </span>
+      <div className={styles.cardHeaderRow}>
+        <h3 className={styles.cardHeaderTitle}>
+          {formUbs.isEditing
+            ? "Editar unidade"
+            : formUbs.isFormActive
+              ? "Nova unidade"
+              : "Unidades / UBS"}
+        </h3>
+        <button
+          type="button"
+          className={styles.btnAdicionar}
+          onClick={() => {
+            resetFormUbs();
+            setFormUbs((prev) => ({ ...prev, isFormActive: true }));
+          }}
+        >
+          Cadastrar novo
+        </button>
+      </div>
 
-              {dropAberto && (
+      <form
+        onSubmit={async (e) => {
+          e.preventDefault();
+          const ok = await confirm({
+            title: formUbs.isEditing ? "Atualizar UBS" : "Cadastrar UBS",
+            message: formUbs.isEditing
+              ? "Deseja salvar as alterações desta unidade?"
+              : "Deseja confirmar o cadastro desta unidade?",
+            confirmText: formUbs.isEditing ? "Atualizar" : "Cadastrar",
+          });
+          if (!ok) return;
+          if (formUbs.isEditing) {
+            const res = await updateUbs(formUbs.id, formUbs);
+            if (res.success) {
+              await notify({ tipo: "sucesso", title: "UBS atualizada", message: "Dados da UBS atualizados com sucesso!" });
+              reloadData();
+            } else await notify({ tipo: "erro", title: "Erro", message: "Erro ao atualizar: " + res.error });
+          } else {
+            const res = await createUbs(formUbs);
+            if (res.success) {
+              await notify({ tipo: "sucesso", title: "UBS cadastrada", message: "UBS cadastrada com sucesso!" });
+              reloadData();
+            } else await notify({ tipo: "erro", title: "Erro", message: "Erro ao salvar: " + res.error });
+          }
+          resetFormUbs();
+        }}
+        className={styles.patientFormContainer}
+      >
+        <div className={styles.formSection}>
+          <div className={styles.formSectionHeader}>
+            <h4>Dados da Unidade</h4>
+          </div>
+          <div className={styles.formGridStrict}>
+            <div
+              className={`${styles.fieldGroup} ${styles.colUbsName}`}
+              style={{ position: "relative" }}
+              ref={dropdownRef}
+            >
+              <label>Nome da Unidade / UBS *</label>
+              <div className={styles.inputWrapperWithIcon}>
+                <input
+                  type="text"
+                  value={formUbs.nome}
+                  placeholder={formUbs.isFormActive ? "" : "Digite nome ou CNES para buscar..."}
+                  onChange={(e) => {
+                    // Em cadastro novo/edição, edita o nome (sem buscar).
+                    // Fora disso, o campo funciona como busca de unidade.
+                    if (formUbs.isFormActive) {
+                      setFormUbs({ ...formUbs, nome: e.target.value });
+                    } else {
+                      setFormUbs((prev) => ({ ...prev, nome: e.target.value }));
+                      setDropAberto(true);
+                    }
+                  }}
+                  onFocus={() => {
+                    if (!formUbs.isFormActive) setDropAberto(true);
+                  }}
+                  autoComplete="off"
+                  required
+                />
+                {!formUbs.isFormActive && (
+                  <span className={styles.selectArrow} onClick={() => setDropAberto(!dropAberto)}>
+                    {dropAberto ? "▲" : "▼"}
+                  </span>
+                )}
+              </div>
+
+              {!formUbs.isFormActive && dropAberto && (
                 <div className={styles.tableDropdownMenu}>
                   <div className={styles.tableContainerScroll}>
                     <table className={styles.ubsTableDropdown}>
@@ -142,64 +210,6 @@ export default function CadastroUbs({
                   </div>
                 </div>
               )}
-            </div>
-
-            <button
-              type="button"
-              className={styles.btnAdicionar}
-              onClick={() => {
-                resetFormUbs();
-                setFormUbs((prev) => ({ ...prev, isFormActive: true }));
-              }}
-            >
-              + Adicionar novo
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <form
-        onSubmit={async (e) => {
-          e.preventDefault();
-          const ok = await confirm({
-            title: formUbs.isEditing ? "Atualizar UBS" : "Cadastrar UBS",
-            message: formUbs.isEditing
-              ? "Deseja salvar as alterações desta unidade?"
-              : "Deseja confirmar o cadastro desta unidade?",
-            confirmText: formUbs.isEditing ? "Atualizar" : "Cadastrar",
-          });
-          if (!ok) return;
-          if (formUbs.isEditing) {
-            const res = await updateUbs(formUbs.id, formUbs);
-            if (res.success) {
-              await notify({ tipo: "sucesso", title: "UBS atualizada", message: "Dados da UBS atualizados com sucesso!" });
-              reloadData();
-            } else await notify({ tipo: "erro", title: "Erro", message: "Erro ao atualizar: " + res.error });
-          } else {
-            const res = await createUbs(formUbs);
-            if (res.success) {
-              await notify({ tipo: "sucesso", title: "UBS cadastrada", message: "UBS cadastrada com sucesso!" });
-              reloadData();
-            } else await notify({ tipo: "erro", title: "Erro", message: "Erro ao salvar: " + res.error });
-          }
-          resetFormUbs();
-        }}
-        className={styles.patientFormContainer}
-      >
-        <div className={styles.formSection}>
-          <div className={styles.formSectionHeader}>
-            <h4>Dados da Unidade</h4>
-          </div>
-          <div className={styles.formGridStrict}>
-            <div className={`${styles.fieldGroup} ${styles.colUbsName}`}>
-              <label>Nome da Unidade / UBS *</label>
-              <input
-                type="text"
-                value={formUbs.nome}
-                onChange={(e) => setFormUbs({ ...formUbs, nome: e.target.value })}
-                disabled={!formUbs.isFormActive}
-                required
-              />
             </div>
             <div className={`${styles.fieldGroup} ${styles.colCnes}`}>
               <label>Código CNES *</label>

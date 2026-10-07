@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import styles from './AtendimentoServico.module.css';
-import { useConfirm } from '@/components/ConfirmDialog';
+import { useConfirm, useNotify } from '@/components/ConfirmDialog';
 import { getAgendamentosDoDia } from '../actions';
 
 const STATUS_OPCOES = [
@@ -15,6 +15,7 @@ const hojeYMD = () => new Date().toISOString().split('T')[0];
 
 export default function AtendimentoServico({ servicoNome, onRegistrar }) {
   const confirm = useConfirm();
+  const notify = useNotify();
   const [data, setData] = useState(hojeYMD());
   const [agendamentos, setAgendamentos] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -22,17 +23,30 @@ export default function AtendimentoServico({ servicoNome, onRegistrar }) {
 
   // Estado por agendamento: status + observação da recepção.
   const [registros, setRegistros] = useState({});
+  // Ids já registrados (ficam travados até clicar em Editar).
+  const [registrados, setRegistrados] = useState({});
 
   const carregar = useCallback(async () => {
     setLoading(true);
     const lista = await getAgendamentosDoDia(servicoNome, data);
     setAgendamentos(Array.isArray(lista) ? lista : []);
-    // Reinicia os registros com status padrão "PRESENCA".
+    // Inicializa os campos; se já houver atendimento registrado no banco,
+    // carrega os valores salvos e trava o registro (botão inativo + Editar).
     const base = {};
+    const travados = {};
     (lista || []).forEach((a) => {
-      base[a.id] = { status: 'PRESENCA', observacao: '' };
+      if (a.registrado) {
+        base[a.id] = {
+          status: a.statusRegistrado || 'PRESENCA',
+          observacao: a.observacaoRegistrada || '',
+        };
+        travados[a.id] = true;
+      } else {
+        base[a.id] = { status: 'PRESENCA', observacao: '' };
+      }
     });
     setRegistros(base);
+    setRegistrados(travados);
     setLoading(false);
   }, [servicoNome, data]);
 
@@ -60,8 +74,9 @@ export default function AtendimentoServico({ servicoNome, onRegistrar }) {
     if (!ok) return;
 
     setRegistrando(ag.id);
+    let ok2 = true;
     if (onRegistrar) {
-      await onRegistrar({
+      const res = await onRegistrar({
         pacienteJuntaId: ag.pacienteJuntaId,
         servicoNome,
         especialidade: ag.especialidade,
@@ -69,8 +84,21 @@ export default function AtendimentoServico({ servicoNome, onRegistrar }) {
         status: reg.status,
         observacao: reg.observacao,
       });
+      if (res && res.success === false) ok2 = false;
     }
     setRegistrando(null);
+    if (ok2) {
+      // Trava o registro deste agendamento (botão fica inativo até editar).
+      setRegistrados((prev) => ({ ...prev, [ag.id]: true }));
+    }
+  };
+
+  const editar = (ag) => {
+    setRegistrados((prev) => {
+      const novo = { ...prev };
+      delete novo[ag.id];
+      return novo;
+    });
   };
 
   const formatarDiaBR = (ymd) => {
@@ -120,8 +148,9 @@ export default function AtendimentoServico({ servicoNome, onRegistrar }) {
             <tbody>
               {agendamentos.map((ag) => {
                 const reg = registros[ag.id] || { status: 'PRESENCA', observacao: '' };
+                const foiRegistrado = !!registrados[ag.id];
                 return (
-                  <tr key={ag.id}>
+                  <tr key={ag.id} className={foiRegistrado ? styles.rowRegistrado : ''}>
                     <td><strong>{ag.hora}</strong></td>
                     <td>
                       <strong>{ag.pacienteNome}</strong>
@@ -133,6 +162,7 @@ export default function AtendimentoServico({ servicoNome, onRegistrar }) {
                         className={styles.statusSelect}
                         value={reg.status}
                         onChange={(e) => setCampo(ag.id, 'status', e.target.value)}
+                        disabled={foiRegistrado}
                       >
                         {STATUS_OPCOES.map((s) => (
                           <option key={s.value} value={s.value}>{s.label}</option>
@@ -146,17 +176,31 @@ export default function AtendimentoServico({ servicoNome, onRegistrar }) {
                         placeholder="Opcional"
                         value={reg.observacao}
                         onChange={(e) => setCampo(ag.id, 'observacao', e.target.value)}
+                        disabled={foiRegistrado}
                       />
                     </td>
                     <td style={{ textAlign: 'center' }}>
-                      <button
-                        type="button"
-                        className={styles.registrarBtn}
-                        onClick={() => registrar(ag)}
-                        disabled={registrando === ag.id}
-                      >
-                        {registrando === ag.id ? '...' : 'Registrar'}
-                      </button>
+                      {foiRegistrado ? (
+                        <div className={styles.acoesCell}>
+                          <span className={styles.registradoTag}>✓ Registrado</span>
+                          <button
+                            type="button"
+                            className={styles.editarBtn}
+                            onClick={() => editar(ag)}
+                          >
+                            Editar
+                          </button>
+                        </div>
+                      ) : (
+                        <button
+                          type="button"
+                          className={styles.registrarBtn}
+                          onClick={() => registrar(ag)}
+                          disabled={registrando === ag.id}
+                        >
+                          {registrando === ag.id ? '...' : 'Registrar'}
+                        </button>
+                      )}
                     </td>
                   </tr>
                 );

@@ -737,13 +737,21 @@
   flex: 1;
 }
 
-.selectLikeInput {
+.inputWrapperWithIcon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.selectLikeInput,
+.field input.selectLikeInput {
   width: 100%;
   padding: 0.65rem 2rem 0.65rem 0.85rem;
   border: 1px solid #cbd5e1;
   border-radius: 8px;
-  font-size: 0.9rem;
-  color: #1e293b;
+  font-size: 0.875rem;
+  color: #334155;
   background-color: #ffffff;
   outline: none;
   box-sizing: border-box;
@@ -875,10 +883,10 @@
 }
 
 /* Larguras do grid de dados do paciente (12 colunas, estilo Novo Pedido) */
-.field.colCpf { grid-column: span 3; }
+.field.colCpf { grid-column: span 4; }
 .field.colName { grid-column: span 6; }
-.field.colMother { grid-column: span 5; }
-.field.colSmall { grid-column: span 3; }
+.field.colMother { grid-column: span 6; }
+.field.colSmall { grid-column: span 4; }
 .field.colMed { grid-column: span 4; }
 
 .field.colCep { grid-column: span 2; }
@@ -920,6 +928,18 @@
   border: 1px solid #e2e8f0;
   border-radius: 10px;
   padding: 1.25rem;
+}
+
+/* Subtítulo "Endereço" — fonte azul-acinzentada, caixa alta, com respiro + linha */
+.enderecoSubtitulo {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: #475569;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  margin: 1.5rem 0 0.9rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .identHeader {

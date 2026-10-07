@@ -205,15 +205,9 @@ export default function RelatoriosGeraisPage() {
     );
     yGrid += alturaLinha;
 
-    let currentY = yGrid + 2;
+    let currentY = yGrid + 4;
 
-    // ── Resumo por módulo ──
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(11);
-    doc.setTextColor(30, 41, 59);
-    doc.text("Resumo por Módulo", margemX, currentY);
-    currentY += 6;
-
+    // ── Resumo por módulo (sem título) ──
     doc.setFont("helvetica", "normal");
     doc.setFontSize(9);
     doc.setTextColor(71, 85, 105);
@@ -260,41 +254,66 @@ export default function RelatoriosGeraisPage() {
     currentY += 3;
 
     // ── Helpers de layout para as tabelas do PDF ──
+    // Limite inferior seguro (rodapé fica em y=290). Deixa folga para não colar no rodapé.
+    const LIMITE_Y = 268;
     const garantirEspaco = (altura = 20) => {
-      if (currentY + altura > 282) {
+      if (currentY + altura > LIMITE_Y) {
         doc.addPage();
         currentY = 20;
       }
     };
 
     const estiloTabela = {
+      theme: "plain",
       styles: { fontSize: 8, cellPadding: 2.3, textColor: [30, 41, 59] },
+      // Cabeçalho sem fundo azul: só texto cinza (linha separadora desenhada abaixo).
       headStyles: {
-        fillColor: [37, 99, 235],
-        textColor: 255,
+        fillColor: false,
+        textColor: [100, 116, 139],
         fontStyle: "bold",
-        fontSize: 8.5,
+        fontSize: 8,
       },
       alternateRowStyles: { fillColor: [248, 250, 252] },
-      margin: { left: margemX, right: margemX },
+      // margin.bottom garante que a tabela quebre antes do rodapé (y=290),
+      // repetindo o cabeçalho na página seguinte em vez de colar no fim.
+      margin: { left: margemX, right: margemX, bottom: 26 },
+      // Linha fina sob o cabeçalho, no estilo do prontuário.
+      didDrawCell: (data) => {
+        if (data.section === "head") {
+          const { x, y, width, height } = data.cell;
+          doc.setDrawColor(226, 232, 240);
+          doc.setLineWidth(0.3);
+          doc.line(x, y + height, x + width, y + height);
+        }
+      },
     };
 
     const tituloModulo = (texto) => {
-      garantirEspaco();
+      // Reserva espaço p/ título + separador + cabeçalho + ~2 linhas, para o
+      // título não ficar órfão no fim da página.
+      garantirEspaco(42);
+      currentY += 4; // respiro antes do título do módulo
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(10);
+      doc.setFontSize(11);
       doc.setTextColor(37, 99, 235);
       doc.text(texto, margemX, currentY);
-      currentY += 2;
+      currentY += 3;
+      // Linha separadora fina abaixo do título do módulo.
+      doc.setDrawColor(226, 232, 240);
+      doc.setLineWidth(0.3);
+      doc.line(margemX, currentY, margemX + larguraUtil, currentY);
+      currentY += 5;
     };
 
     const subtitulo = (texto) => {
-      garantirEspaco();
+      // Reserva p/ subtítulo + cabeçalho da tabela + ~2 linhas.
+      garantirEspaco(30);
+      currentY += 2; // respiro antes do subtítulo
       doc.setFont("helvetica", "bold");
-      doc.setFontSize(8.5);
-      doc.setTextColor(71, 85, 105);
-      doc.text(texto, margemX, currentY);
-      currentY += 1.5;
+      doc.setFontSize(8);
+      doc.setTextColor(100, 116, 139);
+      doc.text(String(texto).toUpperCase(), margemX, currentY);
+      currentY += 3;
     };
 
     const linhaTexto = (texto) => {
@@ -326,7 +345,7 @@ export default function RelatoriosGeraisPage() {
         const liberados = reg?.liberados || [];
         if (aguardando.length === 0 && liberados.length === 0) return;
 
-        tituloModulo("Regulação");
+        tituloModulo("Regulação de Exames");
 
         if (aguardando.length > 0) {
           subtitulo("Aguardando");
@@ -419,7 +438,7 @@ export default function RelatoriosGeraisPage() {
       const doModulo = atividades.filter((a) => a.modulo === modulo);
       if (doModulo.length === 0) return;
 
-      tituloModulo(modulo);
+      tituloModulo(modulo === "CCZ" ? "CCZ - Zoonoses" : modulo);
       renderTabela(
         ["Data", "Tipo", "Descrição", "Status"],
         doModulo.map((a) => [
@@ -478,15 +497,6 @@ export default function RelatoriosGeraisPage() {
   const resumo = selecionado?.resumo || {};
 
   // Agrupa as atividades (já ordenadas por data desc) por módulo, respeitando ORDEM_MODULOS.
-  const gruposTimeline = selecionado
-    ? ORDEM_MODULOS.map((modulo) => ({
-        modulo,
-        itens: (selecionado.atividades || []).filter(
-          (a) => a.modulo === modulo,
-        ),
-      })).filter((grupo) => grupo.itens.length > 0)
-    : [];
-
   return (
     <main className={styles.container}>
       <header className={styles.header}>
@@ -500,6 +510,7 @@ export default function RelatoriosGeraisPage() {
         </div>
       </header>
 
+      <div className={styles.cardWrapper}>
       <section className={styles.buscaWrapper}>
         <label className={styles.buscaLabel}>
           Buscar paciente (Nome ou CPF)
@@ -676,44 +687,188 @@ export default function RelatoriosGeraisPage() {
             </div>
           </div>
 
-          <div className={styles.timeline}>
-            <h3>Histórico unificado</h3>
-            {gruposTimeline.length === 0 ? (
-              <p className={styles.empty}>
-                Nenhuma atividade registrada para este paciente.
-              </p>
-            ) : (
-              gruposTimeline.map((grupo) => (
-                <div key={grupo.modulo} className={styles.timelineGroup}>
-                  <div className={styles.timelineGroupTitle}>
-                    <span className={styles.moduleBadge}>{grupo.modulo}</span>
-                    <span>{grupo.itens.length} registro(s)</span>
-                  </div>
-                  {grupo.itens.map((atividade) => (
-                    <div key={atividade.id} className={styles.timelineItem}>
-                      <span className={styles.timelineDot} />
-                      <div className={styles.timelineBody}>
-                        <strong>{atividade.tipo}</strong>
-                        <span className={styles.descricao}>
-                          {atividade.descricao}
-                        </span>
-                        <span className={styles.metaLine}>
-                          <span>{formatarData(atividade.data)}</span>
-                          {atividade.status && (
-                            <span className={styles.statusBadge}>
-                              {atividade.status}
-                            </span>
-                          )}
-                        </span>
-                      </div>
+          {/* DETALHAMENTO POR MÓDULO (tabelas) */}
+          <div className={styles.modulosDetalhe}>
+            <h3>Detalhamento por módulo</h3>
+
+            {/* REGULAÇÃO */}
+            {((resumo.regulacao?.aguardando?.length || 0) > 0 ||
+              (resumo.regulacao?.liberados?.length || 0) > 0) && (
+              <div className={styles.moduloBloco}>
+                <h4 className={styles.moduloTitulo}>Regulação de Exames</h4>
+
+                {resumo.regulacao?.aguardando?.length > 0 && (
+                  <>
+                    <p className={styles.moduloSub}>Aguardando</p>
+                    <div className={styles.tabelaWrapper}>
+                      <table className={styles.tabela}>
+                        <thead>
+                          <tr>
+                            <th>Exame</th>
+                            <th>Data de solicitação</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {resumo.regulacao.aguardando.map((item, i) => (
+                            <tr key={`ag-${i}`}>
+                              <td>{item.exame || "—"}</td>
+                              <td>{formatarData(item.data)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
                     </div>
-                  ))}
-                </div>
-              ))
+                  </>
+                )}
+
+                {resumo.regulacao?.liberados?.length > 0 && (
+                  <>
+                    <p className={styles.moduloSub}>Agendados / Liberados</p>
+                    <div className={styles.tabelaWrapper}>
+                      <table className={styles.tabela}>
+                        <thead>
+                          <tr>
+                            <th>Exame</th>
+                            <th>Data de liberação</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {resumo.regulacao.liberados.map((item, i) => (
+                            <tr key={`lib-${i}`}>
+                              <td>{item.exame || "—"}</td>
+                              <td>{formatarData(item.data)}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </>
+                )}
+              </div>
             )}
+
+            {/* FARMÁCIA JUDICIAL */}
+            {resumo.farmacia && (
+              <div className={styles.moduloBloco}>
+                <h4 className={styles.moduloTitulo}>Farmácia Judicial</h4>
+                <p className={styles.moduloInfoLinha}>
+                  <strong>Número do processo:</strong>{" "}
+                  {resumo.farmacia.numeroProcesso || "—"}
+                </p>
+                <p className={styles.moduloInfoLinha}>
+                  <strong>Status do paciente:</strong>{" "}
+                  {formatarStatusFarmacia(resumo.farmacia.status)}
+                </p>
+                <p className={styles.moduloSub}>Medicamentos vinculados</p>
+                {(resumo.farmacia.medicamentos?.length || 0) === 0 ? (
+                  <p className={styles.empty}>Nenhum medicamento vinculado.</p>
+                ) : (
+                  <div className={styles.tabelaWrapper}>
+                    <table className={styles.tabela}>
+                      <thead>
+                        <tr>
+                          <th>Medicamento</th>
+                          <th>Dosagem</th>
+                          <th>Qtd/mês</th>
+                          <th>Situação</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {resumo.farmacia.medicamentos.map((item, i) => (
+                          <tr key={`med-${i}`}>
+                            <td>{item.nome || "—"}</td>
+                            <td>{item.dosagem || "—"}</td>
+                            <td>{item.qtdPrescritaMensal ?? "—"}</td>
+                            <td>{item.ativo ? "Ativo" : "Inativo"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* JUNTA REGULADORA */}
+            {resumo.junta && (
+              <div className={styles.moduloBloco}>
+                <h4 className={styles.moduloTitulo}>Junta Reguladora</h4>
+                <p className={styles.moduloSub}>Serviços vinculados</p>
+                {(resumo.junta.servicos?.length || 0) === 0 ? (
+                  <p className={styles.empty}>Nenhum serviço vinculado.</p>
+                ) : (
+                  <div className={styles.tabelaWrapper}>
+                    <table className={styles.tabela}>
+                      <thead>
+                        <tr>
+                          <th>Serviço</th>
+                          <th>Situação</th>
+                          <th>Data de vínculo</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {resumo.junta.servicos.map((item, i) => (
+                          <tr key={`serv-${i}`}>
+                            <td>{item.nome || "—"}</td>
+                            <td>{item.ativo ? "Ativo" : "Inativo"}</td>
+                            <td>{formatarData(item.dataVinculo)}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* CCZ (tabela genérica a partir das atividades) */}
+            {(() => {
+              const cczItens = (selecionado.atividades || []).filter(
+                (a) => a.modulo === "CCZ",
+              );
+              if (cczItens.length === 0) return null;
+              return (
+                <div className={styles.moduloBloco}>
+                  <h4 className={styles.moduloTitulo}>CCZ - Zoonoses</h4>
+                  <div className={styles.tabelaWrapper}>
+                    <table className={styles.tabela}>
+                      <thead>
+                        <tr>
+                          <th>Data</th>
+                          <th>Tipo</th>
+                          <th>Descrição</th>
+                          <th>Status</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {cczItens.map((a) => (
+                          <tr key={a.id}>
+                            <td>{formatarData(a.data)}</td>
+                            <td>{a.tipo || "—"}</td>
+                            <td>{a.descricao || "—"}</td>
+                            <td>{a.status || "—"}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {!resumo.regulacao &&
+              !resumo.farmacia &&
+              !resumo.junta &&
+              (selecionado.atividades || []).filter((a) => a.modulo === "CCZ")
+                .length === 0 && (
+                <p className={styles.empty}>
+                  Nenhum registro nos módulos para este paciente.
+                </p>
+              )}
           </div>
         </>
       )}
+      </div>
     </main>
   );
 }

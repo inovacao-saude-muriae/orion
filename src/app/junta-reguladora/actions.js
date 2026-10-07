@@ -1,6 +1,7 @@
 'use server';
 
 import { prisma } from '@/lib/prisma';
+import { revalidatePath } from 'next/cache';
 
 // Helper para converter BigInt e Objetos Date sem erro de serialização no Next.js
 function serializeData(data) {
@@ -165,6 +166,49 @@ export async function cadastrarPacienteJunta(data) {
   }
 }
 
+/* ── LISTAR PACIENTES CADASTRADOS NA JUNTA (para o dropdown do prontuário) ── */
+export async function listarPacientesJunta(termo) {
+  try {
+    const termoClean = String(termo || '').trim();
+    const apenasNumeros = termoClean.replace(/\D/g, '');
+
+    const pacientes = await prisma.pacienteJunta.findMany({
+      include: {
+        pessoa: true,
+      },
+    });
+
+    // Filtra por nome ou CPF (quando houver termo) e monta a lista do dropdown.
+    const lista = pacientes
+      .filter((pj) => !!pj.pessoa)
+      .filter((pj) => {
+        if (!termoClean) return true;
+        const nome = (pj.pessoa.nomeCompleto || '').toLowerCase();
+        const cpf = (pj.pessoa.cpf || '').replace(/\D/g, '');
+        return (
+          nome.includes(termoClean.toLowerCase()) ||
+          (apenasNumeros && cpf.includes(apenasNumeros))
+        );
+      })
+      .map((pj) => ({
+        cpf: pj.pessoa.cpf,
+        cns: pj.pessoa.cns || '',
+        nomeCompleto: pj.pessoa.nomeCompleto,
+        nome: pj.pessoa.nomeCompleto,
+        nomeMae: pj.pessoa.nomeMae || '',
+        dataNascimento: pj.pessoa.dataNascimento
+          ? new Date(pj.pessoa.dataNascimento).toISOString().split('T')[0]
+          : '',
+      }))
+      .sort((a, b) => (a.nomeCompleto || '').localeCompare(b.nomeCompleto || '', 'pt-BR'));
+
+    return serializeData(lista);
+  } catch (error) {
+    console.error('Erro ao listar pacientes da Junta:', error);
+    return [];
+  }
+}
+
 /* ── 3. LISTAR PACIENTES VINCULADOS A UM SERVIÇO ── */
 export async function getPacientesPorServico(servicoNome) {
   try {
@@ -295,20 +339,54 @@ export async function registrarAtendimentoServico(data) {
       });
     }
 
-    const dataFinal = dataAtendimento || dataForm ? new Date(dataAtendimento || dataForm) : new Date();
+    // Normaliza a data para 'YYYY-MM-DD' e monta o dia em UTC (coluna é @db.Date),
+    // evitando divergência de fuso que faria o registro cair em outro dia.
+    const dataStr = String(dataAtendimento || dataForm || '').split('T')[0];
+    const [ano, mesN, diaN] = (dataStr || '').split('-').map(Number);
+    const dataFinal =
+      ano && mesN && diaN ? new Date(Date.UTC(ano, mesN - 1, diaN)) : new Date();
 
-    await prisma.juntaAtendimento.create({
-      data: {
+    const diaInicio = new Date(dataFinal);
+    const diaFim = new Date(dataFinal);
+    diaFim.setUTCDate(diaFim.getUTCDate() + 1);
+
+    const espec = especialidade || 'Geral';
+
+    // Já existe um atendimento deste paciente, neste serviço, especialidade e dia?
+    const existente = await prisma.juntaAtendimento.findFirst({
+      where: {
         pacienteJuntaId: Number(idDoPaciente),
         servicoId: juntaServico.id,
-        especialidade: especialidade || 'Geral',
-        dataAtendimento: dataFinal,
-        status: status || 'PRESENCA',
-        observacao: observacao || null,
-        profissionalResponsavel: profissional || null,
+        especialidade: espec,
+        dataAtendimento: { gte: diaInicio, lt: diaFim },
       },
     });
 
+    if (existente) {
+      // Edição: atualiza o registro existente (não cria outro no relatório).
+      await prisma.juntaAtendimento.update({
+        where: { id: existente.id },
+        data: {
+          status: status || 'PRESENCA',
+          observacao: observacao || null,
+          profissionalResponsavel: profissional || null,
+        },
+      });
+    } else {
+      await prisma.juntaAtendimento.create({
+        data: {
+          pacienteJuntaId: Number(idDoPaciente),
+          servicoId: juntaServico.id,
+          especialidade: espec,
+          dataAtendimento: dataFinal,
+          status: status || 'PRESENCA',
+          observacao: observacao || null,
+          profissionalResponsavel: profissional || null,
+        },
+      });
+    }
+
+    revalidatePath('/junta-reguladora');
     return { success: true };
   } catch (error) {
     console.error('Erro ao registrar atendimento:', error);
@@ -383,70 +461,110 @@ export async function getProntuarioUnificado(termoBusca) {
     let servicosAgrupados = [];
 
     if (pacienteJunta) {
-      // 3. Busca serviços vinculados usando a relação do Prisma PacienteJuntaServico
-      const vinculos = await prisma.pacienteJuntaServico.findMany({
-        where: { pacienteJuntaId: pacienteJunta.id, ativo: true },
-      });
+      // Busca vínculos, atendimentos e agendamentos (todos com serviço) em paralelo.
+      const [vinculos, atendimentos, agendamentos] = await Promise.all([
+        prisma.pacienteJuntaServico.findMany({
+          where: { pacienteJuntaId: pacienteJunta.id, ativo: true },
+          include: { servico: true },
+        }),
+        prisma.juntaAtendimento.findMany({
+          where: { pacienteJuntaId: pacienteJunta.id },
+          orderBy: { dataAtendimento: 'desc' },
+          include: { servico: true },
+        }),
+        prisma.agendamentoJunta.findMany({
+          where: { pacienteJuntaId: pacienteJunta.id },
+          orderBy: [{ data: 'desc' }, { hora: 'asc' }],
+          include: { servico: true },
+        }),
+      ]);
 
-      if (vinculos.length > 0) {
-        const servicoIds = vinculos.map((v) => v.servicoId).filter(Boolean);
-        const listaServicos = await prisma.servico.findMany({
-          where: { id: { in: servicoIds } },
-        });
-        servicosAtivos = listaServicos.map((s) => s.nome);
+      servicosAtivos = vinculos
+        .map((v) => v.servico?.nome)
+        .filter(Boolean);
+
+      // Chave por serviço+especialidade+dia para cruzar agendamento x atendimento.
+      const ymd = (d) => new Date(d).toISOString().split('T')[0];
+      const chaveAtend = (servNome, espec, dia) =>
+        `${servNome}___${(espec || '').trim().toLowerCase()}___${dia}`;
+
+      // Mapa de atendimentos registrados (status/observação) por serviço+espec+dia.
+      const atendPorChave = new Map();
+      for (const a of atendimentos) {
+        const nomeServico = a.servico?.nome || 'Outros';
+        atendPorChave.set(
+          chaveAtend(nomeServico, a.especialidade, ymd(a.dataAtendimento)),
+          a,
+        );
       }
 
-      // 4. Histórico de Atendimentos
-      const atendimentos = await prisma.juntaAtendimento.findMany({
-        where: { pacienteJuntaId: pacienteJunta.id },
-        orderBy: { dataAtendimento: 'desc' },
-      });
-
-      if (atendimentos.length > 0) {
-        const servicoIdsAtend = atendimentos.map((a) => a.servicoId).filter(Boolean);
-        const servicosMap = await prisma.servico.findMany({
-          where: { id: { in: servicoIdsAtend } },
-        });
-
-        const servicoDict = servicosMap.reduce((acc, s) => {
-          acc[s.id] = s.nome;
-          return acc;
-        }, {});
-
-        const gruposMap = {};
-
-        for (const a of atendimentos) {
-          const nomeServico = servicoDict[a.servicoId] || 'Outros';
-          const espec = a.especialidade || 'Geral';
-          const chaveGrupo = `${nomeServico}___${espec}`;
-
-          if (!gruposMap[chaveGrupo]) {
-            gruposMap[chaveGrupo] = {
-              servico: nomeServico,
-              especialidade: espec,
-              presencas: 0,
-              faltas: 0,
-              faltasJustificadas: 0,
-              datas: [],
-            };
-          }
-
-          const st = (a.status || '').toUpperCase();
-          if (st === 'PRESENCA') gruposMap[chaveGrupo].presencas++;
-          else if (st === 'FALTA') gruposMap[chaveGrupo].faltas++;
-          else if (st === 'FALTA_JUSTIFICADA') gruposMap[chaveGrupo].faltasJustificadas++;
-
-          gruposMap[chaveGrupo].datas.push({
-            id: a.id,
-            data: a.dataAtendimento,
-            status: a.status,
-            profissional: a.profissionalResponsavel,
-            observacao: a.observacao,
-          });
+      const gruposMap = {};
+      const garantirGrupo = (nomeServico, espec) => {
+        const chave = `${nomeServico}___${espec}`;
+        if (!gruposMap[chave]) {
+          gruposMap[chave] = {
+            servico: nomeServico,
+            especialidade: espec,
+            presencas: 0,
+            faltas: 0,
+            faltasJustificadas: 0,
+            datas: [],
+          };
         }
+        return gruposMap[chave];
+      };
 
-        servicosAgrupados = Object.values(gruposMap);
+      const chavesUsadas = new Set();
+
+      // 1) Linhas vindas dos AGENDAMENTOS (trazem data + hora da agenda).
+      for (const ag of agendamentos) {
+        const nomeServico = ag.servico?.nome || 'Outros';
+        const espec = ag.especialidade || 'Geral';
+        const dia = ymd(ag.data);
+        const grupo = garantirGrupo(nomeServico, espec);
+
+        const atend = atendPorChave.get(chaveAtend(nomeServico, espec, dia));
+        const status = atend?.status || null; // null = agendado, sem registro ainda
+
+        const st = (status || '').toUpperCase();
+        if (st === 'PRESENCA') grupo.presencas++;
+        else if (st === 'FALTA') grupo.faltas++;
+        else if (st === 'FALTA_JUSTIFICADA') grupo.faltasJustificadas++;
+
+        grupo.datas.push({
+          id: `ag-${ag.id}`,
+          data: ag.data,
+          hora: ag.hora,
+          status, // pode ser null (apenas agendado)
+          observacao: atend?.observacao || ag.observacao || '',
+        });
+
+        chavesUsadas.add(chaveAtend(nomeServico, espec, dia));
       }
+
+      // 2) Atendimentos registrados SEM agendamento correspondente (avulsos).
+      for (const a of atendimentos) {
+        const nomeServico = a.servico?.nome || 'Outros';
+        const espec = a.especialidade || 'Geral';
+        const dia = ymd(a.dataAtendimento);
+        if (chavesUsadas.has(chaveAtend(nomeServico, espec, dia))) continue;
+
+        const grupo = garantirGrupo(nomeServico, espec);
+        const st = (a.status || '').toUpperCase();
+        if (st === 'PRESENCA') grupo.presencas++;
+        else if (st === 'FALTA') grupo.faltas++;
+        else if (st === 'FALTA_JUSTIFICADA') grupo.faltasJustificadas++;
+
+        grupo.datas.push({
+          id: `at-${a.id}`,
+          data: a.dataAtendimento,
+          hora: '',
+          status: a.status,
+          observacao: a.observacao || '',
+        });
+      }
+
+      servicosAgrupados = Object.values(gruposMap);
     }
 
     const end = pessoa.enderecos?.[0] || {};
@@ -554,9 +672,10 @@ export async function getAgendamentosDoDia(servicoNome, dataYMD) {
       : null;
     if (!servico || !dataYMD) return [];
 
-    const inicio = new Date(`${dataYMD}T00:00:00`);
+    const [yA, mA, dA] = String(dataYMD).split('-').map(Number);
+    const inicio = new Date(Date.UTC(yA, mA - 1, dA));
     const fim = new Date(inicio);
-    fim.setDate(fim.getDate() + 1);
+    fim.setUTCDate(fim.getUTCDate() + 1);
 
     const rows = await prisma.agendamentoJunta.findMany({
       where: {
@@ -567,16 +686,37 @@ export async function getAgendamentosDoDia(servicoNome, dataYMD) {
       orderBy: [{ hora: 'asc' }],
     });
 
+    // Atendimentos já registrados nesse serviço/dia (para marcar o que já foi feito).
+    const atendimentos = await prisma.juntaAtendimento.findMany({
+      where: {
+        servicoId: servico.id,
+        dataAtendimento: { gte: inicio, lt: fim },
+      },
+    });
+
+    const chaveAtend = (pacId, espec) => `${pacId}___${(espec || '').trim().toLowerCase()}`;
+    const mapaAtend = new Map();
+    for (const at of atendimentos) {
+      mapaAtend.set(chaveAtend(at.pacienteJuntaId, at.especialidade), at);
+    }
+
     return serializeData(
-      rows.map((a) => ({
-        id: a.id,
-        pacienteJuntaId: a.pacienteJuntaId,
-        pacienteNome: a.pacienteJunta?.pessoa?.nomeCompleto || '—',
-        pacienteCpf: a.pacienteJunta?.pessoa?.cpf || '',
-        especialidade: a.especialidade,
-        hora: a.hora,
-        observacao: a.observacao || '',
-      })),
+      rows.map((a) => {
+        const jaRegistrado = mapaAtend.get(chaveAtend(a.pacienteJuntaId, a.especialidade));
+        return {
+          id: a.id,
+          pacienteJuntaId: a.pacienteJuntaId,
+          pacienteNome: a.pacienteJunta?.pessoa?.nomeCompleto || '—',
+          pacienteCpf: a.pacienteJunta?.pessoa?.cpf || '',
+          especialidade: a.especialidade,
+          hora: a.hora,
+          observacao: a.observacao || '',
+          // Dados do atendimento já registrado (se houver).
+          registrado: !!jaRegistrado,
+          statusRegistrado: jaRegistrado?.status || null,
+          observacaoRegistrada: jaRegistrado?.observacao || '',
+        };
+      }),
     );
   } catch (error) {
     console.error('Erro ao buscar agendamentos do dia:', error);

@@ -95,9 +95,9 @@
 }
 
 .btnAdicionar {
-  background-color: #059669;
-  color: #ffffff;
-  border: none;
+  background-color: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
   padding: 0.6rem 1.1rem;
   border-radius: 8px;
   font-weight: 600;
@@ -108,7 +108,7 @@
 }
 
 .btnAdicionar:hover {
-  background-color: #047857;
+  background-color: #dbeafe;
 }
 
 /* Rodapé de ações na parte inferior */
@@ -145,8 +145,23 @@
   box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
 }
 
+.inputWrapperWithIcon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.inputWrapperWithIcon input {
+  width: 100%;
+  padding-right: 2rem;
+  box-sizing: border-box;
+}
+
 .arrowIcon {
   position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
   right: 0.85rem;
   color: #64748b;
   font-size: 0.7rem;
@@ -241,18 +256,27 @@
 }
 
 .formSectionTitle {
-  font-size: 0.72rem;
+  font-size: 0.8rem;
   font-weight: 700;
   text-transform: uppercase;
   letter-spacing: 0.03em;
-  color: #64748b;
-  margin: 0.9rem 0 0.5rem;
-  padding-bottom: 0.3rem;
-  border-bottom: 1px solid #f1f5f9;
+  color: #475569;
+  margin: 1.5rem 0 0.9rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e2e8f0;
 }
 
 .formSectionTitle:first-of-type {
   margin-top: 0;
+}
+
+/* Bloco cinza que agrupa os campos (dados pessoais + endereço) */
+.camposBloco {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-top: 1rem;
 }
 
 /* GRID DE CAMPOS (compacto: 6 colunas) */
@@ -281,21 +305,24 @@
 
 .field input,
 .field select {
-  padding: 0.4rem 0.55rem;
-  border: 1px solid #cbd5e0;
-  border-radius: 6px;
-  font-size: 0.82rem;
+  padding: 0.6rem 0.85rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.875rem;
   outline: none;
-  transition: border-color 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
   background-color: #fff;
+  box-sizing: border-box;
 }
 
 .field input:focus,
 .field select:focus {
   border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
 }
 
-.field input:disabled {
+.field input:disabled,
+.field select:disabled {
   background-color: #f1f5f9;
   color: #64748b;
 }

@@ -6,6 +6,7 @@ import { buscarCep } from "@/lib/viacep";
 import { useConfirm } from "@/components/ConfirmDialog";
 import BotaoEditar from "@/components/BotaoEditar";
 import { documentoPaciente } from "@/app/regulacao/constants";
+import { mascararTelefone as maskTelefone } from "@/lib/telefone";
 import {
   listarPessoas,
   listarUbs,
@@ -22,14 +23,6 @@ const maskCpf = (v) =>
     .replace(/(\d{3})(\d)/, "$1.$2")
     .replace(/(\d{3})(\d)/, "$1.$2")
     .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
-
-const maskTelefone = (v) => {
-  const d = (v || "").replace(/\D/g, "").slice(0, 11);
-  if (d.length <= 10) {
-    return d.replace(/(\d{2})(\d)/, "($1) $2").replace(/(\d{4})(\d{1,4})$/, "$1-$2");
-  }
-  return d.replace(/(\d{2})(\d)/, "($1) $2").replace(/(\d{5})(\d{1,4})$/, "$1-$2");
-};
 
 const maskCep = (v) =>
   (v || "").replace(/\D/g, "").slice(0, 8).replace(/(\d{5})(\d{1,3})$/, "$1-$2");
@@ -114,6 +107,8 @@ export default function PessoasPage() {
   // ── Busca ─────────────────────────────────────────────────────────────────
   const handleBuscar = async (valor) => {
     setTermo(valor);
+    // O campo "Nome completo" é também o campo de busca: reflete o que é digitado.
+    setForm((prev) => ({ ...prev, nomeCompleto: valor }));
     if (!dropAberto) setDropAberto(true);
     if (valor.trim().length >= 2) {
       setBuscando(true);
@@ -172,9 +167,10 @@ export default function PessoasPage() {
 
   // ── Ações ─────────────────────────────────────────────────────────────────
   const novoCadastro = () => {
-    setForm(FORM_VAZIO);
+    // Preserva o nome já digitado no campo de busca ao iniciar um novo cadastro.
+    const nomeDigitado = termo.trim();
+    setForm({ ...FORM_VAZIO, nomeCompleto: nomeDigitado });
     setModo("novo");
-    setTermo("");
     setDropAberto(false);
     setCepErro("");
   };
@@ -191,6 +187,7 @@ export default function PessoasPage() {
     setDropAberto(false);
     setCepErro("");
     setConfirmarExclusao(false);
+    setErro("");
   };
 
   const salvar = async (e) => {
@@ -222,6 +219,7 @@ export default function PessoasPage() {
     setSalvando(false);
 
     if (res.success) {
+      setErro("");
       const busca = await listarPessoas(payload.cpf);
       const salva = busca.success
         ? busca.data.find((x) => soDigitos(x.cpf) === payload.cpf)
@@ -229,7 +227,7 @@ export default function PessoasPage() {
       if (salva) selecionarPessoa(salva);
       else cancelar();
     } else {
-      alert(res.error || "Não foi possível salvar.");
+      setErro(res.error || "Não foi possível salvar.");
     }
   };
 
@@ -239,7 +237,7 @@ export default function PessoasPage() {
     setSalvando(false);
     setConfirmarExclusao(false);
     if (res.success) cancelar();
-    else alert(res.error || "Não foi possível excluir.");
+    else setErro(res.error || "Não foi possível excluir.");
   };
 
   const pessoaSelecionada = Boolean(soDigitos(form.cpf));
@@ -261,101 +259,106 @@ export default function PessoasPage() {
 
       {/* CARD ÚNICO: BUSCA + DADOS DA PESSOA */}
       <form onSubmit={salvar} className={`${styles.card} ${styles.formCard}`}>
-        {/* BUSCA (estilo Novo Pedido: select-like + dropdown em tabela) */}
-        <div className={styles.searchBlock}>
-          <label className={styles.searchLabel}>Buscar pessoa no banco</label>
-          <div className={styles.searchRowInline}>
-            <div className={styles.searchSelectWrapper} ref={dropdownRef}>
-              <input
-                type="text"
-                className={styles.selectLikeInput}
-                placeholder="Selecionar ou digitar nome/CPF..."
-                value={termo}
-                onChange={(e) => handleBuscar(e.target.value)}
-                onFocus={() => setDropAberto(true)}
-              />
-              <span className={styles.arrowIcon} onClick={() => setDropAberto(!dropAberto)}>
-                {dropAberto ? "▲" : "▼"}
-              </span>
-
-              {dropAberto && (
-                <div className={styles.tableDropdownMenu}>
-                  <div className={styles.tableContainerScroll}>
-                    <table className={styles.patientTableDropdown}>
-                      <thead>
-                        <tr>
-                          <th>CPF / CNS</th>
-                          <th>Usuário</th>
-                          <th>Nome da mãe</th>
-                          <th>Data nasc.</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {pessoasFiltradas.length > 0 ? (
-                          pessoasFiltradas.map((p) => (
-                            <tr
-                              key={p.cpf}
-                              onMouseDown={(e) => {
-                                e.preventDefault();
-                                selecionarPessoa(p);
-                              }}
-                              className={soDigitos(form.cpf) === soDigitos(p.cpf) ? styles.selectedRow : ""}
-                            >
-                              <td>{documentoPaciente({ cpf: p.cpf, cns: p.cns })}</td>
-                              <td className={styles.boldName}>{p.nomeCompleto}</td>
-                              <td>{p.nomeMae || "Não informada"}</td>
-                              <td>
-                                {p.dataNascimento
-                                  ? p.dataNascimento.split("-").reverse().join("/")
-                                  : "-"}
-                              </td>
-                            </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td colSpan="4" className={styles.noDataTd}>
-                              {buscando ? "Buscando pessoas..." : "Nenhuma pessoa encontrada."}
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
-            </div>
-
-            <button type="button" className={styles.btnAdicionar} onClick={novoCadastro}>
-              + Adicionar novo
-            </button>
-          </div>
-        </div>
-
-        <hr className={styles.divider} />
-
         <div className={styles.cardHeaderRow}>
           <h2 className={styles.cardHeaderTitle}>{tituloForm}</h2>
+          <button type="button" className={styles.btnAdicionar} onClick={novoCadastro}>
+            Adicionar novo
+          </button>
         </div>
 
+        <div className={styles.camposBloco}>
         <div className={styles.formSectionTitle}>Dados pessoais</div>
         <div className={styles.grid}>
-          <div className={styles.field}>
-            <label>CPF *</label>
+          <div className={`${styles.field} ${styles.colWide}`} style={{ position: "relative" }} ref={dropdownRef}>
+            <label>Nome completo *</label>
+            <div className={styles.inputWrapperWithIcon}>
+              <input
+                type="text"
+                value={form.nomeCompleto}
+                placeholder={editavel ? "" : "Digite nome ou CPF para buscar..."}
+                onChange={(e) => {
+                  // Em cadastro novo ou edição, apenas edita o nome (sem buscar).
+                  // Só no modo leitura o campo funciona como busca de pessoa.
+                  if (editavel) {
+                    setForm({ ...form, nomeCompleto: e.target.value });
+                  } else {
+                    handleBuscar(e.target.value);
+                  }
+                }}
+                onFocus={() => {
+                  if (!editavel) setDropAberto(true);
+                }}
+                autoComplete="off"
+                required
+              />
+              {!editavel && (
+                <span className={styles.arrowIcon} onClick={() => setDropAberto(!dropAberto)}>
+                  {dropAberto ? "▲" : "▼"}
+                </span>
+              )}
+            </div>
+            {!editavel && dropAberto && (
+              <div className={styles.tableDropdownMenu}>
+                <div className={styles.tableContainerScroll}>
+                  <table className={styles.patientTableDropdown}>
+                    <thead>
+                      <tr>
+                        <th>CPF / CNS</th>
+                        <th>Usuário</th>
+                        <th>Nome da mãe</th>
+                        <th>Data nasc.</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {pessoasFiltradas.length > 0 ? (
+                        pessoasFiltradas.map((p) => (
+                          <tr
+                            key={p.cpf}
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              selecionarPessoa(p);
+                            }}
+                            className={soDigitos(form.cpf) === soDigitos(p.cpf) ? styles.selectedRow : ""}
+                          >
+                            <td>{documentoPaciente({ cpf: p.cpf, cns: p.cns })}</td>
+                            <td className={styles.boldName}>{p.nomeCompleto}</td>
+                            <td>{p.nomeMae || "Não informada"}</td>
+                            <td>
+                              {p.dataNascimento
+                                ? p.dataNascimento.split("-").reverse().join("/")
+                                : "-"}
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="4" className={styles.noDataTd}>
+                            {buscando ? "Buscando pessoas..." : "Nenhuma pessoa encontrada."}
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+          </div>
+          <div className={`${styles.field} ${styles.colWide}`}>
+            <label>Nome da mãe *</label>
             <input
               type="text"
-              value={form.cpf}
-              onChange={(e) => setForm({ ...form, cpf: maskCpf(e.target.value) })}
-              placeholder="000.000.000-00"
-              disabled={modo !== "novo"}
+              value={form.nomeMae}
+              onChange={(e) => setForm({ ...form, nomeMae: e.target.value })}
+              disabled={!editavel}
               required
             />
           </div>
-          <div className={`${styles.field} ${styles.colWide}`}>
-            <label>Nome completo *</label>
+          <div className={styles.field}>
+            <label>Data de nascimento *</label>
             <input
-              type="text"
-              value={form.nomeCompleto}
-              onChange={(e) => setForm({ ...form, nomeCompleto: e.target.value })}
+              type="date"
+              value={form.dataNascimento}
+              onChange={(e) => setForm({ ...form, dataNascimento: e.target.value })}
               disabled={!editavel}
               required
             />
@@ -373,26 +376,6 @@ export default function PessoasPage() {
             </select>
           </div>
           <div className={styles.field}>
-            <label>Data de nascimento *</label>
-            <input
-              type="date"
-              value={form.dataNascimento}
-              onChange={(e) => setForm({ ...form, dataNascimento: e.target.value })}
-              disabled={!editavel}
-              required
-            />
-          </div>
-          <div className={`${styles.field} ${styles.colWide}`}>
-            <label>Nome da mãe *</label>
-            <input
-              type="text"
-              value={form.nomeMae}
-              onChange={(e) => setForm({ ...form, nomeMae: e.target.value })}
-              disabled={!editavel}
-              required
-            />
-          </div>
-          <div className={styles.field}>
             <label>Telefone / WhatsApp</label>
             <input
               type="text"
@@ -400,6 +383,17 @@ export default function PessoasPage() {
               onChange={(e) => setForm({ ...form, telefone: maskTelefone(e.target.value) })}
               placeholder="(00) 00000-0000"
               disabled={!editavel}
+            />
+          </div>
+          <div className={styles.field}>
+            <label>CPF *</label>
+            <input
+              type="text"
+              value={form.cpf}
+              onChange={(e) => setForm({ ...form, cpf: maskCpf(e.target.value) })}
+              placeholder="000.000.000-00"
+              disabled={modo !== "novo"}
+              required
             />
           </div>
           <div className={styles.field}>
@@ -449,7 +443,16 @@ export default function PessoasPage() {
             {cepLoading && <small className={styles.hint}>Buscando endereço...</small>}
             {cepErro && <small className={styles.hintErro}>{cepErro}</small>}
           </div>
-          <div className={`${styles.field} ${styles.colWide}`}>
+          <div className={styles.field}>
+            <label>Bairro</label>
+            <input
+              type="text"
+              value={form.bairro}
+              onChange={(e) => setForm({ ...form, bairro: e.target.value })}
+              disabled={!editavel}
+            />
+          </div>
+          <div className={styles.field}>
             <label>Logradouro / Rua</label>
             <input
               type="text"
@@ -477,15 +480,6 @@ export default function PessoasPage() {
             />
           </div>
           <div className={styles.field}>
-            <label>Bairro</label>
-            <input
-              type="text"
-              value={form.bairro}
-              onChange={(e) => setForm({ ...form, bairro: e.target.value })}
-              disabled={!editavel}
-            />
-          </div>
-          <div className={styles.field}>
             <label>Cidade</label>
             <input
               type="text"
@@ -504,6 +498,7 @@ export default function PessoasPage() {
               disabled={!editavel}
             />
           </div>
+        </div>
         </div>
 
         <div className={styles.formActions}>

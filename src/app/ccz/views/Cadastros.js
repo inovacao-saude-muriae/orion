@@ -18,6 +18,7 @@ import {
   vincularTutor,
   createAnimal,
 } from "../actions";
+import { mascararTelefone as maskTel } from "@/lib/telefone";
 
 // ── Máscaras ─────────────────────────────────────────────────────────────
 function maskCpf(v) {
@@ -28,17 +29,6 @@ function maskCpf(v) {
     .replace(/(\d{3})(\d)/, "$1.$2")
     .replace(/(\d{3})(\d)/, "$1.$2")
     .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
-}
-function maskTel(v) {
-  if (!v) return "";
-  const d = v.replace(/\D/g, "").slice(0, 11);
-  if (d.length <= 10)
-    return d
-      .replace(/(\d{2})(\d)/, "($1) $2")
-      .replace(/(\d{4})(\d{1,4})$/, "$1-$2");
-  return d
-    .replace(/(\d{2})(\d)/, "($1) $2")
-    .replace(/(\d{5})(\d{1,4})$/, "$1-$2");
 }
 function onlyDigits(v) {
   return v ? v.replace(/\D/g, "") : "";

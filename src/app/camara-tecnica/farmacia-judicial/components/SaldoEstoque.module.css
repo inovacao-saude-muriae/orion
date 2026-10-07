@@ -323,9 +323,9 @@
 }
 
 .addBtn {
-  background-color: #059669;
-  color: #ffffff;
-  border: none;
+  background-color: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
   padding: 0.6rem 1.1rem;
   border-radius: 8px;
   font-weight: 600;
@@ -337,7 +337,7 @@
 }
 
 .addBtn:hover {
-  background-color: #047857;
+  background-color: #dbeafe;
 }
 
 /* ── Modal estreito (nova entrada) ──────────────────────────────────────── */

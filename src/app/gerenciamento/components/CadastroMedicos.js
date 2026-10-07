@@ -31,7 +31,8 @@ export default function CadastroMedicos({
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
-  const termoBusca = (formMedico.search || "").toLowerCase().trim();
+  // O campo "Nome do Médico" é também a busca: filtra por nome ou CRM.
+  const termoBusca = (formMedico.nome || "").toLowerCase().trim();
   const medicosFiltrados = (auxData.medicos || []).filter((m) => {
     if (!termoBusca) return true;
     const nome = (m.nome || "").toLowerCase();
@@ -91,27 +92,94 @@ export default function CadastroMedicos({
         onCancel={() => setDeleteConfig(null)}
       />
 
-      <div className={styles.searchSectionContainer}>
-        <div className={styles.fieldGroup}>
-          <label>Buscar Médico no Banco (CRM ou Nome)</label>
-          <div className={styles.searchActionRow}>
-            <div className={styles.selectSearchWrapper} ref={dropdownRef}>
-              <input
-                type="text"
-                className={styles.selectLikeInput}
-                value={formMedico.search || ""}
-                placeholder="Selecionar ou digitar CRM/Nome..."
-                onChange={(e) => {
-                  setFormMedico((prev) => ({ ...prev, search: e.target.value }));
-                  setDropAberto(true);
-                }}
-                onFocus={() => setDropAberto(true)}
-              />
-              <span className={styles.selectArrow} onClick={() => setDropAberto(!dropAberto)}>
-                {dropAberto ? "▲" : "▼"}
-              </span>
+      <div className={styles.cardHeaderRow}>
+        <h3 className={styles.cardHeaderTitle}>
+          {formMedico.isEditing
+            ? "Editar médico"
+            : formMedico.isFormActive
+              ? "Novo médico"
+              : "Médicos"}
+        </h3>
+        <button
+          type="button"
+          className={styles.btnAdicionar}
+          onClick={() => {
+            resetFormMedico();
+            setFormMedico((prev) => ({ ...prev, isFormActive: true }));
+          }}
+        >
+          Cadastrar novo
+        </button>
+      </div>
 
-              {dropAberto && (
+      <form
+        onSubmit={async (e) => {
+          e.preventDefault();
+          const ok = await confirm({
+            title: formMedico.isEditing ? "Atualizar médico" : "Cadastrar médico",
+            message: formMedico.isEditing
+              ? "Deseja salvar as alterações deste médico?"
+              : "Deseja confirmar o cadastro deste médico?",
+            confirmText: formMedico.isEditing ? "Atualizar" : "Cadastrar",
+          });
+          if (!ok) return;
+          if (formMedico.isEditing) {
+            const res = await updateMedico(formMedico.id, formMedico);
+            if (res.success) {
+              await notify({ tipo: "sucesso", title: "Médico atualizado", message: "Dados do médico atualizados com sucesso!" });
+              reloadData();
+            } else await notify({ tipo: "erro", title: "Erro", message: "Erro ao atualizar: " + res.error });
+          } else {
+            const res = await createMedico(formMedico);
+            if (res.success) {
+              await notify({ tipo: "sucesso", title: "Médico cadastrado", message: "Médico cadastrado com sucesso!" });
+              reloadData();
+            } else await notify({ tipo: "erro", title: "Erro", message: "Erro ao salvar: " + res.error });
+          }
+          resetFormMedico();
+        }}
+        className={styles.patientFormContainer}
+      >
+        <div className={styles.formSection}>
+          <div className={styles.formSectionHeader}>
+            <h4>Dados Profissionais</h4>
+          </div>
+          <div className={styles.formGridStrict}>
+            <div
+              className={`${styles.fieldGroup} ${styles.colName}`}
+              style={{ position: "relative" }}
+              ref={dropdownRef}
+            >
+              <label>Nome completo *</label>
+              <div className={styles.inputWrapperWithIcon}>
+                <input
+                  type="text"
+                  value={formMedico.nome}
+                  placeholder={formMedico.isFormActive ? "" : "Digite nome ou CRM para buscar..."}
+                  onChange={(e) => {
+                    // Em cadastro novo/edição, edita o nome (sem buscar).
+                    // Fora disso, o campo funciona como busca de médico.
+                    if (formMedico.isFormActive) {
+                      setFormMedico({ ...formMedico, nome: e.target.value });
+                    } else {
+                      setFormMedico((prev) => ({ ...prev, nome: e.target.value }));
+                      setDropAberto(true);
+                    }
+                  }}
+                  onFocus={() => {
+                    if (!formMedico.isFormActive) setDropAberto(true);
+                  }}
+                  autoComplete="off"
+                  required
+                />
+                {!formMedico.isFormActive && (
+                  <span className={styles.selectArrow} onClick={() => setDropAberto(!dropAberto)}>
+                    {dropAberto ? "▲" : "▼"}
+                  </span>
+                )}
+              </div>
+
+              {!formMedico.isFormActive && dropAberto && (
                 <div className={styles.tableDropdownMenu}>
                   <div className={styles.tableContainerScroll}>
                     <table className={styles.medicoTableDropdown}>
@@ -152,64 +220,6 @@ export default function CadastroMedicos({
                   </div>
                 </div>
               )}
-            </div>
-
-            <button
-              type="button"
-              className={styles.btnAdicionar}
-              onClick={() => {
-                resetFormMedico();
-                setFormMedico((prev) => ({ ...prev, isFormActive: true }));
-              }}
-            >
-              + Adicionar novo
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <form
-        onSubmit={async (e) => {
-          e.preventDefault();
-          const ok = await confirm({
-            title: formMedico.isEditing ? "Atualizar médico" : "Cadastrar médico",
-            message: formMedico.isEditing
-              ? "Deseja salvar as alterações deste médico?"
-              : "Deseja confirmar o cadastro deste médico?",
-            confirmText: formMedico.isEditing ? "Atualizar" : "Cadastrar",
-          });
-          if (!ok) return;
-          if (formMedico.isEditing) {
-            const res = await updateMedico(formMedico.id, formMedico);
-            if (res.success) {
-              await notify({ tipo: "sucesso", title: "Médico atualizado", message: "Dados do médico atualizados com sucesso!" });
-              reloadData();
-            } else await notify({ tipo: "erro", title: "Erro", message: "Erro ao atualizar: " + res.error });
-          } else {
-            const res = await createMedico(formMedico);
-            if (res.success) {
-              await notify({ tipo: "sucesso", title: "Médico cadastrado", message: "Médico cadastrado com sucesso!" });
-              reloadData();
-            } else await notify({ tipo: "erro", title: "Erro", message: "Erro ao salvar: " + res.error });
-          }
-          resetFormMedico();
-        }}
-        className={styles.patientFormContainer}
-      >
-        <div className={styles.formSection}>
-          <div className={styles.formSectionHeader}>
-            <h4>Dados Profissionais</h4>
-          </div>
-          <div className={styles.formGridStrict}>
-            <div className={`${styles.fieldGroup} ${styles.colName}`}>
-              <label>Nome do Médico *</label>
-              <input
-                type="text"
-                value={formMedico.nome}
-                onChange={(e) => setFormMedico({ ...formMedico, nome: e.target.value })}
-                disabled={!formMedico.isFormActive}
-                required
-              />
             </div>
             <div className={`${styles.fieldGroup} ${styles.colCrm}`}>
               <label>CRM *</label>

@@ -7,6 +7,7 @@ import ModalConfirmacaoCCZ from "../components/Modals/ModalConfirmacaoCCZ";
 import ModalMensagemCCZ from "../components/Modals/ModalMensagemCCZ";
 import BotaoEditar from "@/components/BotaoEditar";
 import { updateTutor, deleteTutor } from "../actions";
+import { mascararTelefone as maskTel } from "@/lib/telefone";
 
 function maskCpf(v) {
   if (!v) return "";
@@ -16,18 +17,6 @@ function maskCpf(v) {
     .replace(/(\d{3})(\d)/, "$1.$2")
     .replace(/(\d{3})(\d)/, "$1.$2")
     .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
-}
-
-function maskTel(v) {
-  if (!v) return "";
-  const d = v.replace(/\D/g, "").slice(0, 11);
-  if (d.length <= 10)
-    return d
-      .replace(/(\d{2})(\d)/, "($1) $2")
-      .replace(/(\d{4})(\d{1,4})$/, "$1-$2");
-  return d
-    .replace(/(\d{2})(\d)/, "($1) $2")
-    .replace(/(\d{5})(\d{1,4})$/, "$1-$2");
 }
 
 function onlyDigits(v) {

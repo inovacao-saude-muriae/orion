@@ -317,7 +317,7 @@ export default function TabSaldoEstoque({
           </button>
 
           <button type="button" className={styles.addBtn} onClick={abrirEntrada}>
-            + Registrar nova entrada
+            Cadastrar nova entrada
           </button>
         </div>
       </div>

@@ -14,6 +14,7 @@ import CadastroPacienteJunta from "./views/CadastroPacienteJunta";
 import AtendimentoServico from "./components/AtendimentoServico";
 import AgendaServico from "./views/AgendaServico";
 import ProntuarioRelatorio from "./views/ProntuarioRelatorio";
+import { useNotify } from "@/components/ConfirmDialog";
 
 import styles from "./page.module.css";
 
@@ -30,6 +31,7 @@ const MAPA_SERVICOS = {
 
 function JuntaReguladoraPageContent() {
   const searchParams = useSearchParams();
+  const notify = useNotify();
 
   const activeTab = searchParams.get("tab") || "CADASTRO";
   const activeSubTab = searchParams.get("subTab") || "CAEE";
@@ -43,6 +45,12 @@ function JuntaReguladoraPageContent() {
   const [loadingServico, setLoadingServico] = useState(false);
   // Aba interna dentro de um serviço: recepção/atendimento ou agenda.
   const [abaServico, setAbaServico] = useState("ATENDIMENTO");
+
+  // Ao acessar ou trocar de serviço, sempre abre na Recepção/Atendimento
+  // (não mantém a Agenda do serviço anterior).
+  useEffect(() => {
+    setAbaServico("ATENDIMENTO");
+  }, [activeTab, servicoNomeFormatado]);
 
   // Busca de pacientes no banco ao selecionar/mudar de serviço
   useEffect(() => {
@@ -100,10 +108,10 @@ function JuntaReguladoraPageContent() {
   const handleCadastrarPaciente = async (formData) => {
     const res = await cadastrarPacienteJunta(formData);
     if (res.success) {
-      alert("Dados da Junta salvos com sucesso!");
+      await notify({ tipo: "sucesso", title: "Pronto", message: "Dados da Junta salvos com sucesso!" });
       recarregarPacientes();
     } else {
-      alert("Erro ao salvar paciente: " + (res.error || "Erro desconhecido"));
+      await notify({ tipo: "erro", title: "Erro", message: "Erro ao salvar paciente: " + (res.error || "Erro desconhecido") });
     }
     return res;
   };
@@ -111,22 +119,22 @@ function JuntaReguladoraPageContent() {
   const handleRegistrarAtendimento = async (atendimentoData) => {
     const res = await registrarAtendimentoServico(atendimentoData);
     if (res.success) {
-      alert("Registro de presença/atendimento gravado com sucesso!");
-      recarregarPacientes();
+      await notify({ tipo: "sucesso", title: "Pronto", message: "Registro de presença/atendimento gravado com sucesso!" });
     } else {
-      alert("Erro ao registrar atendimento: " + (res.error || "Erro desconhecido"));
+      await notify({ tipo: "erro", title: "Erro", message: "Erro ao registrar atendimento: " + (res.error || "Erro desconhecido") });
     }
+    return res;
   };
 
   const handleBuscarProntuario = async (termo) => {
     const res = await getProntuarioUnificado(termo);
     if (res && res.success) {
       if (!res.data) {
-        alert("Nenhum paciente encontrado com este Nome ou CPF.");
+        await notify({ tipo: "info", message: "Nenhum paciente encontrado com este Nome ou CPF." });
       }
       setProntuarioData(res.data);
     } else {
-      alert("Erro na busca do prontuário: " + (res.error || "Erro no banco"));
+      await notify({ tipo: "erro", title: "Erro", message: "Erro na busca do prontuário: " + (res.error || "Erro no banco") });
       setProntuarioData(null);
     }
   };
@@ -168,14 +176,9 @@ function JuntaReguladoraPageContent() {
 
           {abaServico === "AGENDA" ? (
             <AgendaServico servicoNome={servicoNomeFormatado} />
-          ) : loadingServico ? (
-            <div style={{ textAlign: "center", padding: "2rem", color: "#64748b" }}>
-              Carregando pacientes do serviço {servicoNomeFormatado}...
-            </div>
           ) : (
             <AtendimentoServico
               servicoNome={servicoNomeFormatado}
-              pacientes={pacientesServico}
               onRegistrar={handleRegistrarAtendimento}
             />
           )}

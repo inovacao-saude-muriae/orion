@@ -201,9 +201,9 @@
 .updateBtn:hover { background-color: #047857; }
 
 .btnAdicionar {
-  background-color: #059669;
-  color: #ffffff;
-  border: none;
+  background-color: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
   padding: 0.6rem 1.1rem;
   border-radius: 8px;
   font-weight: 600;
@@ -213,7 +213,7 @@
   transition: background-color 0.2s ease;
 }
 
-.btnAdicionar:hover { background-color: #047857; }
+.btnAdicionar:hover { background-color: #dbeafe; }
 
 .btnGhost {
   background-color: transparent;
@@ -281,11 +281,42 @@
 
 .selectArrow {
   position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
   right: 0.85rem;
   font-size: 0.75rem;
   color: #64748b;
   cursor: pointer;
   user-select: none;
+}
+
+.inputWrapperWithIcon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.inputWrapperWithIcon input {
+  width: 100%;
+  padding-right: 2rem;
+  box-sizing: border-box;
+}
+
+.cardHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.cardHeaderTitle {
+  font-size: 1rem;
+  font-weight: 700;
+  color: #0f172a;
+  margin: 0;
 }
 
 .tableDropdownMenu {

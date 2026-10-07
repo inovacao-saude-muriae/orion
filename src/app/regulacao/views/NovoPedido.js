@@ -112,15 +112,18 @@ export default function NovoPedido({
             <h4>1. Identificação do Paciente</h4>
           </div>
 
-          <div className={styles.searchSectionContainer}>
-            <div className={styles.fieldGroup} style={{ position: 'relative' }} ref={dropdownRef}>
-              <label>Buscar Paciente *</label>
-              
-              {/* CAMPO DE DIGITAÇÃO E SELEÇÃO UNIFICADOS */}
+          {/* DADOS DO PACIENTE — o campo "Nome completo" é também a busca */}
+          <div className={styles.formGridStrict}>
+            <div
+              className={`${styles.fieldGroup} ${styles.colName}`}
+              style={{ position: 'relative' }}
+              ref={dropdownRef}
+            >
+              <label>Nome completo *</label>
               <div className={styles.inputWrapperWithIcon}>
                 <input
                   type="text"
-                  placeholder="Selecionar ou digitar nome/CPF..."
+                  placeholder="Digite nome ou CPF para buscar..."
                   value={newRequest.patientSearch || ''}
                   onChange={(e) => {
                     setNewRequest((prev) => ({ ...prev, patientSearch: e.target.value }));
@@ -128,6 +131,7 @@ export default function NovoPedido({
                   }}
                   onFocus={() => setIsOpen(true)}
                   className={styles.selectLikeInput}
+                  autoComplete="off"
                   required
                 />
                 <span className={styles.arrowIcon} onClick={() => setIsOpen(!isOpen)}>
@@ -151,8 +155,8 @@ export default function NovoPedido({
                       <tbody>
                         {filteredPatients.length > 0 ? (
                           filteredPatients.map((pessoa) => (
-                            <tr 
-                              key={pessoa.cpf} 
+                            <tr
+                              key={pessoa.cpf}
                               onMouseDown={(e) => {
                                 e.preventDefault();
                                 handleSelectPerson(pessoa);
@@ -181,12 +185,11 @@ export default function NovoPedido({
                   </div>
                 </div>
               )}
-
+              <p className={styles.helperNote}>
+                A pessoa precisa estar cadastrada em <strong>Gerenciamento &gt; Cadastro de Pessoas</strong>.
+              </p>
             </div>
-          </div>
 
-          {/* DADOS COMPLETOS DO PACIENTE (somente leitura) */}
-          <div className={styles.formGridStrict}>
             <div className={`${styles.fieldGroup} ${styles.colMother}`}>
               <label>Nome da Mãe</label>
               <input
@@ -266,9 +269,7 @@ export default function NovoPedido({
           </div>
 
           {/* SUBTÍTULO: ENDEREÇO */}
-          <div className={styles.formSectionHeader}>
-            <h4>Endereço</h4>
-          </div>
+          <p className={styles.enderecoSubtitulo}>Endereço</p>
 
           {/* ENDEREÇO DO PACIENTE (somente leitura) */}
           <div className={styles.formGridStrict}>

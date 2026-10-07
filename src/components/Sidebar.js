@@ -1,9 +1,9 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname, useSearchParams } from "next/navigation";
+import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import styles from "./Sidebar.module.css";
 
 const menuSections = [
@@ -130,21 +130,20 @@ const menuSections = [
         ),
         subItems: [
           { name: "Cadastro de Paciente", tab: "CADASTRO" },
-          { name: "Prontuário e Relatório", tab: "RELATORIO" },
-          {
+           {
             name: "Serviços de Atendimento",
             tab: "SERVICOS",
             isNestedDropdown: true,
             nestedItems: [
               { name: "CAEE", subTab: "CAEE" },
               { name: "APAE", subTab: "APAE" },
-              { name: "Ambulatório", subTab: "AMBULATORIO" },
-              { name: "Educação", subTab: "EDUCACAO" },
-              { name: "Social", subTab: "SOCIAL" },
+              { name: "Ambulatório", subTab: "AMBULATORIO" },       
               { name: "Centro de Especialidades", subTab: "ESPECIALIDADES" },
-              { name: "Centro de Reabilitação", subTab: "REABILITACAO" },
+           
             ],
           },
+          { name: "Prontuário e Relatório", tab: "RELATORIO" },
+         
         ],
       },
     ],
@@ -216,10 +215,8 @@ const menuSections = [
             strokeLinecap="round"
             strokeLinejoin="round"
           >
-            <path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" />
-            <circle cx="9" cy="7" r="4" />
-            <path d="M19 8v6" />
-            <path d="M22 11h-6" />
+            <circle cx="12" cy="12" r="3" />
+            <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1Z" />
           </svg>
         ),
         subItems: [
@@ -264,9 +261,179 @@ const menuSections = [
   },
 ];
 
+// Ícone pequeno para itens de submenu, escolhido por palavra-chave do nome.
+function subIcon(nome = "") {
+  const n = nome.toLowerCase();
+  const props = {
+    width: 15,
+    height: 15,
+    viewBox: "0 0 24 24",
+    fill: "none",
+    stroke: "currentColor",
+    strokeWidth: 2,
+    strokeLinecap: "round",
+    strokeLinejoin: "round",
+  };
+
+  if (n.includes("dashboard") || n.includes("painel"))
+    return (
+      <svg {...props}><rect x="3" y="3" width="7" height="9" /><rect x="14" y="3" width="7" height="5" /><rect x="14" y="12" width="7" height="9" /><rect x="3" y="16" width="7" height="5" /></svg>
+    );
+  if (n.includes("novo pedido") || n.includes("cadastrar") || n.includes("cadastro") || n.includes("novo"))
+    return (
+      <svg {...props}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /><path d="M12 12v6" /><path d="M9 15h6" /></svg>
+    );
+  if (n.includes("lista de espera") || n.includes("espera") || n.includes("exibir") || n.includes("lista"))
+    return (
+      <svg {...props}><line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" /><line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" /></svg>
+    );
+  if (n.includes("liberad"))
+    return (
+      <svg {...props}><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14" /><path d="m9 11 3 3L22 4" /></svg>
+    );
+  if (n.includes("financeiro") || n.includes("relatório") || n.includes("relatorio"))
+    return (
+      <svg {...props}><path d="M3 3v18h18" /><path d="m19 9-5 5-4-4-3 3" /></svg>
+    );
+  if (n.includes("paciente") || n.includes("pessoa") || n.includes("usuário") || n.includes("usuario"))
+    return (
+      <svg {...props}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /></svg>
+    );
+  if (n.includes("prontuário") || n.includes("prontuario"))
+    return (
+      <svg {...props}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /><line x1="16" y1="13" x2="8" y2="13" /><line x1="16" y1="17" x2="8" y2="17" /></svg>
+    );
+  if (n.includes("medicamento") || n.includes("dispensa") || n.includes("farmácia") || n.includes("farmacia"))
+    return (
+      <svg {...props}><path d="m10.5 20.5 10-10a4.95 4.95 0 1 0-7-7l-10 10a4.95 4.95 0 1 0 7 7Z" /><path d="m8.5 8.5 7 7" /></svg>
+    );
+  if (n.includes("estoque"))
+    return (
+      <svg {...props}><path d="m7.5 4.27 9 5.15" /><path d="M21 8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16Z" /><path d="m3.3 7 8.7 5 8.7-5" /><path d="M12 22V12" /></svg>
+    );
+  if (n.includes("médico") || n.includes("medico"))
+    return (
+      <svg {...props}><path d="M8 2v4" /><path d="M16 2v4" /><path d="M12 11v6" /><path d="M9 14h6" /><rect x="3" y="4" width="18" height="18" rx="2" /></svg>
+    );
+  if (n.includes("ubs") || n.includes("unidade") || n.includes("saúde") || n.includes("saude"))
+    return (
+      <svg {...props}><path d="M3 9.5 12 3l9 6.5" /><path d="M5 10v10a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V10" /><path d="M12 13v4" /><path d="M10 15h4" /></svg>
+    );
+  if (n.includes("procedimento"))
+    return (
+      <svg {...props}><path d="M14.5 2 9 7.5l-7 7a2.12 2.12 0 0 0 3 3l7-7L17.5 5" /><path d="m14 7 3 3" /></svg>
+    );
+  // "Serviços de Atendimento" (Junta): grade de serviços oferecidos (CAEE, APAE, Ambulatório...).
+  if (n.includes("serviços de atendimento") || n.includes("servicos de atendimento"))
+    return (
+      <svg {...props}><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></svg>
+    );
+  // "Serviços e Especialidades" (Gerenciamento): mesma grade de serviços.
+  // "Centro de Especialidades" usa o ponto genérico.
+  if (n.includes("serviços e especialidades") || n.includes("servicos e especialidades"))
+    return (
+      <svg {...props}><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></svg>
+    );
+  if (n.includes("animal") || n.includes("animais") || n.includes("zoonose") || n.includes("esporotricose"))
+    return (
+      <svg {...props}><circle cx="11" cy="4" r="2" /><circle cx="18" cy="8" r="2" /><circle cx="20" cy="16" r="2" /><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z" /></svg>
+    );
+  if (n.includes("denúncia") || n.includes("denuncia"))
+    return (
+      <svg {...props}><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
+    );
+  if (n.includes("processo"))
+    return (
+      <svg {...props}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg>
+    );
+  // Padrão genérico (ponto).
+  return (
+    <svg {...props}><circle cx="12" cy="12" r="4" /></svg>
+  );
+}
+
+// Roles que podem VER cada módulo no menu (espelha o middleware).
+// GESTOR vê tudo (tratado à parte).
+const VISIBILIDADE_MODULO = {
+  "/regulacao": ["REGULACAO_ADMIN", "REGULACAO_COMUM"],
+  "/camara-tecnica": ["FARMACIA_ADMIN", "PROCESSO_ADMIN"],
+  "/junta-reguladora": [
+    "JUNTA_ADMIN",
+    "JUNTA_CAEE",
+    "JUNTA_EDUCACAO",
+    "JUNTA_SAUDE",
+    "JUNTA_ASSISTENCIA",
+  ],
+  "/ccz": ["CCZ_ADMIN"],
+  "/admin/gerenciamento": [
+    "REGULACAO_ADMIN",
+    "JUNTA_ADMIN",
+    "FARMACIA_ADMIN",
+    "PROCESSO_ADMIN",
+    "CCZ_ADMIN",
+  ],
+};
+
+// Roles que podem ver cada sub-item específico (quando mais restrito que o módulo).
+// Se não listado aqui, herda a visibilidade do módulo.
+const VISIBILIDADE_SUBITEM = {
+  // Câmara Técnica: cada admin vê só o seu
+  FARMACIA_JUDICIAL: ["FARMACIA_ADMIN"],
+  PROCESSOS: ["PROCESSO_ADMIN"],
+  // Regulação: Financeiro só admin
+  FINANCEIRO: ["REGULACAO_ADMIN"],
+  // Gerenciamento: itens com acesso restrito
+  MEDICOS: ["REGULACAO_ADMIN"],
+  UBS: ["REGULACAO_ADMIN"],
+  PROCEDIMENTOS: ["REGULACAO_ADMIN"],
+  SERVICOS: ["REGULACAO_ADMIN"],
+  USUARIOS: [], // só GESTOR
+};
+
 function MenuContent() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
+  const router = useRouter();
+  const [userRole, setUserRole] = useState(null);
+
+  useEffect(() => {
+    let ativo = true;
+    (async () => {
+      try {
+        const res = await fetch("/api/me");
+        if (!res.ok) return;
+        const data = await res.json();
+        if (ativo) setUserRole(data?.user?.role || null);
+      } catch {
+        /* silencioso */
+      }
+    })();
+    return () => {
+      ativo = false;
+    };
+  }, []);
+
+  const carregandoRole = userRole === null;
+  const isGestor = userRole === "GESTOR";
+
+  // Pode ver o módulo (path raiz)?
+  const podeVerModulo = (path) => {
+    const roles = VISIBILIDADE_MODULO[path];
+    if (!roles) return true; // módulos sem restrição (ex.: Início)
+    // Enquanto a role carrega, oculta módulos restritos para não "piscar".
+    if (carregandoRole) return false;
+    if (isGestor) return true;
+    return roles.includes(userRole);
+  };
+
+  // Pode ver um sub-item específico?
+  const podeVerSubItem = (sub) => {
+    const roles = VISIBILIDADE_SUBITEM[sub.tab];
+    if (!roles) return true; // herda do módulo
+    if (carregandoRole) return false;
+    if (isGestor) return true;
+    return roles.includes(userRole);
+  };
   const currentTab = searchParams.get("tab") || "DASHBOARD";
   const currentSubTab = searchParams.get("subTab") || "";
 
@@ -274,12 +441,42 @@ function MenuContent() {
   const [openNested, setOpenNested] = useState({});
   const [searchTerm, setSearchTerm] = useState("");
 
-  const toggleGroup = (path) => {
-    setOpenGroup((prev) => ({ ...prev, [path]: !prev[path] }));
+  // Monta a URL da primeira aba (padrão) de um módulo, para "resetar" a posição
+  // ao reabrir o módulo em vez de ficar na última aba acessada.
+  const urlAbaInicial = (item) => {
+    const primeiro = item.subItems?.[0];
+    if (!primeiro) return item.path;
+    // Link já pronto (ex.: Gerenciamento usa path próprio por item).
+    if (primeiro.path) return primeiro.path;
+    // Caso padrão: path do módulo + tab do primeiro sub-item.
+    return `${item.path}?tab=${primeiro.tab}`;
   };
 
-  const toggleNested = (tabKey) => {
+  const toggleGroup = (item) => {
+    const path = item.path;
+    const vaiAbrir = !openGroup[path];
+    setOpenGroup((prev) => ({ ...prev, [path]: !prev[path] }));
+    // Ao abrir o módulo, navega para a aba inicial (zera a posição anterior).
+    // Exceção: se o primeiro item for um subgrupo (nestedDropdown), não navega —
+    // apenas expande o menu (ex.: Câmara Técnica só mostra conteúdo ao clicar
+    // em Farmácia Judicial).
+    if (vaiAbrir && !item.subItems?.[0]?.isNestedDropdown) {
+      router.push(urlAbaInicial(item));
+    }
+  };
+
+  const toggleNested = (sub, itemPath) => {
+    const tabKey = sub.tab;
+    const vaiAbrir = !openNested[tabKey];
     setOpenNested((prev) => ({ ...prev, [tabKey]: !prev[tabKey] }));
+    // Ao abrir o subgrupo, navega para o primeiro item dele (zera a posição).
+    if (vaiAbrir) {
+      const base = sub.path || itemPath;
+      const primeiro = sub.nestedItems?.[0];
+      if (primeiro) {
+        router.push(`${base}?tab=${sub.tab}&subTab=${primeiro.subTab}`);
+      }
+    }
   };
 
   return (
@@ -302,20 +499,23 @@ function MenuContent() {
       {/* LISTA NAVEGÁVEL */}
       <nav className={styles.menuContentList}>
         {menuSections.map((section, sIdx) => {
-          const filteredItems = section.items.filter((item) => {
-            if (!searchTerm) return true;
-            const matchMain = item.name
-              .toLowerCase()
-              .includes(searchTerm.toLowerCase());
-            const matchSub = item.subItems?.some(
-              (sub) =>
-                sub.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                sub.nestedItems?.some((nested) =>
-                  nested.name.toLowerCase().includes(searchTerm.toLowerCase()),
-                ),
-            );
-            return matchMain || matchSub;
-          });
+          const filteredItems = section.items
+            // Filtra por permissão (role) — oculta módulos que o usuário não acessa.
+            .filter((item) => podeVerModulo(item.path))
+            .filter((item) => {
+              if (!searchTerm) return true;
+              const matchMain = item.name
+                .toLowerCase()
+                .includes(searchTerm.toLowerCase());
+              const matchSub = item.subItems?.some(
+                (sub) =>
+                  sub.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                  sub.nestedItems?.some((nested) =>
+                    nested.name.toLowerCase().includes(searchTerm.toLowerCase()),
+                  ),
+              );
+              return matchMain || matchSub;
+            });
 
           if (filteredItems.length === 0) return null;
 
@@ -326,12 +526,20 @@ function MenuContent() {
                   Boolean(openGroup[item.path]) || Boolean(searchTerm);
 
                 if (item.isDropdown) {
+                  // Sub-itens visíveis conforme a permissão do usuário.
+                  const subItemsVisiveis = (item.subItems || []).filter(
+                    podeVerSubItem,
+                  );
+                  // Se o módulo não tem nenhum sub-item visível, não renderiza.
+                  if (subItemsVisiveis.length === 0) return null;
+
                   return (
                     <div key={item.path}>
                       <button
                         type="button"
                         className={styles.menuItemBtn}
-                        onClick={() => toggleGroup(item.path)}
+                        data-state={isDropdownOpen ? "open" : "closed"}
+                        onClick={() => toggleGroup(item)}
                         title={item.name}
                       >
                         <span className={styles.itemIcon}>{item.icon}</span>
@@ -353,7 +561,7 @@ function MenuContent() {
 
                       {isDropdownOpen && (
                         <ul className={styles.subMenuList}>
-                          {item.subItems.map((sub) => {
+                          {subItemsVisiveis.map((sub) => {
                             if (sub.isNestedDropdown) {
                               const isNestedOpen =
                                 Boolean(openNested[sub.tab]) ||
@@ -363,10 +571,13 @@ function MenuContent() {
                                 <li key={sub.tab}>
                                   <button
                                     type="button"
-                                    className={styles.nestedBtn}
-                                    onClick={() => toggleNested(sub.tab)}
+                                    className={`${styles.nestedBtn} ${isNestedOpen ? styles.nestedBtnOpen : ""}`}
+                                    onClick={() => toggleNested(sub, item.path)}
                                   >
-                                    <span>{sub.name}</span>
+                                    <span className={styles.subItemContent}>
+                                      <span className={styles.subItemIcon}>{subIcon(sub.name)}</span>
+                                      {sub.name}
+                                    </span>
                                     <svg
                                       className={`${styles.arrowIcon} ${isNestedOpen ? styles.arrowOpen : ""}`}
                                       width="12"
@@ -402,7 +613,10 @@ function MenuContent() {
                                                   : ""
                                               }`}
                                             >
-                                              {nested.name}
+                                              <span className={styles.subItemContent}>
+                                                <span className={styles.subItemIcon}>{subIcon(nested.name)}</span>
+                                                {nested.name}
+                                              </span>
                                             </Link>
                                           </li>
                                         );
@@ -431,7 +645,10 @@ function MenuContent() {
                                     isSubActive ? styles.activeLink : ""
                                   }`}
                                 >
-                                  {sub.name}
+                                  <span className={styles.subItemContent}>
+                                    <span className={styles.subItemIcon}>{subIcon(sub.name)}</span>
+                                    {sub.name}
+                                  </span>
                                 </Link>
                               </li>
                             );

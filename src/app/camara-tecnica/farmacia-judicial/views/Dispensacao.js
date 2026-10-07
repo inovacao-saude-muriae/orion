@@ -382,7 +382,7 @@ export default function TabDispensacao({
               onClick={handleAddItem}
               className={styles.addBtn}
             >
-              + Adicionar Item
+              Adicionar Medicamento
             </button>
           </div>
         </div>

@@ -8,6 +8,36 @@
 
 export const soDigitos = (valor) => (valor ? String(valor).replace(/\D/g, "") : "");
 
+/**
+ * Valida um CPF conferindo os dígitos verificadores.
+ * Aceita o valor formatado ou só os dígitos.
+ * @returns {boolean} true se o CPF for válido.
+ */
+export function validarCpf(valor) {
+  const cpf = soDigitos(valor);
+  if (cpf.length !== 11) return false;
+  // Rejeita sequências com todos os dígitos iguais (ex.: 111.111.111-11).
+  if (/^(\d)\1{10}$/.test(cpf)) return false;
+
+  const calcDigito = (base) => {
+    let soma = 0;
+    const peso = base.length + 1;
+    for (let i = 0; i < base.length; i++) {
+      soma += Number(base[i]) * (peso - i);
+    }
+    const resto = (soma * 10) % 11;
+    return resto === 10 ? 0 : resto;
+  };
+
+  const dig1 = calcDigito(cpf.slice(0, 9));
+  if (dig1 !== Number(cpf[9])) return false;
+
+  const dig2 = calcDigito(cpf.slice(0, 10));
+  if (dig2 !== Number(cpf[10])) return false;
+
+  return true;
+}
+
 // Converte "YYYY-MM-DD" (ou Date) para Date em UTC. Lança erro se ausente.
 function paraData(valor) {
   if (!valor) return null;

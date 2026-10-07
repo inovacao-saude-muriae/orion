@@ -245,3 +245,46 @@
   opacity: 0.6;
   cursor: not-allowed;
 }
+
+/* Linha já registrada */
+.rowRegistrado td {
+  background-color: #f0fdf4;
+}
+
+.statusSelect:disabled,
+.obsInput:disabled {
+  background-color: #f1f5f9;
+  color: #64748b;
+  cursor: not-allowed;
+}
+
+.acoesCell {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  white-space: nowrap;
+}
+
+.registradoTag {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: #15803d;
+}
+
+.editarBtn {
+  background-color: #ffffff;
+  color: #2563eb;
+  border: 1px solid #93c5fd;
+  padding: 0.4rem 0.8rem;
+  border-radius: 7px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.editarBtn:hover {
+  background-color: #2563eb;
+  color: #ffffff;
+}

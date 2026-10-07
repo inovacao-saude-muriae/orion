@@ -96,7 +96,8 @@ export default function CadastroPacienteJunta({ onCadastrar }) {
 
   const handleSelectPessoa = (p) => {
     setPessoa(p);
-    setSearchTerm(`${p.nomeCompleto || p.nome} (${formatCPF(p.cpf)})`);
+    // O campo "Nome completo" é também a busca: mantém só o nome no texto.
+    setSearchTerm(p.nomeCompleto || p.nome || '');
     setShowDropdown(false);
     // Pré-carrega dados de Junta já existentes, se vierem na busca.
     const existentes = (p.tipoDeficiencia || '')
@@ -161,82 +162,77 @@ export default function CadastroPacienteJunta({ onCadastrar }) {
             <h4>1. Identificação do Paciente</h4>
           </div>
 
-          <div className={styles.searchFieldWrapper}>
-            <label className={styles.searchLabel}>Buscar Paciente *</label>
-
-          <div className={styles.searchBarRow}>
-            <div className={styles.searchSelectWrapper} ref={dropdownRef}>
+        {/* DADOS PESSOAIS — o campo "Nome completo" é também a busca */}
+        <div className={styles.dataGrid}>
+          <div
+            className={`${styles.field} ${styles.colName}`}
+            style={{ position: 'relative' }}
+            ref={dropdownRef}
+          >
+            <label>Nome completo *</label>
+            <div className={styles.inputWrapperWithIcon}>
               <input
                 type="text"
                 className={styles.selectLikeInput}
-                placeholder="Selecionar ou digitar nome/CPF..."
+                placeholder="Digite nome ou CPF para buscar..."
                 value={searchTerm}
                 onChange={(e) => handleInputChange(e.target.value)}
                 onFocus={() => setShowDropdown(true)}
+                autoComplete="off"
               />
               <span className={styles.arrowIcon} onClick={() => setShowDropdown(!showDropdown)}>
                 {showDropdown ? '▲' : '▼'}
               </span>
-
-              {showDropdown && (
-                <div className={styles.tableDropdownMenu}>
-                  <div className={styles.tableContainerScroll}>
-                    <table className={styles.patientTableDropdown}>
-                      <thead>
-                        <tr>
-                          <th>CPF / CNS</th>
-                          <th>Usuário</th>
-                          <th>Nome da mãe</th>
-                          <th>Data nasc.</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {searchResults.length > 0 ? (
-                          searchResults.map((p, index) => (
-                            <tr
-                              key={p.cpf ? `${p.cpf}-${index}` : index}
-                              onMouseDown={(e) => {
-                                e.preventDefault();
-                                handleSelectPessoa(p);
-                              }}
-                              className={pessoa?.cpf === p.cpf ? styles.selectedRow : ''}
-                            >
-                              <td>{documentoPaciente({ cpf: p.cpf, cns: p.cns })}</td>
-                              <td className={styles.boldName}>{p.nomeCompleto || p.nome}</td>
-                              <td>{p.nomeMae || 'Não informada'}</td>
-                              <td>
-                                {p.dataNascimento
-                                  ? p.dataNascimento.split('-').reverse().join('/')
-                                  : '-'}
-                              </td>
-                            </tr>
-                          ))
-                        ) : (
-                          <tr>
-                            <td colSpan="4" className={styles.noDataTd}>
-                              {isSearching ? 'Consultando banco de dados...' : 'Nenhuma pessoa encontrada.'}
-                            </td>
-                          </tr>
-                        )}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              )}
             </div>
 
-          </div>
-
+            {showDropdown && (
+              <div className={styles.tableDropdownMenu}>
+                <div className={styles.tableContainerScroll}>
+                  <table className={styles.patientTableDropdown}>
+                    <thead>
+                      <tr>
+                        <th>CPF / CNS</th>
+                        <th>Usuário</th>
+                        <th>Nome da mãe</th>
+                        <th>Data nasc.</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {searchResults.length > 0 ? (
+                        searchResults.map((p, index) => (
+                          <tr
+                            key={p.cpf ? `${p.cpf}-${index}` : index}
+                            onMouseDown={(e) => {
+                              e.preventDefault();
+                              handleSelectPessoa(p);
+                            }}
+                            className={pessoa?.cpf === p.cpf ? styles.selectedRow : ''}
+                          >
+                            <td>{documentoPaciente({ cpf: p.cpf, cns: p.cns })}</td>
+                            <td className={styles.boldName}>{p.nomeCompleto || p.nome}</td>
+                            <td>{p.nomeMae || 'Não informada'}</td>
+                            <td>
+                              {p.dataNascimento
+                                ? p.dataNascimento.split('-').reverse().join('/')
+                                : '-'}
+                            </td>
+                          </tr>
+                        ))
+                      ) : (
+                        <tr>
+                          <td colSpan="4" className={styles.noDataTd}>
+                            {isSearching ? 'Consultando banco de dados...' : 'Nenhuma pessoa encontrada.'}
+                          </td>
+                        </tr>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
             <p className={styles.helperNote}>
               A pessoa precisa estar cadastrada em <strong>Gerenciamento &gt; Cadastro de Pessoas</strong>.
             </p>
-          </div>
-
-        {/* DADOS PESSOAIS (somente leitura) */}
-        <div className={styles.dataGrid}>
-          <div className={`${styles.field} ${styles.colName}`}>
-            <label>Nome completo</label>
-            <input type="text" value={pessoa?.nomeCompleto || pessoa?.nome || ''} disabled readOnly placeholder="—" />
           </div>
           <div className={`${styles.field} ${styles.colMother}`}>
             <label>Nome da mãe</label>
@@ -275,12 +271,10 @@ export default function CadastroPacienteJunta({ onCadastrar }) {
         </div>
 
         {/* SUBTÍTULO: ENDEREÇO */}
-        <div className={styles.identHeader}>
-          <h4>Endereço</h4>
-        </div>
+        <p className={styles.enderecoSubtitulo}>Endereço</p>
 
         {/* ENDEREÇO (somente leitura) */}
-        <div className={styles.dataGrid} style={{ marginTop: '0.75rem' }}>
+        <div className={styles.dataGrid}>
           <div className={`${styles.field} ${styles.colCep}`}>
             <label>CEP</label>
             <input type="text" value={pessoa?.cep || ''} disabled readOnly placeholder="00000-000" />

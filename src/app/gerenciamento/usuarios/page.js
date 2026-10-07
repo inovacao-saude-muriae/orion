@@ -3,6 +3,7 @@
 import { useState } from 'react';
 import styles from './AdminUsuarios.module.css';
 import { useConfirm } from '@/components/ConfirmDialog';
+import { mascararTelefone } from '@/lib/telefone';
 
 export default function AdminUsuariosPage() {
   const confirm = useConfirm();
@@ -220,8 +221,8 @@ export default function AdminUsuariosPage() {
             <input
               type="text"
               disabled={pessoaExiste}
-              value={telefone}
-              onChange={(e) => setTelefone(e.target.value)}
+              value={mascararTelefone(telefone)}
+              onChange={(e) => setTelefone(mascararTelefone(e.target.value))}
               placeholder="(00) 00000-0000"
               className={`${styles.input} ${pessoaExiste ? styles.inputDisabled : ''}`}
               autoComplete="off"
