@@ -49,6 +49,7 @@ export async function GET() {
         select: {
           pessoaCpf: true,
           numeroPasta: true,
+          numeroProcesso: true,
           status: true,
           createdAt: true,
           tratamentos: {
@@ -81,7 +82,11 @@ export async function GET() {
           createdAt: true,
           tipoDeficiencia: true,
           servicos: {
-            select: { servico: { select: { nome: true } }, dataVinculo: true },
+            select: {
+              servico: { select: { nome: true } },
+              dataVinculo: true,
+              ativo: true,
+            },
           },
           atendimentos: {
             select: {
@@ -134,18 +139,22 @@ export async function GET() {
       eventosPorCpf.get(cpf).push({ id: evento.id, ...evento });
     };
 
-    pedidos.forEach((pedido) =>
+    pedidos.forEach((pedido) => {
+      // Relatório considera apenas exames aguardando ou liberados/agendados.
+      if (pedido.status !== "Aguardando" && pedido.status !== "Liberado") {
+        return;
+      }
+      const exame = `${pedido.procedimento?.tipoExame?.nome || "Exame"} - ${pedido.procedimento?.nome || "Procedimento"}`;
+      const liberado = pedido.status === "Liberado";
       adicionarEvento(pedido.pessoaCpf, {
         id: `regulacao-${pedido.id}`,
         modulo: "Regulação",
-        tipo:
-          pedido.status === "Liberado" ? "Exame liberado" : "Exame aguardando",
-        descricao: `${pedido.procedimento?.tipoExame?.nome || "Exame"} - ${pedido.procedimento?.nome || "Procedimento"} (${pedido.status})`,
+        tipo: liberado ? "Exame liberado" : "Exame aguardando",
+        descricao: exame,
         status: pedido.status,
-        dataLiberacao: pedido.dataLiberacao,
-        data: pedido.dataSolicitacao,
-      }),
-    );
+        data: liberado ? pedido.dataLiberacao : pedido.dataSolicitacao,
+      });
+    });
 
     pacientesFarmacia.forEach((paciente) => {
       adicionarEvento(paciente.pessoaCpf, {
@@ -184,15 +193,17 @@ export async function GET() {
         descricao: paciente.tipoDeficiencia || "Paciente cadastrado",
         data: paciente.createdAt,
       });
-      paciente.servicos.forEach((vinculo) =>
+      paciente.servicos.forEach((vinculo) => {
+        // Default do schema é true; null/undefined é tratado como ativo.
+        const ativo = vinculo.ativo === false ? false : true;
         adicionarEvento(paciente.pessoaCpf, {
           id: `junta-servico-${paciente.pessoaCpf}-${vinculo.servico?.nome}`,
           modulo: "Junta Reguladora",
           tipo: "Serviço vinculado",
-          descricao: vinculo.servico?.nome || "Serviço",
+          descricao: `${vinculo.servico?.nome || "Serviço"} (${ativo ? "Ativo" : "Inativo"})`,
           data: vinculo.dataVinculo,
-        }),
-      );
+        });
+      });
       paciente.atendimentos.forEach((atendimento) =>
         adicionarEvento(paciente.pessoaCpf, {
           id: `junta-atendimento-${atendimento.id}`,
@@ -289,35 +300,57 @@ export async function GET() {
         totalAtividades: atividades.length,
         modulos,
         resumo: {
-          regulacao: {
-            total: pedidosDaPessoa.length,
-            aguardando: pedidosDaPessoa.filter(
-              (item) => item.status === "Aguardando",
-            ).length,
-            liberados: pedidosDaPessoa.filter(
-              (item) => item.status === "Liberado",
-            ).length,
-          },
+          regulacao: (() => {
+            const mapearExame = (item) =>
+              `${item.procedimento?.tipoExame?.nome || "Exame"} - ${item.procedimento?.nome || "Procedimento"}`;
+            const aguardando = pedidosDaPessoa
+              .filter((item) => item.status === "Aguardando")
+              .map((item) => ({
+                exame: mapearExame(item),
+                data: item.dataSolicitacao,
+              }));
+            const liberados = pedidosDaPessoa
+              .filter((item) => item.status === "Liberado")
+              .map((item) => ({
+                exame: mapearExame(item),
+                data: item.dataLiberacao,
+              }));
+            return {
+              total: aguardando.length + liberados.length,
+              totalAguardando: aguardando.length,
+              totalLiberados: liberados.length,
+              aguardando,
+              liberados,
+            };
+          })(),
           farmacia: farmaciaDaPessoa
             ? {
                 status: farmaciaDaPessoa.status,
                 pasta: farmaciaDaPessoa.numeroPasta,
-                medicamentos: farmaciaDaPessoa.tratamentos
-                  .filter((item) => item.ativo)
-                  .map(
-                    (item) =>
-                      `${item.medicamento?.nome || "Medicamento"} (${item.qtdPrescritaMensal}/mês)`,
-                  ),
+                numeroProcesso: farmaciaDaPessoa.numeroProcesso,
+                medicamentos: farmaciaDaPessoa.tratamentos.map((item) => ({
+                  nome: item.medicamento?.nome || "Medicamento",
+                  dosagem: item.medicamento?.dosagem || "",
+                  qtdPrescritaMensal: item.qtdPrescritaMensal,
+                  ativo: item.ativo,
+                })),
                 dispensacoes: farmaciaDaPessoa.dispensacoes.length,
               }
             : null,
           junta: juntaDaPessoa
-            ? {
-                servicos: juntaDaPessoa.servicos
-                  .map((item) => item.servico?.nome)
-                  .filter(Boolean),
-                atendimentos: juntaDaPessoa.atendimentos.length,
-              }
+            ? (() => {
+                const servicos = juntaDaPessoa.servicos.map((item) => ({
+                  nome: item.servico?.nome || "Serviço",
+                  ativo: item.ativo === false ? false : true,
+                  dataVinculo: item.dataVinculo,
+                }));
+                return {
+                  servicos,
+                  totalServicos: servicos.length,
+                  ativos: servicos.filter((s) => s.ativo).length,
+                  atendimentos: juntaDaPessoa.atendimentos.length,
+                };
+              })()
             : null,
           ccz: animaisDaPessoa.length
             ? {

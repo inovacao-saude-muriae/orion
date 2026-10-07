@@ -209,18 +209,23 @@ export default function RelatoriosGeraisPage() {
     const linhasResumo = [];
     const reg = resumo.regulacao;
     if (reg) {
+      const qtdAguardando = reg.aguardando?.length || 0;
+      const qtdLiberados = reg.liberados?.length || 0;
       linhasResumo.push(
-        `Regulação: ${reg.total || 0} exame(s) · ${reg.aguardando || 0} aguardando · ${reg.liberados || 0} liberado(s)`,
+        `Regulação: ${qtdAguardando} aguardando · ${qtdLiberados} agendado(s)/liberado(s)`,
       );
     }
     if (resumo.farmacia) {
       linhasResumo.push(
-        `Farmácia Judicial: ${resumo.farmacia.medicamentos?.length || 0} medicamento(s) ativo(s) · ${resumo.farmacia.dispensacoes || 0} dispensação(ões) · Pasta ${resumo.farmacia.pasta} · status ${resumo.farmacia.status}`,
+        `Farmácia Judicial: Processo ${resumo.farmacia.numeroProcesso || "—"} · ${resumo.farmacia.medicamentos?.length || 0} medicamento(s) vinculado(s) · status ${resumo.farmacia.status}`,
       );
     }
     if (resumo.junta) {
+      const totalServicos = resumo.junta.servicos?.length || 0;
+      const ativos =
+        resumo.junta.servicos?.filter((s) => s.ativo).length || 0;
       linhasResumo.push(
-        `Junta Reguladora: ${resumo.junta.servicos?.length || 0} serviço(s) · ${resumo.junta.atendimentos || 0} atendimento(s)`,
+        `Junta Reguladora: ${totalServicos} serviço(s) · ${ativos} ativo(s)`,
       );
     }
     if (resumo.ccz) {
@@ -242,49 +247,179 @@ export default function RelatoriosGeraisPage() {
     }
     currentY += 3;
 
-    // ── Uma tabela por módulo ──
-    ORDEM_MODULOS.forEach((modulo) => {
-      const doModulo = atividades.filter((a) => a.modulo === modulo);
-      if (doModulo.length === 0) return;
-
-      if (currentY + 20 > 282) {
+    // ── Helpers de layout para as tabelas do PDF ──
+    const garantirEspaco = (altura = 20) => {
+      if (currentY + altura > 282) {
         doc.addPage();
         currentY = 20;
       }
+    };
 
+    const estiloTabela = {
+      styles: { fontSize: 8, cellPadding: 2.3, textColor: [30, 41, 59] },
+      headStyles: {
+        fillColor: [37, 99, 235],
+        textColor: 255,
+        fontStyle: "bold",
+        fontSize: 8.5,
+      },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      margin: { left: margemX, right: margemX },
+    };
+
+    const tituloModulo = (texto) => {
+      garantirEspaco();
       doc.setFont("helvetica", "bold");
       doc.setFontSize(10);
       doc.setTextColor(37, 99, 235);
-      doc.text(modulo, margemX, currentY);
+      doc.text(texto, margemX, currentY);
       currentY += 2;
+    };
 
+    const subtitulo = (texto) => {
+      garantirEspaco();
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(8.5);
+      doc.setTextColor(71, 85, 105);
+      doc.text(texto, margemX, currentY);
+      currentY += 1.5;
+    };
+
+    const linhaTexto = (texto) => {
+      garantirEspaco(10);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(71, 85, 105);
+      const linhasTxt = doc.splitTextToSize(texto, larguraUtil);
+      doc.text(linhasTxt, margemX, currentY);
+      currentY += linhasTxt.length * 4.6 + 2;
+    };
+
+    const renderTabela = (head, body, columnStyles) => {
       autoTable(doc, {
         startY: currentY + 1,
-        head: [["Data", "Tipo", "Descrição", "Status"]],
-        body: doModulo.map((a) => [
+        head: [head],
+        body,
+        ...estiloTabela,
+        columnStyles,
+      });
+      currentY = doc.lastAutoTable.finalY + 8;
+    };
+
+    // ── Tabelas dedicadas por módulo ──
+    ORDEM_MODULOS.forEach((modulo) => {
+      if (modulo === "Regulação") {
+        const reg = resumo.regulacao;
+        const aguardando = reg?.aguardando || [];
+        const liberados = reg?.liberados || [];
+        if (aguardando.length === 0 && liberados.length === 0) return;
+
+        tituloModulo("Regulação");
+
+        if (aguardando.length > 0) {
+          subtitulo("Aguardando");
+          renderTabela(
+            ["Exame", "Data de solicitação"],
+            aguardando.map((item) => [
+              item.exame || "—",
+              formatarData(item.data),
+            ]),
+            { 0: { cellWidth: "auto" }, 1: { cellWidth: 40 } },
+          );
+        }
+
+        if (liberados.length > 0) {
+          subtitulo("Agendados/Liberados");
+          renderTabela(
+            ["Exame", "Data de liberação"],
+            liberados.map((item) => [
+              item.exame || "—",
+              formatarData(item.data),
+            ]),
+            { 0: { cellWidth: "auto" }, 1: { cellWidth: 40 } },
+          );
+        }
+        return;
+      }
+
+      if (modulo === "Farmácia Judicial") {
+        const farmacia = resumo.farmacia;
+        if (!farmacia) return;
+
+        tituloModulo("Farmácia Judicial");
+        linhaTexto(`Número do processo: ${farmacia.numeroProcesso || "—"}`);
+
+        const medicamentos = farmacia.medicamentos || [];
+        subtitulo("Medicamentos vinculados");
+        if (medicamentos.length === 0) {
+          linhaTexto("—");
+        } else {
+          renderTabela(
+            ["Medicamento", "Dosagem", "Qtd/mês", "Situação"],
+            medicamentos.map((item) => [
+              item.nome || "—",
+              item.dosagem || "—",
+              item.qtdPrescritaMensal ?? "—",
+              item.ativo ? "Ativo" : "Inativo",
+            ]),
+            {
+              0: { cellWidth: "auto" },
+              1: { cellWidth: 32 },
+              2: { cellWidth: 22 },
+              3: { cellWidth: 24 },
+            },
+          );
+        }
+        return;
+      }
+
+      if (modulo === "Junta Reguladora") {
+        const junta = resumo.junta;
+        const servicos = junta?.servicos || [];
+        if (!junta) return;
+
+        tituloModulo("Junta Reguladora");
+        subtitulo("Serviços vinculados");
+        if (servicos.length === 0) {
+          linhaTexto("—");
+        } else {
+          renderTabela(
+            ["Serviço", "Situação", "Data de vínculo"],
+            servicos.map((item) => [
+              item.nome || "—",
+              item.ativo ? "Ativo" : "Inativo",
+              formatarData(item.dataVinculo),
+            ]),
+            {
+              0: { cellWidth: "auto" },
+              1: { cellWidth: 28 },
+              2: { cellWidth: 36 },
+            },
+          );
+        }
+        return;
+      }
+
+      // CCZ (e demais módulos): tabela genérica a partir das atividades.
+      const doModulo = atividades.filter((a) => a.modulo === modulo);
+      if (doModulo.length === 0) return;
+
+      tituloModulo(modulo);
+      renderTabela(
+        ["Data", "Tipo", "Descrição", "Status"],
+        doModulo.map((a) => [
           formatarData(a.data),
           a.tipo || "—",
           a.descricao || "—",
           a.status || "—",
         ]),
-        styles: { fontSize: 8, cellPadding: 2.3, textColor: [30, 41, 59] },
-        headStyles: {
-          fillColor: [37, 99, 235],
-          textColor: 255,
-          fontStyle: "bold",
-          fontSize: 8.5,
-        },
-        alternateRowStyles: { fillColor: [248, 250, 252] },
-        margin: { left: margemX, right: margemX },
-        columnStyles: {
+        {
           0: { cellWidth: 24 },
           1: { cellWidth: 38 },
           2: { cellWidth: "auto" },
           3: { cellWidth: 28 },
         },
-      });
-
-      currentY = doc.lastAutoTable.finalY + 8;
+      );
     });
 
     // Rodapé em todas as páginas.
@@ -480,27 +615,26 @@ export default function RelatoriosGeraisPage() {
               <div className={styles.systemCard}>
                 <strong>Regulação</strong>
                 <span>
-                  {resumo.regulacao?.total || 0} exame(s) solicitado(s)
+                  {(resumo.regulacao?.aguardando?.length || 0) +
+                    (resumo.regulacao?.liberados?.length || 0)}{" "}
+                  exame(s)
                 </span>
                 <small>
-                  {resumo.regulacao?.aguardando || 0} aguardando ·{" "}
-                  {resumo.regulacao?.liberados || 0} liberado(s)
+                  {resumo.regulacao?.aguardando?.length || 0} aguardando ·{" "}
+                  {resumo.regulacao?.liberados?.length || 0} agendados/liberados
                 </small>
               </div>
               <div className={styles.systemCard}>
                 <strong>Farmácia Judicial</strong>
                 <span>
                   {resumo.farmacia?.medicamentos?.length || 0} medicamento(s)
-                  ativo(s)
+                  vinculado(s)
                 </span>
                 <small>
                   {resumo.farmacia
-                    ? `${resumo.farmacia.dispensacoes} dispensação(ões) · Pasta ${resumo.farmacia.pasta} · ${resumo.farmacia.status}`
+                    ? `Processo ${resumo.farmacia.numeroProcesso || "—"} · ${resumo.farmacia.status}`
                     : "Sem cadastro judicial"}
                 </small>
-                {resumo.farmacia?.medicamentos?.length > 0 && (
-                  <small>{resumo.farmacia.medicamentos.join(" · ")}</small>
-                )}
               </div>
               <div className={styles.systemCard}>
                 <strong>Junta Reguladora</strong>
@@ -509,7 +643,7 @@ export default function RelatoriosGeraisPage() {
                 </span>
                 <small>
                   {resumo.junta
-                    ? `${resumo.junta.atendimentos || 0} atendimento(s) registrado(s)`
+                    ? `${resumo.junta.servicos?.filter((s) => s.ativo).length || 0} ativo(s)`
                     : "Sem cadastro na Junta"}
                 </small>
               </div>
