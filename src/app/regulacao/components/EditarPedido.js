@@ -131,21 +131,21 @@ export default function EditarPedido({
               />
             </div>
 
-            <div className={`${styles.fieldGroup} ${styles.colCpf}`}>
-              <label>CPF</label>
-              <input
-                type="text"
-                value={editingItem.cpf || ""}
-                disabled
-                readOnly
-              />
-            </div>
-
             <div className={`${styles.fieldGroup} ${styles.colMother}`}>
               <label>Nome da Mãe</label>
               <input
                 type="text"
                 value={editingItem.motherName || "Não informada"}
+                disabled
+                readOnly
+              />
+            </div>
+
+            <div className={`${styles.fieldGroup} ${styles.colCpf}`}>
+              <label>CPF</label>
+              <input
+                type="text"
+                value={editingItem.cpf || ""}
                 disabled
                 readOnly
               />

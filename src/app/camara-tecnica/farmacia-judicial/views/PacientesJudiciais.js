@@ -5,6 +5,7 @@ import Image from 'next/image';
 import { buscarPessoaExistente } from '../actions';
 import { useConfirm } from '@/components/ConfirmDialog';
 import { documentoPaciente } from '@/app/regulacao/constants';
+import { mascararTelefone } from '@/lib/telefone';
 import styles from './PacientesJudiciais.module.css';
 
 const MED_VAZIO = { medicamentoId: '', qtdMensal: '', statusMedication: 'Ativo' };
@@ -265,17 +266,13 @@ export default function TabPacientesJudiciais({
 
             {/* DADOS PESSOAIS (somente leitura) */}
             <div className={styles.dataGrid}>
-              <div className={`${styles.field} ${styles.colCpf}`}>
-                <label>CPF</label>
-                <input type="text" value={pessoa ? formatCPF(pessoa.cpf) : ''} disabled readOnly placeholder="000.000.000-00" />
-              </div>
               <div className={`${styles.field} ${styles.colName}`}>
                 <label>Nome completo</label>
                 <input type="text" value={pessoa?.nomeCompleto || pessoa?.nome || ''} disabled readOnly placeholder="—" />
               </div>
-              <div className={`${styles.field} ${styles.colSmall}`}>
-                <label>Sexo</label>
-                <input type="text" value={pessoa?.sexo || ''} disabled readOnly placeholder="—" />
+              <div className={`${styles.field} ${styles.colMother}`}>
+                <label>Nome da mãe</label>
+                <input type="text" value={pessoa?.nomeMae || ''} disabled readOnly placeholder="—" />
               </div>
               <div className={`${styles.field} ${styles.colSmall}`}>
                 <label>Data de nascimento</label>
@@ -287,13 +284,17 @@ export default function TabPacientesJudiciais({
                   placeholder="dd/mm/aaaa"
                 />
               </div>
-              <div className={`${styles.field} ${styles.colMother}`}>
-                <label>Nome da mãe</label>
-                <input type="text" value={pessoa?.nomeMae || ''} disabled readOnly placeholder="—" />
+              <div className={`${styles.field} ${styles.colSmall}`}>
+                <label>Sexo</label>
+                <input type="text" value={pessoa?.sexo || ''} disabled readOnly placeholder="—" />
               </div>
               <div className={`${styles.field} ${styles.colMed}`}>
                 <label>Telefone / WhatsApp</label>
-                <input type="text" value={pessoa?.telefone || ''} disabled readOnly placeholder="(00) 00000-0000" />
+                <input type="text" value={mascararTelefone(pessoa?.telefone)} disabled readOnly placeholder="(00) 00000-0000" />
+              </div>
+              <div className={`${styles.field} ${styles.colCpf}`}>
+                <label>CPF</label>
+                <input type="text" value={pessoa ? formatCPF(pessoa.cpf) : ''} disabled readOnly placeholder="000.000.000-00" />
               </div>
               <div className={`${styles.field} ${styles.colMed}`}>
                 <label>CNS (Cartão SUS)</label>
@@ -305,11 +306,20 @@ export default function TabPacientesJudiciais({
               </div>
             </div>
 
+            {/* SUBTÍTULO: ENDEREÇO */}
+            <div className={styles.identHeader}>
+              <h4>Endereço</h4>
+            </div>
+
             {/* ENDEREÇO (somente leitura) */}
             <div className={styles.dataGrid} style={{ marginTop: '0.75rem' }}>
               <div className={`${styles.field} ${styles.colCep}`}>
                 <label>CEP</label>
                 <input type="text" value={pessoa?.cep || ''} disabled readOnly placeholder="00000-000" />
+              </div>
+              <div className={`${styles.field} ${styles.colBairro}`}>
+                <label>Bairro</label>
+                <input type="text" value={pessoa?.bairro || ''} disabled readOnly placeholder="—" />
               </div>
               <div className={`${styles.field} ${styles.colLogradouro}`}>
                 <label>Logradouro / Rua</label>
@@ -322,10 +332,6 @@ export default function TabPacientesJudiciais({
               <div className={`${styles.field} ${styles.colComplemento}`}>
                 <label>Complemento</label>
                 <input type="text" value={pessoa?.complemento || ''} disabled readOnly placeholder="—" />
-              </div>
-              <div className={`${styles.field} ${styles.colBairro}`}>
-                <label>Bairro</label>
-                <input type="text" value={pessoa?.bairro || ''} disabled readOnly placeholder="—" />
               </div>
               <div className={`${styles.field} ${styles.colCidade}`}>
                 <label>Cidade</label>

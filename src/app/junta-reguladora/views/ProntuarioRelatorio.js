@@ -1,16 +1,69 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
-import { buscarPessoaExistente } from '../actions';
+import { listarPacientesJunta } from '../actions';
+import { documentoPaciente } from '@/app/regulacao/constants';
+import { mascararTelefone } from '@/lib/telefone';
 import styles from './ProntuarioRelatorio.module.css';
+
+const MESES_NOMES = [
+  'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
+  'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
+];
+
+// Extrai 'YYYY-MM' de uma data (string ISO ou Date), sem efeito de fuso.
+const competenciaDaData = (d) => {
+  if (!d) return '';
+  const s = typeof d === 'string' ? d : new Date(d).toISOString();
+  return s.split('T')[0].slice(0, 7); // 'YYYY-MM'
+};
 
 export default function ProntuarioRelatorio({ prontuarioData, onBuscar }) {
   const [termo, setTermo] = useState('');
   const [sugestoes, setSugestoes] = useState([]);
   const [showDropdown, setShowDropdown] = useState(false);
   const [isSearching, setIsSearching] = useState(false);
+
+  // Filtro por intervalo de datas (De / Até). Vazio = sem limite nesse lado.
+  const [dataDe, setDataDe] = useState('');
+  const [dataAte, setDataAte] = useState('');
+
+  // Menu dropdown de exportação.
+  const [exportMenuAberto, setExportMenuAberto] = useState(false);
+  const exportMenuRef = useRef(null);
+  // Dropdown de busca de paciente (tabela).
+  const buscaRef = useRef(null);
+
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (exportMenuRef.current && !exportMenuRef.current.contains(e.target)) {
+        setExportMenuAberto(false);
+      }
+      if (buscaRef.current && !buscaRef.current.contains(e.target)) {
+        setShowDropdown(false);
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  // Carrega a lista inicial de pacientes da Junta ao montar.
+  useEffect(() => {
+    let ativo = true;
+    (async () => {
+      try {
+        const lista = await listarPacientesJunta('');
+        if (ativo) setSugestoes(Array.isArray(lista) ? lista : []);
+      } catch {
+        if (ativo) setSugestoes([]);
+      }
+    })();
+    return () => {
+      ativo = false;
+    };
+  }, []);
 
   // 🎯 LIMPEZA SILENCIOSA DOS CAMPOS AO DESMONTA/TROCAR DE ABA
   useEffect(() => {
@@ -29,21 +82,16 @@ export default function ProntuarioRelatorio({ prontuarioData, onBuscar }) {
 
   const handleInputChange = async (valor) => {
     setTermo(valor);
-    if (valor.trim().length >= 2) {
-      setIsSearching(true);
-      setShowDropdown(true);
-      try {
-        const resultados = await buscarPessoaExistente(valor.trim());
-        setSugestoes(resultados || []);
-      } catch (error) {
-        console.error('Erro ao buscar sugestões:', error);
-        setSugestoes([]);
-      } finally {
-        setIsSearching(false);
-      }
-    } else {
+    setShowDropdown(true);
+    setIsSearching(true);
+    try {
+      const resultados = await listarPacientesJunta(valor.trim());
+      setSugestoes(Array.isArray(resultados) ? resultados : []);
+    } catch (error) {
+      console.error('Erro ao buscar pacientes da Junta:', error);
       setSugestoes([]);
-      setShowDropdown(false);
+    } finally {
+      setIsSearching(false);
     }
   };
 
@@ -70,10 +118,72 @@ export default function ProntuarioRelatorio({ prontuarioData, onBuscar }) {
   };
 
   const paciente = prontuarioData?.paciente;
-  const servicosAgrupados = prontuarioData?.servicosAgrupados || [];
+  const servicosAgrupadosRaw = prontuarioData?.servicosAgrupados || [];
 
-  const gerarPDFDownload = () => {
+  // 'YYYY-MM-DD' de uma data (string ISO ou Date), sem efeito de fuso.
+  const diaDaData = (d) => {
+    if (!d) return '';
+    const s = typeof d === 'string' ? d : new Date(d).toISOString();
+    return s.split('T')[0];
+  };
+
+  // Filtra os grupos pelo intervalo de datas (De / Até) e recalcula contadores.
+  // Se ambos vazios, retorna o histórico completo.
+  const filtrarPorIntervalo = (grupos, de, ate) => {
+    const semFiltro = !de && !ate;
+    return grupos
+      .map((g) => {
+        const datasFiltradas = (g.datas || []).filter((d) => {
+          const dia = diaDaData(d.data); // 'YYYY-MM-DD'
+          if (de && dia < de) return false;
+          if (ate && dia > ate) return false;
+          return true;
+        });
+
+        if (!semFiltro && datasFiltradas.length === 0) return null;
+
+        let presencas = 0, faltas = 0, faltasJustificadas = 0;
+        for (const d of datasFiltradas) {
+          const st = (d.status || '').toUpperCase();
+          if (st === 'PRESENCA') presencas++;
+          else if (st === 'FALTA') faltas++;
+          else if (st === 'FALTA_JUSTIFICADA') faltasJustificadas++;
+        }
+
+        return {
+          ...g,
+          datas: semFiltro ? g.datas : datasFiltradas,
+          presencas: semFiltro ? g.presencas : presencas,
+          faltas: semFiltro ? g.faltas : faltas,
+          faltasJustificadas: semFiltro ? g.faltasJustificadas : faltasJustificadas,
+        };
+      })
+      .filter(Boolean);
+  };
+
+  const servicosAgrupados = filtrarPorIntervalo(servicosAgrupadosRaw, dataDe, dataAte);
+
+  const formatarBR = (ymd) => {
+    if (!ymd) return '';
+    const [y, m, d] = ymd.split('-');
+    return `${d}/${m}/${y}`;
+  };
+
+  const rotuloCompetencia =
+    dataDe && dataAte
+      ? `${formatarBR(dataDe)} a ${formatarBR(dataAte)}`
+      : dataDe
+        ? `A partir de ${formatarBR(dataDe)}`
+        : dataAte
+          ? `Até ${formatarBR(dataAte)}`
+          : 'Histórico completo';
+
+  const gerarPDFDownload = (escopo = 'mes') => {
     if (!paciente) return;
+
+    // escopo: 'mes' = usa o filtro atual; 'completo' = todo o histórico.
+    const grupos = escopo === 'completo' ? servicosAgrupadosRaw : servicosAgrupados;
+    const rotuloPeriodo = escopo === 'completo' ? 'Histórico completo' : rotuloCompetencia;
 
     const doc = new jsPDF({
       orientation: 'portrait',
@@ -100,99 +210,188 @@ export default function ProntuarioRelatorio({ prontuarioData, onBuscar }) {
     doc.setFontSize(14);
     doc.text('PRONTUÁRIO UNIFICADO E RELATÓRIO DE FREQUÊNCIAS', 14, 28);
 
-    autoTable(doc, {
-      startY: 32,
-      theme: 'grid',
-      headStyles: {
-        fillColor: [30, 41, 59],
-        textColor: [255, 255, 255],
-        fontStyle: 'bold',
-        fontSize: 9,
-      },
-      head: [['DADOS PESSOAIS DO PACIENTE', '']],
-      body: [
-        ['Nome Completo:', paciente.nome || '-'],
-        ['CPF:', formatCPF(paciente.cpf) || '-'],
-        ['Nome da Mãe:', paciente.nomeMae || 'Não informado'],
-        ['Data de Nascimento:', paciente.data_nascimento ? new Date(paciente.data_nascimento).toLocaleDateString('pt-BR') : 'Não informada'],
-        ['Telefone / WhatsApp:', paciente.telefone || 'Não informado'],
-        ['Diagnóstico / Deficiência:', paciente.tipo_deficiencia || 'Não informado'],
-        ['Endereço:', paciente.logradouro ? `${paciente.logradouro}, ${paciente.numero} - ${paciente.bairro}` : 'Não informado'],
-        ['Serviços Ativos Vinculados:', paciente.servicos_ativos?.length > 0 ? paciente.servicos_ativos.join(', ') : 'Nenhum serviço ativo'],
-      ],
-      styles: { fontSize: 8, cellPadding: 2 },
-      columnStyles: {
-        0: { fontStyle: 'bold', cellWidth: 45, fillColor: [248, 250, 252] },
-        1: { cellWidth: 'auto' },
-      },
-    });
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(9);
+    doc.setTextColor(100, 116, 139);
+    doc.text(`Período: ${rotuloPeriodo}`, 14, 33.5);
 
-    let currentY = doc.lastAutoTable.finalY + 8;
+    // ── DADOS DO PACIENTE (campos em caixas, estilo formulário) ──
+    const margemX = 14;
+    const larguraUtil = 182; // 210 - 2*14
+    let fichaY = 40;
 
-    if (servicosAgrupados.length === 0) {
+    // Título da seção
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(11);
+    doc.setTextColor(30, 41, 59);
+    doc.text('Dados do Paciente', margemX, fichaY);
+    fichaY += 4;
+
+    // Helper: desenha um campo "input": rótulo azul-escuro acima + caixa
+    // arredondada (fundo cinza-claro) com o valor dentro.
+    // Retorna a altura total ocupada pelo campo.
+    const alturaCaixa = 8; // altura da caixa do valor
+    const gapRotulo = 4;   // espaço entre topo e a caixa (para o rótulo)
+    const campoCaixa = (rotulo, valor, x, y, largura) => {
+      // Rótulo
+      doc.setFont('helvetica', 'bold');
+      doc.setFontSize(7.5);
+      doc.setTextColor(51, 65, 85);
+      doc.text(String(rotulo), x + 0.5, y + 2.6);
+
+      // Caixa
+      const caixaY = y + gapRotulo;
+      doc.setFillColor(248, 250, 252);
+      doc.setDrawColor(203, 213, 225);
+      doc.setLineWidth(0.3);
+      doc.roundedRect(x, caixaY, largura, alturaCaixa, 1.6, 1.6, 'FD');
+
+      // Valor (truncado para caber na caixa)
+      doc.setFont('helvetica', 'normal');
+      doc.setFontSize(9);
+      doc.setTextColor(30, 41, 59);
+      const texto = valor == null || valor === '' ? '—' : String(valor);
+      const linhasTxt = doc.splitTextToSize(texto, largura - 5);
+      doc.text(linhasTxt[0], x + 3, caixaY + alturaCaixa / 2 + 1.5);
+
+      return gapRotulo + alturaCaixa + 4; // altura total do campo + respiro
+    };
+
+    const gap = 5; // espaço horizontal entre colunas
+    // Grade de 3 colunas
+    const col3 = (larguraUtil - gap * 2) / 3;
+    const x3 = [margemX, margemX + col3 + gap, margemX + (col3 + gap) * 2];
+
+    let yGrid = fichaY + 1;
+    const alturaLinha = gapRotulo + alturaCaixa + 4;
+
+    // Linha 1: CPF | Nome completo | Sexo
+    campoCaixa('CPF', formatCPF(paciente.cpf), x3[0], yGrid, col3);
+    campoCaixa('Nome completo', paciente.nome, x3[1], yGrid, col3);
+    campoCaixa('Sexo', paciente.sexo, x3[2], yGrid, col3);
+    yGrid += alturaLinha;
+
+    // Linha 2: Data de nascimento | Nome da mãe | Telefone / WhatsApp
+    campoCaixa(
+      'Data de nascimento',
+      paciente.data_nascimento ? new Date(paciente.data_nascimento).toLocaleDateString('pt-BR') : null,
+      x3[0], yGrid, col3,
+    );
+    campoCaixa('Nome da mãe', paciente.nomeMae, x3[1], yGrid, col3);
+    campoCaixa('Telefone / WhatsApp', mascararTelefone(paciente.telefone), x3[2], yGrid, col3);
+    yGrid += alturaLinha;
+
+    // Linha 3 (largura total): Endereço completo
+    const enderecoTxt = paciente.logradouro
+      ? `${paciente.logradouro}, ${paciente.numero || 'S/N'} - ${paciente.bairro || ''}${
+          paciente.cidade ? ` - ${paciente.cidade}` : ''
+        }${paciente.uf ? `/${paciente.uf}` : ''}${paciente.cep ? ` - CEP ${paciente.cep}` : ''}`
+      : null;
+    campoCaixa('Endereço', enderecoTxt, margemX, yGrid, larguraUtil);
+    yGrid += alturaLinha;
+
+    // Linha 4 (largura total): Diagnóstico / Deficiência
+    campoCaixa('Diagnóstico / Deficiência', paciente.tipo_deficiencia, margemX, yGrid, larguraUtil);
+    yGrid += alturaLinha;
+
+    // Linha 5 (largura total): Serviços ativos vinculados
+    campoCaixa(
+      'Serviços ativos vinculados',
+      paciente.servicos_ativos?.length > 0 ? paciente.servicos_ativos.join(', ') : 'Nenhum serviço ativo',
+      margemX, yGrid, larguraUtil,
+    );
+    yGrid += alturaLinha;
+
+    let currentY = yGrid + 4;
+
+    if (grupos.length === 0) {
       doc.setFontSize(9);
       doc.setFont('helvetica', 'italic');
       doc.setTextColor(100, 116, 139);
-      doc.text('Nenhum registro de atendimento ou frequência gravado no sistema.', 14, currentY);
+      doc.text('Nenhum registro de atendimento ou frequência no período selecionado.', 14, currentY);
     } else {
-      servicosAgrupados.forEach((grupo) => {
-        if (currentY > 250) {
+      const bloqX = 14;
+      const bloqW = 182;
+      const alturaCabecalho = 15; // duas linhas de texto no topo do bloco
+
+      grupos.forEach((grupo) => {
+        // Estima o espaço mínimo (cabeçalho + 1 linha de tabela) para evitar
+        // quebrar o bloco logo após o cabeçalho.
+        if (currentY + alturaCabecalho + 16 > 282) {
           doc.addPage();
           currentY = 20;
         }
 
-        doc.setFillColor(241, 245, 249);
-        doc.setDrawColor(203, 213, 225);
-        doc.rect(14, currentY, 182, 10, 'FD');
+        const bloqTopo = currentY;
 
+        // ── Cabeçalho do serviço (2 linhas, sem colisão) ──
+        // Linha 1: SERVIÇO + especialidade. Linha 2: resumo de frequência.
         doc.setFont('helvetica', 'bold');
-        doc.setFontSize(9);
+        doc.setFontSize(9.5);
         doc.setTextColor(2, 132, 199);
-        doc.text(`SERVIÇO: ${grupo.servico}`, 18, currentY + 6.5);
+        doc.text(`${grupo.servico}`, bloqX + 4, bloqTopo + 6);
 
-        doc.setTextColor(30, 41, 59);
-        doc.text(`Especialidade: ${grupo.especialidade}`, 80, currentY + 6.5);
-
-        const resumoFrequencia = `Presenças: ${grupo.presencas} | Faltas: ${grupo.faltas} | Justificadas: ${grupo.faltasJustificadas}`;
         doc.setFont('helvetica', 'normal');
-        doc.setFontSize(8);
-        doc.text(resumoFrequencia, 192, currentY + 6.5, { align: 'right' });
+        doc.setFontSize(8.5);
+        doc.setTextColor(71, 85, 105);
+        const servW = doc.getTextWidth(`${grupo.servico}`);
+        doc.text(`•  Especialidade: ${grupo.especialidade}`, bloqX + 4 + servW + 3, bloqTopo + 6);
 
-        currentY += 12;
+        doc.setFontSize(8);
+        doc.setTextColor(100, 116, 139);
+        doc.text(
+          `Agendamentos: ${grupo.datas.length}    |    Presenças: ${grupo.presencas}    |    Faltas: ${grupo.faltas}    |    Justificadas: ${grupo.faltasJustificadas}`,
+          bloqX + 4,
+          bloqTopo + 11.5,
+        );
+
+        // Linha separadora entre cabeçalho e tabela.
+        doc.setDrawColor(226, 232, 240);
+        doc.setLineWidth(0.3);
+        doc.line(bloqX + 4, bloqTopo + alturaCabecalho - 1, bloqX + bloqW - 4, bloqTopo + alturaCabecalho - 1);
+
+        const tabelaY = bloqTopo + alturaCabecalho;
 
         const tableBody = grupo.datas.map((d) => {
-          let statusText = 'Presença Confirmada';
-          if (d.status === 'FALTA') statusText = 'Falta';
-          if (d.status === 'FALTA_JUSTIFICADA') statusText = 'Falta Justificada';
+          let statusText = 'Agendado';
+          if (d.status === 'PRESENCA') statusText = 'Presença Confirmada';
+          else if (d.status === 'FALTA') statusText = 'Falta';
+          else if (d.status === 'FALTA_JUSTIFICADA') statusText = 'Falta Justificada';
 
           return [
             new Date(d.data).toLocaleDateString('pt-BR'),
+            d.hora || '-',
             statusText,
-            d.profissional || '-',
             d.observacao || '-',
           ];
         });
 
         autoTable(doc, {
-          startY: currentY,
-          theme: 'striped',
+          startY: tabelaY,
+          theme: 'plain',
+          margin: { left: bloqX + 4, right: bloqX + 4 },
+          tableWidth: bloqW - 8,
+          // Cabeçalho sem fundo: só texto em cinza + separador desenhado acima.
           headStyles: {
-            fillColor: [71, 85, 105],
-            textColor: [255, 255, 255],
+            fillColor: false,
+            textColor: [100, 116, 139],
             fontStyle: 'bold',
-            fontSize: 8,
+            fontSize: 7.5,
+            cellPadding: { top: 2, bottom: 2.5, left: 2, right: 2 },
           },
-          head: [['Data', 'Frequência / Status', 'Profissional', 'Observação']],
+          head: [['Data', 'Hora', 'Frequência / Status', 'Observação']],
           body: tableBody,
-          styles: { fontSize: 8, cellPadding: 2.5 },
+          styles: { fontSize: 8, cellPadding: 2.3, textColor: [30, 41, 59] },
+          // Zebra sutil nas linhas de corpo (sem bordas de grade).
+          alternateRowStyles: { fillColor: [248, 250, 252] },
           columnStyles: {
-            0: { cellWidth: 28, fontStyle: 'bold' },
-            1: { cellWidth: 40 },
-            2: { cellWidth: 45 },
+            0: { cellWidth: 26, fontStyle: 'bold' },
+            1: { cellWidth: 20 },
+            2: { cellWidth: 44 },
             3: { cellWidth: 'auto' },
           },
           didParseCell: (data) => {
-            if (data.section === 'body' && data.column.index === 1) {
+            if (data.section === 'body' && data.column.index === 2) {
               const val = data.cell.raw;
               if (val === 'Presença Confirmada') {
                 data.cell.styles.textColor = [22, 101, 52];
@@ -208,7 +407,14 @@ export default function ProntuarioRelatorio({ prontuarioData, onBuscar }) {
           },
         });
 
-        currentY = doc.lastAutoTable.finalY + 8;
+        const bloqFim = doc.lastAutoTable.finalY + 3;
+
+        // Contorno arredondado englobando cabeçalho + tabela (bloco único).
+        doc.setDrawColor(203, 213, 225);
+        doc.setLineWidth(0.4);
+        doc.roundedRect(bloqX, bloqTopo, bloqW, bloqFim - bloqTopo, 2.5, 2.5, 'S');
+
+        currentY = bloqFim + 8;
       });
     }
 
@@ -226,103 +432,144 @@ export default function ProntuarioRelatorio({ prontuarioData, onBuscar }) {
     }
 
     const nomeLimpo = (paciente.nome || 'Paciente').replace(/[^a-zA-Z0-9]/g, '_');
-    doc.save(`Prontuario_${nomeLimpo}.pdf`);
+    const sufPeriodo =
+      escopo === 'completo'
+        ? 'Completo'
+        : dataDe && dataAte
+          ? `${dataDe}_a_${dataAte}`
+          : dataDe
+            ? `desde_${dataDe}`
+            : dataAte
+              ? `ate_${dataAte}`
+              : 'Periodo';
+    doc.save(`Prontuario_${nomeLimpo}_${sufPeriodo}.pdf`);
   };
 
   return (
     <div className={styles.card}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', gap: '1rem', flexWrap: 'wrap' }}>
         <h3 className={styles.title} style={{ margin: 0 }}>Prontuário Unificado e Relatório de Serviços</h3>
-        {paciente && (
-          <button
-            type="button"
-            onClick={gerarPDFDownload}
-            style={{
-              backgroundColor: '#16a34a',
-              color: '#ffffff',
-              border: 'none',
-              borderRadius: '6px',
-              padding: '0.65rem 1.25rem',
-              fontWeight: 'bold',
-              cursor: 'pointer',
-              display: 'flex',
-              alignItems: 'center',
-              gap: '8px',
-              boxShadow: '0 2px 4px rgba(0,0,0,0.12)',
-            }}
-          >
-            📥 Baixar Relatório em PDF
-          </button>
-        )}
       </div>
 
-      {/* CAMPO DE BUSCA COM AUTOCOMPLETAR */}
-      <div style={{ position: 'relative', marginBottom: '1.5rem' }}>
-        <form onSubmit={handleSearchSubmit} className={styles.searchRow}>
-          <div style={{ position: 'relative', flex: 1 }}>
-            <input
-              type="text"
-              placeholder="Digite o Nome ou CPF do paciente para buscar no banco..."
-              value={termo}
-              onChange={(e) => handleInputChange(e.target.value)}
-              style={{ width: '100%' }}
-            />
+      {/* BUSCA DE PACIENTE DA JUNTA (dropdown em tabela, igual aos outros módulos) */}
+      <div className={styles.buscaWrapper}>
+        <label className={styles.buscaLabel}>Buscar Paciente da Junta (Nome ou CPF)</label>
+        <div className={styles.searchSelectWrapper} ref={buscaRef}>
+          <input
+            type="text"
+            className={styles.selectLikeInput}
+            placeholder="Selecionar ou digitar nome/CPF..."
+            value={termo}
+            onChange={(e) => handleInputChange(e.target.value)}
+            onFocus={() => setShowDropdown(true)}
+          />
+          <span className={styles.arrowIcon} onClick={() => setShowDropdown((v) => !v)}>
+            {showDropdown ? '▲' : '▼'}
+          </span>
 
-            {showDropdown && sugestoes.length > 0 && (
-              <ul
-                style={{
-                  position: 'absolute',
-                  top: '100%',
-                  left: 0,
-                  right: 0,
-                  backgroundColor: '#ffffff',
-                  border: '1px solid #cbd5e1',
-                  borderRadius: '6px',
-                  boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                  zIndex: 99,
-                  listStyle: 'none',
-                  padding: 0,
-                  margin: '4px 0 0 0',
-                  maxHeight: '220px',
-                  overflowY: 'auto',
-                }}
-              >
-                {sugestoes.map((p, index) => (
-                  <li
-                    key={p.cpf ? `${p.cpf}-${index}` : index}
-                    onClick={() => handleSelectPessoa(p)}
-                    style={{
-                      padding: '10px 14px',
-                      cursor: 'pointer',
-                      borderBottom: '1px solid #f1f5f9',
-                      fontSize: '0.9rem',
-                    }}
-                    onMouseDown={(e) => e.preventDefault()}
-                  >
-                    <strong>{p.nomeCompleto || p.nome}</strong> — CPF: {formatCPF(p.cpf)}
-                  </li>
-                ))}
-              </ul>
-            )}
-          </div>
-
-          <button type="submit" className={styles.primaryBtn}>
-            {isSearching ? 'Buscando...' : 'Buscar Prontuário'}
-          </button>
-        </form>
+          {showDropdown && (
+            <div className={styles.tableDropdownMenu}>
+              <div className={styles.tableContainerScroll}>
+                <table className={styles.patientTableDropdown}>
+                  <thead>
+                    <tr>
+                      <th>CPF / CNS</th>
+                      <th>Usuário</th>
+                      <th>Nome da mãe</th>
+                      <th>Data nasc.</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sugestoes.length > 0 ? (
+                      sugestoes.map((p, index) => (
+                        <tr
+                          key={p.cpf ? `${p.cpf}-${index}` : index}
+                          onMouseDown={(e) => {
+                            e.preventDefault();
+                            handleSelectPessoa(p);
+                          }}
+                          className={paciente?.cpf === p.cpf ? styles.selectedRow : ''}
+                        >
+                          <td>{documentoPaciente({ cpf: p.cpf, cns: p.cns })}</td>
+                          <td className={styles.boldName}>{p.nomeCompleto || p.nome}</td>
+                          <td>{p.nomeMae || 'Não informada'}</td>
+                          <td>
+                            {p.dataNascimento
+                              ? p.dataNascimento.split('-').reverse().join('/')
+                              : '-'}
+                          </td>
+                        </tr>
+                      ))
+                    ) : (
+                      <tr>
+                        <td colSpan="4" className={styles.noDataTd}>
+                          {isSearching
+                            ? 'Consultando...'
+                            : 'Nenhum paciente da Junta encontrado.'}
+                        </td>
+                      </tr>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          )}
+        </div>
       </div>
 
       {paciente ? (
         <div className={styles.prontuarioBox}>
-          {/* DADOS GERAIS */}
+          {/* DADOS GERAIS (campos em caixa, estilo formulário) */}
           <div className={styles.infoCard}>
             <h4>Dados do Paciente</h4>
-            <p><strong>Nome:</strong> {paciente.nome}</p>
-            <p><strong>CPF:</strong> {formatCPF(paciente.cpf)}</p>
-            <p><strong>Nome da Mãe:</strong> {paciente.nomeMae || 'Não informado'}</p>
-            <p><strong>Data Nascimento:</strong> {paciente.data_nascimento ? new Date(paciente.data_nascimento).toLocaleDateString('pt-BR') : 'Não informada'}</p>
-            <p><strong>Telefone:</strong> {paciente.telefone || 'Não informado'}</p>
-            <p><strong>Deficiência/Diagnóstico:</strong> {paciente.tipo_deficiencia || 'Não informado'}</p>
+            <div className={styles.dadosGrid}>
+              <div className={styles.campo}>
+                <label>Nome completo</label>
+                <div className={styles.valorBox}>{paciente.nome || '—'}</div>
+              </div>
+              <div className={styles.campo}>
+                <label>Nome da mãe</label>
+                <div className={styles.valorBox}>{paciente.nomeMae || '—'}</div>
+              </div>
+              <div className={styles.campo}>
+                <label>Data de nascimento</label>
+                <div className={styles.valorBox}>
+                  {paciente.data_nascimento
+                    ? new Date(paciente.data_nascimento).toLocaleDateString('pt-BR')
+                    : '—'}
+                </div>
+              </div>
+              <div className={styles.campo}>
+                <label>Sexo</label>
+                <div className={styles.valorBox}>{paciente.sexo || '—'}</div>
+              </div>
+              <div className={styles.campo}>
+                <label>Telefone / WhatsApp</label>
+                <div className={styles.valorBox}>{mascararTelefone(paciente.telefone) || '—'}</div>
+              </div>
+              <div className={styles.campo}>
+                <label>CPF</label>
+                <div className={styles.valorBox}>{formatCPF(paciente.cpf) || '—'}</div>
+              </div>
+
+              <div className={`${styles.campo} ${styles.campoFull}`}>
+                <label>Endereço</label>
+                <div className={styles.valorBox}>
+                  {paciente.logradouro
+                    ? `${paciente.logradouro}, ${paciente.numero || 'S/N'} - ${paciente.bairro || ''}${
+                        paciente.cidade ? ` - ${paciente.cidade}` : ''
+                      }${paciente.uf ? `/${paciente.uf}` : ''}${
+                        paciente.cep ? ` - CEP ${paciente.cep}` : ''
+                      }`
+                    : '—'}
+                </div>
+              </div>
+
+              <div className={`${styles.campo} ${styles.campoFull}`}>
+                <label>Diagnóstico / Deficiência</label>
+                <div className={styles.valorBox}>{paciente.tipo_deficiencia || '—'}</div>
+              </div>
+            </div>
           </div>
 
           {/* SERVIÇOS VINCULADOS */}
@@ -344,6 +591,77 @@ export default function ProntuarioRelatorio({ prontuarioData, onBuscar }) {
           {/* HISTÓRICO AGRUPADO POR SERVIÇO E ESPECIALIDADE */}
           <div className={styles.historySection}>
             <h4 style={{ marginBottom: '1rem' }}>Relatório Multidisciplinar por Serviço e Especialidade</h4>
+
+            {/* BARRA: FILTRO DE COMPETÊNCIA (mês/ano) + EXPORTAR */}
+            <div className={styles.filtroBar}>
+              <div className={styles.filtroCampos}>
+                <div className={styles.filtroCampo}>
+                  <label>De</label>
+                  <input
+                    type="date"
+                    value={dataDe}
+                    max={dataAte || undefined}
+                    onChange={(e) => setDataDe(e.target.value)}
+                  />
+                </div>
+                <div className={styles.filtroCampo}>
+                  <label>Até</label>
+                  <input
+                    type="date"
+                    value={dataAte}
+                    min={dataDe || undefined}
+                    onChange={(e) => setDataAte(e.target.value)}
+                  />
+                </div>
+                {(dataDe || dataAte) && (
+                  <button
+                    type="button"
+                    className={styles.limparFiltro}
+                    onClick={() => {
+                      setDataDe('');
+                      setDataAte('');
+                    }}
+                  >
+                    Limpar
+                  </button>
+                )}
+                <span className={styles.filtroInfo}>
+                  Exibindo: <strong>{rotuloCompetencia}</strong>
+                </span>
+              </div>
+
+              <div className={styles.exportWrapper} ref={exportMenuRef}>
+                <button
+                  type="button"
+                  className={styles.exportBtn}
+                  onClick={() => setExportMenuAberto((v) => !v)}
+                >
+                  Exportar PDF <span className={styles.exportCaret}>▾</span>
+                </button>
+                {exportMenuAberto && (
+                  <div className={styles.exportMenu}>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setExportMenuAberto(false);
+                        gerarPDFDownload('mes');
+                      }}
+                    >
+                      Período selecionado
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setExportMenuAberto(false);
+                        gerarPDFDownload('completo');
+                      }}
+                    >
+                      Relatório completo
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
 
             {servicosAgrupados.length === 0 ? (
               <p className={styles.emptyMsg}>Nenhum registro de atendimento ou frequência gravado até o momento.</p>
@@ -390,7 +708,10 @@ export default function ProntuarioRelatorio({ prontuarioData, onBuscar }) {
                       </strong>
                     </div>
 
-                    <div style={{ display: 'flex', gap: '0.5rem', fontSize: '0.8rem', fontWeight: 'bold' }}>
+                    <div style={{ display: 'flex', gap: '0.5rem', fontSize: '0.8rem', fontWeight: 'bold', flexWrap: 'wrap' }}>
+                      <span style={{ color: '#1e3a5f', background: '#e0f2fe', padding: '2px 8px', borderRadius: '4px' }}>
+                        🗓️ {grupo.datas.length} Agendamento(s) no mês
+                      </span>
                       <span style={{ color: '#166534', background: '#dcfce7', padding: '2px 8px', borderRadius: '4px' }}>
                         ✅ {grupo.presencas} Presença(s)
                       </span>
@@ -408,10 +729,10 @@ export default function ProntuarioRelatorio({ prontuarioData, onBuscar }) {
                   <table className={styles.table}>
                     <thead>
                       <tr>
-                        <th style={{ width: '20%' }}>Data do Atendimento</th>
+                        <th style={{ width: '18%' }}>Data</th>
+                        <th style={{ width: '12%' }}>Hora</th>
                         <th style={{ width: '30%' }}>Frequência / Status</th>
-                        <th style={{ width: '25%' }}>Profissional</th>
-                        <th style={{ width: '25%' }}>Observação</th>
+                        <th style={{ width: '40%' }}>Observação</th>
                       </tr>
                     </thead>
                     <tbody>
@@ -420,6 +741,7 @@ export default function ProntuarioRelatorio({ prontuarioData, onBuscar }) {
                           <td>
                             <strong>{new Date(d.data).toLocaleDateString('pt-BR')}</strong>
                           </td>
+                          <td>{d.hora || '-'}</td>
                           <td>
                             <span
                               style={{
@@ -430,18 +752,20 @@ export default function ProntuarioRelatorio({ prontuarioData, onBuscar }) {
                                 display: 'inline-block',
                                 backgroundColor:
                                   d.status === 'PRESENCA' ? '#dcfce7' :
-                                  d.status === 'FALTA' ? '#fee2e2' : '#fef3c7',
+                                  d.status === 'FALTA' ? '#fee2e2' :
+                                  d.status === 'FALTA_JUSTIFICADA' ? '#fef3c7' : '#e2e8f0',
                                 color:
                                   d.status === 'PRESENCA' ? '#166534' :
-                                  d.status === 'FALTA' ? '#991b1b' : '#92400e',
+                                  d.status === 'FALTA' ? '#991b1b' :
+                                  d.status === 'FALTA_JUSTIFICADA' ? '#92400e' : '#475569',
                               }}
                             >
                               {d.status === 'PRESENCA' && '✅ Presença Confirmada'}
                               {d.status === 'FALTA' && '❌ Falta'}
                               {d.status === 'FALTA_JUSTIFICADA' && '⚠️ Falta Justificada'}
+                              {!d.status && '🗓️ Agendado'}
                             </span>
                           </td>
-                          <td>{d.profissional || '-'}</td>
                           <td>{d.observacao || '-'}</td>
                         </tr>
                       ))}

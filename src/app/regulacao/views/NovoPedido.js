@@ -4,6 +4,7 @@ import { useState, useRef, useEffect } from 'react';
 import styles from './NovoPedido.module.css';
 import { useUnsavedChanges } from '../hooks/useUnsavedChanges';
 import { documentoPaciente, LOCAIS_REALIZACAO } from '../constants';
+import { mascararTelefone } from '@/lib/telefone';
 
 export default function NovoPedido({
   newRequest = {
@@ -186,18 +187,6 @@ export default function NovoPedido({
 
           {/* DADOS COMPLETOS DO PACIENTE (somente leitura) */}
           <div className={styles.formGridStrict}>
-            <div className={`${styles.fieldGroup} ${styles.colCpf}`}>
-              <label>CPF *</label>
-              <input
-                type="text"
-                value={formatCPF(newRequest.cpf) || ''}
-                readOnly
-                placeholder="000.000.000-00"
-                className={styles.readOnlyInput}
-                required
-              />
-            </div>
-
             <div className={`${styles.fieldGroup} ${styles.colMother}`}>
               <label>Nome da Mãe</label>
               <input
@@ -205,17 +194,6 @@ export default function NovoPedido({
                 value={newRequest.motherName || ''}
                 readOnly
                 placeholder="Nome da Mãe"
-                className={styles.readOnlyInput}
-              />
-            </div>
-
-            <div className={`${styles.fieldGroup} ${styles.colSmall}`}>
-              <label>Sexo</label>
-              <input
-                type="text"
-                value={newRequest.sexo || ''}
-                readOnly
-                placeholder="—"
                 className={styles.readOnlyInput}
               />
             </div>
@@ -232,13 +210,36 @@ export default function NovoPedido({
             </div>
 
             <div className={`${styles.fieldGroup} ${styles.colSmall}`}>
+              <label>Sexo</label>
+              <input
+                type="text"
+                value={newRequest.sexo || ''}
+                readOnly
+                placeholder="—"
+                className={styles.readOnlyInput}
+              />
+            </div>
+
+            <div className={`${styles.fieldGroup} ${styles.colSmall}`}>
               <label>Telefone</label>
               <input
                 type="text"
-                value={newRequest.telefone || ''}
+                value={mascararTelefone(newRequest.telefone)}
                 readOnly
                 placeholder="(00) 00000-0000"
                 className={styles.readOnlyInput}
+              />
+            </div>
+
+            <div className={`${styles.fieldGroup} ${styles.colCpf}`}>
+              <label>CPF *</label>
+              <input
+                type="text"
+                value={formatCPF(newRequest.cpf) || ''}
+                readOnly
+                placeholder="000.000.000-00"
+                className={styles.readOnlyInput}
+                required
               />
             </div>
 
@@ -264,11 +265,20 @@ export default function NovoPedido({
             </div>
           </div>
 
+          {/* SUBTÍTULO: ENDEREÇO */}
+          <div className={styles.formSectionHeader}>
+            <h4>Endereço</h4>
+          </div>
+
           {/* ENDEREÇO DO PACIENTE (somente leitura) */}
           <div className={styles.formGridStrict}>
             <div className={`${styles.fieldGroup} ${styles.colCep}`}>
               <label>CEP</label>
               <input type="text" value={newRequest.cep || ''} readOnly placeholder="00000-000" className={styles.readOnlyInput} />
+            </div>
+            <div className={`${styles.fieldGroup} ${styles.colBairro}`}>
+              <label>Bairro</label>
+              <input type="text" value={newRequest.bairro || ''} readOnly placeholder="—" className={styles.readOnlyInput} />
             </div>
             <div className={`${styles.fieldGroup} ${styles.colLogradouro}`}>
               <label>Logradouro / Rua</label>
@@ -281,10 +291,6 @@ export default function NovoPedido({
             <div className={`${styles.fieldGroup} ${styles.colComplemento}`}>
               <label>Complemento</label>
               <input type="text" value={newRequest.complemento || ''} readOnly placeholder="—" className={styles.readOnlyInput} />
-            </div>
-            <div className={`${styles.fieldGroup} ${styles.colBairro}`}>
-              <label>Bairro</label>
-              <input type="text" value={newRequest.bairro || ''} readOnly placeholder="—" className={styles.readOnlyInput} />
             </div>
             <div className={`${styles.fieldGroup} ${styles.colCidade}`}>
               <label>Cidade</label>
