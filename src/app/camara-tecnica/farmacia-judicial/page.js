@@ -24,16 +24,16 @@ import {
   getRelatorioSaidaPorMedicamento,
 } from "./actions";
 
-import Dashboard from "./views/Dashboard";
-import PacientesJudiciais from "./views/PacientesJudiciais";
-import Medicamentos from "./views/Medicamentos";
-import Dispensacao from "./views/Dispensacao";
-import Relatorios from "./views/Relatorios";
+import Dashboard from "./Dashboard";
+import PacientesJudiciais from "./PacientesJudiciais";
+import Medicamentos from "./Medicamentos";
+import Dispensacao from "./Dispensacao";
+import Relatorios from "./Relatorios";
 
 // 🎯 COMPONENTES DE ESTOQUE SEPARADOS E INDEPENDENTES
-import SaldoEstoque from "./components/SaldoEstoque";
-import RegistrarEntrada from "./components/RegistrarEntrada";
-import CadastrarMedicamento from "./components/CadastrarMedicamentos";
+import SaldoEstoque from "./SaldoEstoque";
+import RegistrarEntrada from "./RegistrarEntrada";
+import CadastrarMedicamento from "./CadastrarMedicamentos";
 
 import styles from "./page.module.css";
 

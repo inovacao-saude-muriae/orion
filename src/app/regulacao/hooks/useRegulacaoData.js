@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { useConfirm } from "@/components/ConfirmDialog";
 import { localPorTipoExame } from "../constants";
 import {
@@ -61,7 +61,7 @@ export function useRegulacaoData(setActiveTab) {
 
   const _hoje = new Date();
   const [finMonth, setFinMonth] = useState(
-    String(_hoje.getMonth() + 1).padStart(2, "0"),
+    String(_hoje.getMonth() + 1).padStart(2, "0")
   );
   const [finYear, setFinYear] = useState(String(_hoje.getFullYear()));
 
@@ -135,7 +135,8 @@ export function useRegulacaoData(setActiveTab) {
     justification: "",
   });
 
-  const reloadData = async () => {
+  // Função manual de recarga (usada pelos handlers após criar/editar/excluir)
+  const reloadData = useCallback(async () => {
     try {
       setLoading(true);
       const [pedidos, aux, cotas] = await Promise.all([
@@ -154,28 +155,81 @@ export function useRegulacaoData(setActiveTab) {
         }
       );
       setCotasFinanceiras(cotas || []);
-
-      // Padrão: "Todos os exames" (selectedQueueExam/selectedReleasedExam vazios).
     } catch (error) {
       console.error("Erro ao carregar dados:", error);
     } finally {
       setLoading(false);
     }
-  };
-
-  useEffect(() => {
-    reloadData();
   }, []);
 
-  // Carrega o planejamento por cidade sempre que o ano de competência muda.
-  const reloadPlanejamento = async (ano = finYear) => {
+  // 1. CARREGAMENTO INICIAL ISOLADO NO EFFECT
+  useEffect(() => {
+    let isMounted = true;
+
+    async function fetchInitialData() {
+      try {
+        setLoading(true);
+        const [pedidos, aux, cotas] = await Promise.all([
+          getPedidosExames(),
+          getAuxiliaryData(),
+          getCotasFinanceiras(),
+        ]);
+
+        if (isMounted) {
+          setRequests(pedidos || []);
+          setAuxData(
+            aux || {
+              tiposExame: [],
+              procedimentos: [],
+              medicos: [],
+              ubsList: [],
+              pessoas: [],
+            }
+          );
+          setCotasFinanceiras(cotas || []);
+        }
+      } catch (error) {
+        console.error("Erro ao carregar dados iniciais:", error);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
+        }
+      }
+    }
+
+    fetchInitialData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Função manual para recarregar o planejamento por cidade
+  const reloadPlanejamento = useCallback(async (ano = finYear) => {
     const dados = await getPlanejamentoCidades(ano);
     setPlanejamentoCidades(dados || []);
-  };
+  }, [finYear]);
 
+  // 2. RECARREGA PLANEJAMENTO QUANDO O ANO MUDA (ISOLADO NO EFFECT)
   useEffect(() => {
-    reloadPlanejamento(finYear);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    let isMounted = true;
+
+    async function fetchPlanejamento() {
+      try {
+        const dados = await getPlanejamentoCidades(finYear);
+        if (isMounted) {
+          setPlanejamentoCidades(dados || []);
+        }
+      } catch (error) {
+        console.error("Erro ao carregar planejamento:", error);
+      }
+    }
+
+    fetchPlanejamento();
+
+    return () => {
+      isMounted = false;
+    };
   }, [finYear]);
 
   // Salva uma célula do planejamento (cidade/ano/mês) e atualiza o estado local.
@@ -184,7 +238,7 @@ export function useRegulacaoData(setActiveTab) {
     if (res.success) {
       setPlanejamentoCidades((prev) => {
         const outros = prev.filter(
-          (p) => !(p.cidade === cidade && p.ano === finYear && p.mes === mes),
+          (p) => !(p.cidade === cidade && p.ano === finYear && p.mes === mes)
         );
         return [...outros, res.data];
       });
@@ -476,7 +530,6 @@ export function useRegulacaoData(setActiveTab) {
 
         const cotaPedido = norm(r.quota);
 
-        // Se a cota consultada for SUS, soma os débitos do SUS e do PPI
         if (tipoAlvo === "SUS") {
           return cotaPedido === "SUS" || cotaPedido === "PPI";
         }
@@ -564,7 +617,7 @@ export function useRegulacaoData(setActiveTab) {
   const handleExamTypeChange = (e) => {
     const selectedTypeId = e.target.value;
     const tipo = auxData.tiposExame?.find(
-      (t) => String(t.id) === String(selectedTypeId),
+      (t) => String(t.id) === String(selectedTypeId)
     );
     const local = localPorTipoExame(tipo?.nome);
     setNewRequest((prev) => ({
@@ -573,7 +626,7 @@ export function useRegulacaoData(setActiveTab) {
       procedureId: "",
       procedureName: "",
       estimatedCost: 0,
-      localRealizacao: local, // preenchido automaticamente pela regra
+      localRealizacao: local,
     }));
   };
 

@@ -35,10 +35,6 @@ export async function GET() {
       // Junta Reguladora
       totalPacientesJunta,
       totalAtendimentosJunta,
-      // CCZ
-      totalAnimais,
-      totalZoonoses,
-      totalDenuncias,
       // Usuários / acesso
       usuariosPorPerfil,
       totalUsuariosAtivos,
@@ -92,10 +88,6 @@ export async function GET() {
 
       prisma.pacienteJunta.count(),
       prisma.juntaAtendimento.count(),
-
-      prisma.animal.count(),
-      prisma.cadastroZoonoses.count(),
-      prisma.denunciaCaoAgressivo.count(),
 
       // Usuários por perfil e ativos
       prisma.user.groupBy({
@@ -217,11 +209,6 @@ export async function GET() {
       junta: {
         pacientes: totalPacientesJunta,
         atendimentos: totalAtendimentosJunta,
-      },
-      ccz: {
-        animais: totalAnimais,
-        zoonoses: totalZoonoses,
-        denuncias: totalDenuncias,
       },
       usuarios: {
         total: totalUsuarios,

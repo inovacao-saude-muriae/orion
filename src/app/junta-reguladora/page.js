@@ -10,10 +10,10 @@ import {
   getProntuarioUnificado,
 } from "./actions";
 
-import CadastroPacienteJunta from "./views/CadastroPacienteJunta";
-import AtendimentoServico from "./components/AtendimentoServico";
-import AgendaServico from "./views/AgendaServico";
-import ProntuarioRelatorio from "./views/ProntuarioRelatorio";
+import CadastroPacienteJunta from "./CadastroPacienteJunta";
+import AtendimentoServico from "./AtendimentoServico";
+import AgendaServico from "./AgendaServico";
+import ProntuarioRelatorio from "./ProntuarioRelatorio";
 import AcessoNegadoModulo from "@/components/AcessoNegadoModulo";
 import { usePermissoesJunta } from "./PermissoesJuntaContext";
 import { useNotify } from "@/components/ConfirmDialog";
@@ -25,20 +25,13 @@ const MAPA_SERVICOS = {
   CAEE: "CAEE",
   APAE: "APAE",
   AMBULATORIO: "Ambulatório",
-  EDUCACAO: "Educação",
-  SOCIAL: "Social",
   ESPECIALIDADES: "Centro de Especialidades",
-  REABILITACAO: "Centro de Reabilitação",
 };
 
 function JuntaReguladoraPageContent() {
   const searchParams = useSearchParams();
   const notify = useNotify();
 
-  // Recorte por sub-serviço (design §2.6 / FR-3.4): a entrada no módulo já é
-  // garantida pelo layout; aqui bloqueamos NO CONTEÚDO as abas de serviço que
-  // não estão vinculadas ao operador. GESTOR/JUNTA-ADMIN veem todas; fail-closed
-  // sem provider (lista vazia + ehAdminJunta false).
   const { subServicosPermitidos, ehAdminJunta } = usePermissoesJunta();
 
   const activeTab = searchParams.get("tab") || "CADASTRO";
@@ -48,7 +41,6 @@ function JuntaReguladoraPageContent() {
   const servicoNomeFormatado =
     MAPA_SERVICOS[activeSubTab.toUpperCase()] || activeSubTab;
 
-  // O subTab ativo (normalizado) está entre os sub-serviços permitidos?
   const subTabAtivo = activeSubTab.toUpperCase();
   const servicoLiberado =
     ehAdminJunta || subServicosPermitidos.includes(subTabAtivo);
@@ -56,44 +48,43 @@ function JuntaReguladoraPageContent() {
   const [pacientesServico, setPacientesServico] = useState([]);
   const [prontuarioData, setProntuarioData] = useState(null);
   const [loadingServico, setLoadingServico] = useState(false);
-  // Aba interna dentro de um serviço: recepção/atendimento ou agenda.
   const [abaServico, setAbaServico] = useState("ATENDIMENTO");
 
-  // Ao acessar ou trocar de serviço, sempre abre na Recepção/Atendimento
-  // (não mantém a Agenda do serviço anterior).
-  useEffect(() => {
+  // Reset direto de estado derivado do serviço/aba sem precisar de useEffect
+  const [prevServico, setPrevServico] = useState(servicoNomeFormatado);
+  const [prevTab, setPrevTab] = useState(activeTab);
+
+  if (prevServico !== servicoNomeFormatado || prevTab !== activeTab) {
+    setPrevServico(servicoNomeFormatado);
+    setPrevTab(activeTab);
     setAbaServico("ATENDIMENTO");
-  }, [activeTab, servicoNomeFormatado]);
+  }
 
   // Busca de pacientes no banco ao selecionar/mudar de serviço
   useEffect(() => {
     let isMounted = true;
 
-    // Só busca quando a aba de serviço está liberada — evita o 403 esperado da
-    // guarda server-side para serviços não vinculados (o bloqueio visual é feito
-    // por servicoLiberado).
     if (activeTab === "SERVICOS" && servicoLiberado) {
-      // Usar queueMicrotask evita o aviso de setState síncrono no topo do Effect
-      queueMicrotask(() => {
-        if (isMounted) setLoadingServico(true);
-      });
-
-      getPacientesPorServico(servicoNomeFormatado)
-        .then((res) => {
-          if (!isMounted) return;
-          if (res && res.success && Array.isArray(res.data)) {
-            setPacientesServico(res.data);
-          } else {
-            setPacientesServico([]);
+      async function loadPacientes() {
+        setLoadingServico(true);
+        try {
+          const res = await getPacientesPorServico(servicoNomeFormatado);
+          if (isMounted) {
+            if (res && res.success && Array.isArray(res.data)) {
+              setPacientesServico(res.data);
+            } else {
+              setPacientesServico([]);
+            }
           }
-        })
-        .catch((err) => {
+        } catch (err) {
           console.error("Erro ao carregar pacientes:", err);
           if (isMounted) setPacientesServico([]);
-        })
-        .finally(() => {
+        } finally {
           if (isMounted) setLoadingServico(false);
-        });
+        }
+      }
+
+      loadPacientes();
     }
 
     return () => {
@@ -135,7 +126,7 @@ function JuntaReguladoraPageContent() {
   const handleRegistrarAtendimento = async (atendimentoData) => {
     const res = await registrarAtendimentoServico(atendimentoData);
     if (res.success) {
-      await notify({ tipo: "sucesso", title: "Pronto", message: "Registro de presença/atendimento gravado com sucesso!" });
+      await notify({ tipo: "sucesso", title: "Pronto", message: "Registro gravado com sucesso!" });
     } else {
       await notify({ tipo: "erro", title: "Erro", message: "Erro ao registrar atendimento: " + (res.error || "Erro desconhecido") });
     }

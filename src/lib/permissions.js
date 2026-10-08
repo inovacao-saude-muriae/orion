@@ -18,7 +18,6 @@ export const MODULOS = {
   FARMACIA: "FARMACIA",
   PROCESSOS: "PROCESSOS",
   JUNTA: "JUNTA",
-  CCZ: "CCZ",
 };
 
 export const NIVEIS = { ADMIN: "ADMIN", OPERADOR: "OPERADOR" };

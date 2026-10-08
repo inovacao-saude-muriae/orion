@@ -8,14 +8,29 @@ import styles from "../GerenciamentoCadastro.module.css";
 export default function ServicosPage() {
   const [data, setData] = useState({ servicos: [], especialidades: [] });
 
+  // Mantido com useCallback para ser passado ao componente filho sem re-renders desnecessários
   const reloadData = useCallback(async () => {
     const res = await getServicosData();
     setData(res || { servicos: [], especialidades: [] });
   }, []);
 
+  // Busca inicial auto-contida para evitar acoplamento de efeito com useCallback
   useEffect(() => {
-    reloadData();
-  }, [reloadData]);
+    let isMounted = true;
+
+    async function loadInitialData() {
+      const res = await getServicosData();
+      if (isMounted) {
+        setData(res || { servicos: [], especialidades: [] });
+      }
+    }
+
+    loadInitialData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <div className={styles.container}>

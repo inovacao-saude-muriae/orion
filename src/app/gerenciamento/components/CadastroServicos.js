@@ -2,7 +2,7 @@
 
 import { useState, useRef, useEffect } from "react";
 import styles from "./CadastroServicos.module.css";
-import ModalConfirmacaoExclusao from "@/app/regulacao/components/Modals/ModalConfirmacaoExclusao";
+import ModalConfirmacaoExclusao from "@/app/regulacao/Modals/ModalConfirmacaoExclusao";
 import { useConfirm, useNotify } from "@/components/ConfirmDialog";
 import BotaoEditar from "@/components/BotaoEditar";
 import { createRegistro, updateRegistro, deleteRegistro } from "@/app/gerenciamento/servicos/actions";

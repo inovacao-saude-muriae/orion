@@ -8,14 +8,29 @@ import styles from "../GerenciamentoCadastro.module.css";
 export default function ProcedimentosPage() {
   const [data, setData] = useState({ tiposExame: [], linhas: [] });
 
+  // Mantido para o componente filho invocar após criar/editar registros
   const reloadData = useCallback(async () => {
     const res = await getProcedimentosData();
     setData(res || { tiposExame: [], linhas: [] });
   }, []);
 
+  // Busca inicial isolada no efeito
   useEffect(() => {
-    reloadData();
-  }, [reloadData]);
+    let isMounted = true;
+
+    async function loadInitialData() {
+      const res = await getProcedimentosData();
+      if (isMounted) {
+        setData(res || { tiposExame: [], linhas: [] });
+      }
+    }
+
+    loadInitialData();
+
+    return () => {
+      isMounted = false;
+    };
+  }, []);
 
   return (
     <div className={styles.container}>

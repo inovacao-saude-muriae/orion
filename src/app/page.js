@@ -20,8 +20,6 @@ const getDestinationByRole = (role) => {
     case "JUNTA_SAUDE":
     case "JUNTA_ASSISTENCIA":
       return "/junta-reguladora?tab=CADASTRO";
-    case "CCZ_ADMIN":
-      return "/ccz?tab=DASHBOARD";
     default:
       return "/regulacao";
   }
@@ -199,14 +197,6 @@ export default function Home() {
               <div className={styles.kpiTitle}>Junta Reguladora</div>
               <div className={`${styles.kpiValue} ${styles.textDark}`}>{metrics.junta.pacientes}</div>
               <p className={styles.kpiFooter}>pacientes · {metrics.junta.atendimentos} atendimentos</p>
-            </div>
-
-            <div className={styles.kpiCard}>
-              <div className={styles.kpiTitle}>CCZ — animais</div>
-              <div className={`${styles.kpiValue} ${styles.textDark}`}>{metrics.ccz.animais}</div>
-              <p className={styles.kpiFooter}>
-                {metrics.ccz.zoonoses} zoonoses · {metrics.ccz.denuncias} denúncias
-              </p>
             </div>
           </section>
 

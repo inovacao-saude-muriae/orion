@@ -33,10 +33,6 @@ export default function LoginPage() {
       case 'ADMIN_JUNTA':
         return '/junta-reguladora?tab=CADASTRO';
 
-      case 'VETERINARIO':
-      case 'OPERADOR_CCZ':
-        return '/ccz?tab=DASHBOARD';
-
       default:
         return '/regulacao';
     }

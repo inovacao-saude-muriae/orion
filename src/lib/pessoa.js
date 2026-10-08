@@ -101,8 +101,7 @@ export async function criarPessoaTx(tx, data) {
  */
 export async function atualizarPessoaTx(tx, cpf, data) {
   const pessoa = normalizarPessoa(data);
-  // eslint-disable-next-line no-unused-vars
-  const { cpf: _cpf, ...campos } = pessoa;
+  const { cpf: _, ...campos } = pessoa;
   return tx.pessoa.update({ where: { cpf: soDigitos(cpf) }, data: campos });
 }
 

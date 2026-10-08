@@ -91,7 +91,7 @@ export default function GestorDashboardPage() {
         <div>
           <h1 className={styles.title}>Painel Gerencial</h1>
           <p className={styles.subtitle}>
-            Visão consolidada dos módulos de Regulação, Farmácia Judicial, Junta Reguladora e CCZ.
+            Visão consolidada dos módulos de Regulação, Farmácia Judicial e Junta Reguladora.
           </p>
         </div>
         <button className={styles.btnPrimary} onClick={fetchMetrics}>
@@ -145,14 +145,6 @@ export default function GestorDashboardPage() {
               <strong className={styles.cardNumber}>{metrics.junta.pacientes}</strong>
               <span className={styles.cardSubtext}>
                 pacientes · {metrics.junta.atendimentos} atendimentos
-              </span>
-            </div>
-
-            <div className={styles.card}>
-              <span className={styles.cardLabel}>CCZ — animais</span>
-              <strong className={styles.cardNumber}>{metrics.ccz.animais}</strong>
-              <span className={styles.cardSubtext}>
-                {metrics.ccz.zoonoses} zoonoses · {metrics.ccz.denuncias} denúncias
               </span>
             </div>
           </div>

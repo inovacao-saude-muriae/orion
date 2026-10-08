@@ -151,60 +151,6 @@ const menuSections = [
   {
     items: [
       {
-        name: "CCZ",
-        path: "/ccz",
-        isDropdown: true,
-        icon: (
-          <svg
-            width="20"
-            height="20"
-            viewBox="0 0 24 24"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-            strokeLinejoin="round"
-          >
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-            <path d="m9 12 2 2 4-4" />
-          </svg>
-        ),
-        subItems: [
-          { name: "Dashboard", tab: "DASHBOARD" },
-          { name: "Procedimentos", tab: "PROCEDIMENTOS" },
-          {
-            name: "Controle de Zoonoses",
-            tab: "ZOONOSES",
-            isNestedDropdown: true,
-            nestedItems: [
-              { name: "Zoonoses", subTab: "Zoonoses" },
-              { name: "Exibir Zoonoses", subTab: "Exibir Zoonoses" },
-            ],
-          },
-          {
-            name: "Controle de Esporotricose",
-            tab: "ESPOROTRICOSE",
-            isNestedDropdown: true,
-            nestedItems: [
-              { name: "Esporotricose", subTab: "CADASTRO" },
-              { name: "Exibir Esporotricose", subTab: "Exibir Esporotricose" },
-            ],
-          },
-          
-          { name: "Cadastrar Denúncia", tab: "DENUNCIAS" },
-         
-          { name: "Tutor", tab: "TUTOR" },
-          { name: "Animal", tab: "ANIMAIS" },
-          
-          
-          
-        ],
-      },
-    ],
-  },
-  {
-    items: [
-      {
         name: "Gerenciamento",
         path: "/admin/gerenciamento",
         isDropdown: true,

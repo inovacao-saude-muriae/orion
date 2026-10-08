@@ -7,17 +7,17 @@ import * as XLSX from "xlsx";
 import { useRegulacaoData } from "./hooks/useRegulacaoData";
 import { useRegulacaoFilters } from "./hooks/useRegulacaoFilters";
 
-import FiltersBar from "./components/FiltersBar";
-import Dashboard from "./views/Dashboard";
-import NovoPedido from "./views/NovoPedido";
-import ListaEspera from "./views/ListaEspera";
-import Liberados from "./views/Liberados";
-import Financeiro from "./views/Financeiro";
-import TelaLiberarPedido from "./components/LiberarPedido";
-import TelaEditarPedido from "./components/EditarPedido";
+import FiltersBar from "./FiltersBar";
+import Dashboard from "./Dashboard";
+import NovoPedido from "./NovoPedido";
+import ListaEspera from "./ListaEspera";
+import Liberados from "./Liberados";
+import Financeiro from "./Financeiro";
+import TelaLiberarPedido from "./LiberarPedido";
+import TelaEditarPedido from "./EditarPedido";
 
-import ModalTetoFinanceiro from "./components/Modals/ModalTetoFinanceiro";
-import ModalSeletorCotas from "./components/Modals/ModalSeletorCotas";
+import ModalTetoFinanceiro from "./Modals/ModalTetoFinanceiro";
+import ModalSeletorCotas from "./Modals/ModalSeletorCotas";
 
 import styles from "./page.module.css";
 
