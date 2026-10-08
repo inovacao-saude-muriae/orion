@@ -1,14 +1,14 @@
 import { NextResponse } from 'next/server';
 import { prisma } from '@/lib/prisma';
 import { Role } from '@prisma/client';
-import { requireRole } from '@/lib/auth';
+import { requireGestor } from '@/lib/auth';
 import bcrypt from 'bcryptjs';
 
 const ROLES_VALIDAS = Object.values(Role);
 
 export async function POST(request) {
   try {
-    await requireRole(['GESTOR']);
+    await requireGestor();
     const body = await request.json();
     const { cpf, nomeCompleto, role, cargo, senha } = body;
 

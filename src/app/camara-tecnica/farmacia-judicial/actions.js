@@ -1,7 +1,8 @@
 // src/app/camara-tecnica/farmacia-judicial/actions.js
 "use server";
 
-import { requireRole } from "@/lib/auth";
+import { requireAdminModulo, requireAcessoModulo } from "@/lib/auth";
+import { MODULOS } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 
@@ -57,6 +58,8 @@ export async function createPacienteJudicial(data) {
   const cleanCpf = (data.cpf || "").replace(/\D/g, "");
 
   try {
+    await requireAdminModulo(MODULOS.FARMACIA);
+
     if (cleanCpf.length !== 11) {
       throw new Error("Selecione uma pessoa válida (CPF com 11 dígitos).");
     }
@@ -180,6 +183,8 @@ export async function getCatalogoCompleto() {
 
 export async function createMedicamento(data) {
   try {
+    await requireAdminModulo(MODULOS.FARMACIA);
+
     await prisma.$executeRaw`
       INSERT INTO public.farmacia_medicamentos (nome, tipo, dosagem, ativo)
       VALUES (${data.nome}, ${data.tipo}, ${data.dosagem}, true)
@@ -194,7 +199,7 @@ export async function createMedicamento(data) {
 
 export async function updateMedicamento(id, data) {
   try {
-    await requireRole(["GESTOR", "FARMACIA_ADMIN"]);
+    await requireAdminModulo(MODULOS.FARMACIA);
 
     const medId = Number(id);
     if (!Number.isSafeInteger(medId) || medId <= 0) {
@@ -220,7 +225,7 @@ export async function updateMedicamento(id, data) {
 
 export async function deleteMedicamento(id) {
   try {
-    await requireRole(["GESTOR", "FARMACIA_ADMIN"]);
+    await requireAdminModulo(MODULOS.FARMACIA);
 
     const medId = Number(id);
     if (!Number.isSafeInteger(medId) || medId <= 0) {
@@ -243,6 +248,8 @@ export async function deleteMedicamento(id) {
 
 export async function createLoteMedicamento(data) {
   try {
+    await requireAdminModulo(MODULOS.FARMACIA);
+
     await prisma.$executeRaw`
       INSERT INTO public.farmacia_lotes_medicamentos 
         (medicamento_id, numero_lote, fornecedor, qtd_inicial, valor_unitario, data_entrada, data_validade)
@@ -266,7 +273,7 @@ export async function createLoteMedicamento(data) {
 
 export async function updateLoteMedicamento(loteId, data) {
   try {
-    await requireRole(["GESTOR", "FARMACIA_ADMIN"]);
+    await requireAdminModulo(MODULOS.FARMACIA);
 
     const id = Number(loteId);
     if (!Number.isSafeInteger(id) || id <= 0) {
@@ -392,7 +399,7 @@ async function calcularSaldoMedicamento(medicamentoId) {
 
 export async function ajustarEstoque(medicamentoId, data) {
   try {
-    const session = await requireRole(["GESTOR", "FARMACIA_ADMIN"]);
+    const session = await requireAdminModulo(MODULOS.FARMACIA);
 
     const id = Number(medicamentoId);
     if (!Number.isSafeInteger(id) || id <= 0) {
@@ -515,8 +522,9 @@ export async function getMedicamentosDoPaciente(numeroPasta) {
 
 export async function registrarDispensacao(data) {
   try {
-    const usuario = await requireRole(["GESTOR", "FARMACIA_ADMIN"]);
-    
+    // registrarDispensacao é operação do dia a dia: libera OPERADOR (§10.2).
+    const usuario = await requireAcessoModulo(MODULOS.FARMACIA);
+
     if (!Array.isArray(data?.itens) || data.itens.length === 0) {
       throw new Error("Informe os medicamentos para dispensação.");
     }

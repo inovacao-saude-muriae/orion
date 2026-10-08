@@ -1,10 +1,11 @@
 "use server";
 
-import { requireRole } from "@/lib/auth";
+import { requireAdminModulo } from "@/lib/auth";
+import { MODULOS } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 
-const ROLES_PERMITIDAS = ["GESTOR", "REGULACAO_ADMIN"];
+// Tipos de exame / procedimentos pertencem à Regulação (design §4.4).
 
 // Garante que exista um Tipo de Exame com o nome informado (cria se necessário)
 // ou usa o tipoExameId passado. Retorna o id.
@@ -87,7 +88,7 @@ export async function getProcedimentosData() {
 // Cria um registro. Tipo de exame obrigatório (id ou nome novo); procedimento opcional.
 export async function createRegistro(data) {
   try {
-    await requireRole(ROLES_PERMITIDAS);
+    await requireAdminModulo(MODULOS.REGULACAO);
     const tipoExameId = await resolverTipoExameId(data);
 
     const procedimentoNome = (data.procedimentoNome || "").trim();
@@ -107,7 +108,7 @@ export async function createRegistro(data) {
 
 export async function updateRegistro(linha, data) {
   try {
-    await requireRole(ROLES_PERMITIDAS);
+    await requireAdminModulo(MODULOS.REGULACAO);
     const tipoExameId = await resolverTipoExameId(data);
     const procedimentoNome = (data.procedimentoNome || "").trim();
 
@@ -140,7 +141,7 @@ export async function updateRegistro(linha, data) {
 
 export async function deleteRegistro(linha) {
   try {
-    await requireRole(ROLES_PERMITIDAS);
+    await requireAdminModulo(MODULOS.REGULACAO);
 
     if (linha.procedimentoId) {
       await prisma.procedimento.delete({

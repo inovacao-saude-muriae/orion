@@ -1,6 +1,11 @@
 "use server";
 
-import { requireRole } from "@/lib/auth";
+import {
+  requireAdminModulo,
+  requireAcessoModulo,
+  requireAcessoPessoas,
+} from "@/lib/auth";
+import { MODULOS } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 import {
@@ -391,6 +396,7 @@ export async function releasePaciente(idStr, releaseData) {
 // 8. Cadastrar Nova Pessoa / Paciente
 export async function createPessoa(data) {
   try {
+    await requireAcessoPessoas();
     const result = await prisma.$transaction(async (tx) => {
       // criarPessoaTx grava todos os campos obrigatórios (inclui sexo e cns).
       const pessoa = await criarPessoaTx(tx, data);
@@ -409,7 +415,7 @@ export async function createPessoa(data) {
 // 9. Cadastrar Novo Médico
 export async function createMedico(data) {
   try {
-    await requireRole(["GESTOR", "REGULACAO_ADMIN"]);
+    await requireAdminModulo(MODULOS.REGULACAO);
     const medico = await prisma.medico.create({
       data: {
         nome: data.nome,
@@ -431,7 +437,7 @@ export async function createMedico(data) {
 // 10. Cadastrar Nova UBS
 export async function createUbs(data) {
   try {
-    await requireRole(["GESTOR", "REGULACAO_ADMIN"]);
+    await requireAdminModulo(MODULOS.REGULACAO);
     const ubs = await prisma.ubs.create({
       data: {
         nome: data.nome,
@@ -450,7 +456,7 @@ export async function createUbs(data) {
 // 11. Cadastrar Novo Procedimento
 export async function createProcedimento(data) {
   try {
-    await requireRole(["GESTOR", "REGULACAO_ADMIN"]);
+    await requireAdminModulo(MODULOS.REGULACAO);
     const procedimento = await prisma.procedimento.create({
       data: {
         nome: data.nome,
@@ -470,7 +476,7 @@ export async function createProcedimento(data) {
 // 12. Atualizar Procedimento
 export async function updateProcedimento(id, data) {
   try {
-    await requireRole(["GESTOR", "REGULACAO_ADMIN"]);
+    await requireAdminModulo(MODULOS.REGULACAO);
     const procedimento = await prisma.procedimento.update({
       where: { id: Number(id) },
       data: {
@@ -491,7 +497,7 @@ export async function updateProcedimento(id, data) {
 // 12b. Excluir Procedimento
 export async function deleteProcedimento(id) {
   try {
-    await requireRole(["GESTOR", "REGULACAO_ADMIN"]);
+    await requireAdminModulo(MODULOS.REGULACAO);
     await prisma.procedimento.delete({ where: { id: Number(id) } });
     revalidatePath("/regulacao");
     return { success: true };
@@ -511,7 +517,8 @@ export async function deleteProcedimento(id) {
 // 13. Buscar Tetos de Cotas Financeiras
 export async function getCotasFinanceiras() {
   try {
-    await requireRole(["GESTOR", "REGULACAO_ADMIN"]);
+    // Leitura: OPERADOR também visualiza (Financeiro somente-leitura, FR-8).
+    await requireAcessoModulo(MODULOS.REGULACAO);
     const data = await prisma.cotaFinanceira.findMany();
     return data.map((c) => ({
       id: c.id,
@@ -529,7 +536,7 @@ export async function getCotasFinanceiras() {
 // 13. Salvar Teto de Cota
 export async function saveCotaFinanceira({ tipoCota, mes, ano, valorTeto }) {
   try {
-    await requireRole(["GESTOR", "REGULACAO_ADMIN"]);
+    await requireAdminModulo(MODULOS.REGULACAO);
 
     // Normaliza a competência (mês com 2 dígitos, ano com 4).
     const mesStr = String(mes ?? "").padStart(2, "0").slice(0, 2);
@@ -591,7 +598,8 @@ export async function saveCotaFinanceira({ tipoCota, mes, ano, valorTeto }) {
 // 13c. Buscar Planejamento Mensal por Cidade (de um ano)
 export async function getPlanejamentoCidades(ano) {
   try {
-    await requireRole(["GESTOR", "REGULACAO_ADMIN"]);
+    // Leitura: OPERADOR também visualiza (Financeiro somente-leitura, FR-8).
+    await requireAcessoModulo(MODULOS.REGULACAO);
     const anoStr = String(ano ?? "").slice(0, 4);
     const registros = await prisma.planejamentoCidade.findMany({
       where: { ano: anoStr },
@@ -613,7 +621,7 @@ export async function getPlanejamentoCidades(ano) {
 // 13d. Salvar uma célula do Planejamento (cidade + ano + mês)
 export async function savePlanejamentoCidade({ cidade, ano, mes, valor }) {
   try {
-    const user = await requireRole(["GESTOR", "REGULACAO_ADMIN"]);
+    const user = await requireAdminModulo(MODULOS.REGULACAO);
 
     const cidadeStr = String(cidade ?? "").trim();
     const anoStr = String(ano ?? "").slice(0, 4);
@@ -670,7 +678,7 @@ export async function savePlanejamentoCidade({ cidade, ano, mes, valor }) {
 // 14. Atualizar Data de Faturamento
 export async function updateBillingDate(idStr, dateStr) {
   try {
-    await requireRole(["GESTOR", "REGULACAO_ADMIN"]);
+    await requireAdminModulo(MODULOS.REGULACAO);
     const numericId = Number(String(idStr).replace(/\D/g, ""));
     await prisma.pedidoExame.update({
       where: { id: numericId },
@@ -770,7 +778,7 @@ export async function deletePedidoExame(idStr) {
 // 17. Atualizar Médico
 export async function updateMedico(id, data) {
   try {
-    await requireRole(["GESTOR", "REGULACAO_ADMIN"]);
+    await requireAdminModulo(MODULOS.REGULACAO);
     const medico = await prisma.medico.update({
       where: { id: Number(id) },
       data: {
@@ -793,7 +801,7 @@ export async function updateMedico(id, data) {
 // 18. Excluir Médico
 export async function deleteMedico(id) {
   try {
-    await requireRole(["GESTOR", "REGULACAO_ADMIN"]);
+    await requireAdminModulo(MODULOS.REGULACAO);
     await prisma.medico.update({
       where: { id: Number(id) },
       data: { ativo: false },
@@ -810,6 +818,7 @@ export async function deleteMedico(id) {
 // 19. Atualizar Pessoa / Paciente
 export async function updatePessoa(cpf, data) {
   try {
+    await requireAcessoPessoas();
     const result = await prisma.$transaction(async (tx) => {
       const pessoa = await atualizarPessoaTx(tx, cpf, data);
       await gravarEnderecoTx(tx, cpf, data);
@@ -827,6 +836,7 @@ export async function updatePessoa(cpf, data) {
 // 20. Excluir Pessoa / Paciente
 export async function deletePessoa(cpf) {
   try {
+    await requireAcessoPessoas();
     await prisma.$transaction(async (tx) => {
       await tx.endereco.deleteMany({ where: { pessoaCpf: cpf } });
       await tx.pessoa.delete({ where: { cpf } });
@@ -843,7 +853,7 @@ export async function deletePessoa(cpf) {
 // 21. Atualizar UBS
 export async function updateUbs(id, data) {
   try {
-    await requireRole(["GESTOR", "REGULACAO_ADMIN"]);
+    await requireAdminModulo(MODULOS.REGULACAO);
     const ubs = await prisma.ubs.update({
       where: { id: Number(id) },
       data: {
@@ -863,7 +873,7 @@ export async function updateUbs(id, data) {
 // 22. Excluir UBS
 export async function deleteUbs(id) {
   try {
-    await requireRole(["GESTOR", "REGULACAO_ADMIN"]);
+    await requireAdminModulo(MODULOS.REGULACAO);
     await prisma.ubs.update({
       where: { id: Number(id) },
       data: { ativo: false },

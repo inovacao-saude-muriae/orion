@@ -1,19 +1,16 @@
 import { NextResponse } from "next/server";
-import { requireRole } from "@/lib/auth";
+import { requireAdminDeAlgumModulo } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-const ROLES_ADMINISTRATIVAS = [
-  "GESTOR",
-  "REGULACAO_ADMIN",
-  "JUNTA_ADMIN",
-  "FARMACIA_ADMIN",
-  "PROCESSO_ADMIN",
-  "CCZ_ADMIN",
-];
+// Refinamento #6 (RBAC Etapa 1): o antigo array ROLES_ADMINISTRATIVAS continha
+// apenas papéis admin (GESTOR, REGULACAO_ADMIN, JUNTA_ADMIN, FARMACIA_ADMIN,
+// PROCESSO_ADMIN, CCZ_ADMIN — sem REGULACAO_COMUM). Verificado antes da troca:
+// requireAdminDeAlgumModulo() (GESTOR ∨ admin de qualquer módulo) preserva
+// exatamente o acesso atual.
 
 export async function GET() {
   try {
-    await requireRole(ROLES_ADMINISTRATIVAS);
+    await requireAdminDeAlgumModulo();
 
     const [
       pessoas,

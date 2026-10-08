@@ -2,6 +2,19 @@
 
 import { prisma } from '@/lib/prisma';
 import { revalidatePath } from 'next/cache';
+import {
+  requireAcessoModulo,
+  requireAdminModulo,
+  requireLeituraServicoJuntaPorNome,
+  requireEscritaServicoJuntaPorNome,
+} from '@/lib/auth';
+import {
+  MODULOS,
+  NIVEIS,
+  usuarioEhGestor,
+  usuarioEhAdminModulo,
+  SERVICO_JUNTA_PARA_NOME,
+} from '@/lib/permissions';
 
 // Helper para converter BigInt e Objetos Date sem erro de serialização no Next.js
 function serializeData(data) {
@@ -11,6 +24,7 @@ function serializeData(data) {
 /* ── 1. BUSCA DE PESSOAS NO BANCO (SEM DUPLICAÇÃO DE DADOS) ── */
 export async function buscarPessoaExistente(termo) {
   try {
+    await requireAcessoModulo(MODULOS.JUNTA);
     const termoClean = String(termo || '').trim();
     const apenasNumeros = termoClean.replace(/\D/g, '');
 
@@ -95,6 +109,9 @@ export async function buscarPessoaPorNomeOuCpf(termo) {
 /* ── 2. CADASTRAR OU ATUALIZAR PACIENTE NA JUNTA REGULADORA ── */
 export async function cadastrarPacienteJunta(data) {
   try {
+    // Cadastro de paciente é ato administrativo da Junta e cria Servico
+    // on-the-fly: nunca liberar a OPERADOR (design §2.6).
+    await requireAdminModulo(MODULOS.JUNTA);
     const { cpf, tipoDeficiencia, locaisEncaminhados = [] } = data;
 
     const cpfClean = (cpf || '').replace(/\D/g, '').slice(0, 11);
@@ -169,6 +186,7 @@ export async function cadastrarPacienteJunta(data) {
 /* ── LISTAR PACIENTES CADASTRADOS NA JUNTA (para o dropdown do prontuário) ── */
 export async function listarPacientesJunta(termo) {
   try {
+    await requireAcessoModulo(MODULOS.JUNTA);
     const termoClean = String(termo || '').trim();
     const apenasNumeros = termoClean.replace(/\D/g, '');
 
@@ -213,6 +231,10 @@ export async function listarPacientesJunta(termo) {
 export async function getPacientesPorServico(servicoNome) {
   try {
     if (!servicoNome) return { success: true, data: [] };
+
+    // Autoriza pelo NOME CANÔNICO recebido ANTES de qualquer OR/contains
+    // (refinamento #4): operador só-CAEE é barrado (403) em APAE/Ambulatório/etc.
+    await requireLeituraServicoJuntaPorNome(servicoNome);
 
     const termo = String(servicoNome).trim();
 
@@ -329,6 +351,10 @@ export async function registrarAtendimentoServico(data) {
     if (!nomeDoServico) return { success: false, error: 'Nome do serviço não informado.' };
     if (!idDoPaciente) return { success: false, error: 'Paciente não selecionado.' };
 
+    // Escrita por serviço: nome mapeado exige o sub-serviço; não mapeado exige
+    // ADMIN da Junta (operador nunca cria serviço on-the-fly) — design §2.6.
+    await requireEscritaServicoJuntaPorNome(nomeDoServico);
+
     let juntaServico = await prisma.servico.findFirst({
       where: { nome: { equals: nomeDoServico, mode: 'insensitive' } },
     });
@@ -401,14 +427,66 @@ export async function getEspecialidadesPorServico(servicoNome) {
   try {
     const nome = String(servicoNome || '').trim();
 
-    const servico = nome
-      ? await prisma.servico.findFirst({
-          where: { nome: { equals: nome, mode: 'insensitive' } },
-        })
-      : null;
+    // Nome definido → valida o sub-serviço (refinamento #1).
+    if (nome) {
+      await requireLeituraServicoJuntaPorNome(nome);
+
+      const servico = await prisma.servico.findFirst({
+        where: { nome: { equals: nome, mode: 'insensitive' } },
+      });
+
+      const especialidades = await prisma.especialidade.findMany({
+        where: servico ? { servicoId: servico.id } : {},
+        include: { servico: true },
+        orderBy: { nome: 'asc' },
+      });
+
+      return serializeData(
+        especialidades.map((e) => ({
+          id: e.id,
+          nome: e.nome,
+          servicoNome: e.servico?.nome || '',
+        })),
+      );
+    }
+
+    // Nome vazio → entra no módulo e decide o escopo pelo nível (Finding 3).
+    const user = await requireAcessoModulo(MODULOS.JUNTA);
+
+    const ehAdminOuGestor =
+      (await usuarioEhGestor(user)) ||
+      (await usuarioEhAdminModulo(user, MODULOS.JUNTA));
+
+    let where = {};
+
+    if (!ehAdminOuGestor) {
+      // OPERADOR: restringe aos sub-serviços efetivamente vinculados, para não
+      // vazar especialidades de serviços fora do vínculo (Finding 3).
+      const nomesPermitidos = (user.acessos || [])
+        .filter(
+          (a) =>
+            a.modulo === MODULOS.JUNTA &&
+            a.nivel === NIVEIS.OPERADOR &&
+            a.servicoJunta,
+        )
+        .map((a) => SERVICO_JUNTA_PARA_NOME[a.servicoJunta])
+        .filter(Boolean);
+
+      // Sem nenhum sub-serviço vinculado → retorna vazio.
+      if (nomesPermitidos.length === 0) return [];
+
+      const servicosPermitidos = await prisma.servico.findMany({
+        where: { nome: { in: nomesPermitidos, mode: 'insensitive' } },
+        select: { id: true },
+      });
+      const idsPermitidos = servicosPermitidos.map((s) => s.id);
+      if (idsPermitidos.length === 0) return [];
+
+      where = { servicoId: { in: idsPermitidos } };
+    }
 
     const especialidades = await prisma.especialidade.findMany({
-      where: servico ? { servicoId: servico.id } : {},
+      where,
       include: { servico: true },
       orderBy: { nome: 'asc' },
     });
@@ -429,6 +507,7 @@ export async function getEspecialidadesPorServico(servicoNome) {
 /* ── 5. CONSULTA DO PRONTUÁRIO UNIFICADO (100% PRISMA ORM DEFINITIVO) ── */
 export async function getProntuarioUnificado(termoBusca) {
   try {
+    await requireAcessoModulo(MODULOS.JUNTA);
     const termoClean = String(termoBusca).trim();
     const apenasNumeros = termoClean.replace(/\D/g, '');
 
@@ -619,6 +698,7 @@ async function resolverServicoIdPorNome(servicoNome) {
 // Lista os agendamentos de um serviço num mês/ano (1-12).
 export async function getAgendamentosDoMes(servicoNome, ano, mes) {
   try {
+    await requireLeituraServicoJuntaPorNome(servicoNome);
     const nome = String(servicoNome || '').trim();
     const servico = nome
       ? await prisma.servico.findFirst({
@@ -664,6 +744,7 @@ export async function getAgendamentosDoMes(servicoNome, ano, mes) {
 // Agendamentos de um serviço numa data específica ('YYYY-MM-DD').
 export async function getAgendamentosDoDia(servicoNome, dataYMD) {
   try {
+    await requireLeituraServicoJuntaPorNome(servicoNome);
     const nome = String(servicoNome || '').trim();
     const servico = nome
       ? await prisma.servico.findFirst({
@@ -727,6 +808,8 @@ export async function getAgendamentosDoDia(servicoNome, dataYMD) {
 // Cria um agendamento (paciente + especialidade + data + hora).
 export async function criarAgendamentoJunta(dados) {
   try {
+    // Escrita por serviço: valida o sub-serviço antes de resolver/criar o Servico.
+    await requireEscritaServicoJuntaPorNome(dados.servicoNome);
     const servicoId = await resolverServicoIdPorNome(dados.servicoNome);
 
     const pacienteJuntaId = Number(dados.pacienteJuntaId);
@@ -758,6 +841,19 @@ export async function excluirAgendamentoJunta(id) {
   try {
     const agId = Number(id);
     if (!agId) return { success: false, error: 'Agendamento inválido.' };
+
+    // Refinamento #2: resolve o serviço pelo id ANTES de excluir e aplica a
+    // guarda de escrita por sub-serviço. Impede operador só-CAEE de excluir
+    // agendamento de APAE/Ambulatório/Especialidades. Nome não-mapeado cai em
+    // requireAdminModulo(JUNTA) dentro de requireEscritaServicoJuntaPorNome.
+    const agendamento = await prisma.agendamentoJunta.findUnique({
+      where: { id: agId },
+      include: { servico: true },
+    });
+    if (!agendamento) return { success: false, error: 'Agendamento inválido.' };
+
+    await requireEscritaServicoJuntaPorNome(agendamento.servico?.nome || '');
+
     await prisma.agendamentoJunta.delete({ where: { id: agId } });
     return { success: true };
   } catch (error) {

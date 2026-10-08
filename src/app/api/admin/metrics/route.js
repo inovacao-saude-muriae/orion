@@ -1,16 +1,12 @@
 import { NextResponse } from "next/server";
-import { requireRole } from "@/lib/auth";
+import { requireAdminDeAlgumModulo } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
-// Perfis com acesso ao painel gerencial consolidado.
-const ROLES_GERENCIAIS = [
-  "GESTOR",
-  "REGULACAO_ADMIN",
-  "JUNTA_ADMIN",
-  "FARMACIA_ADMIN",
-  "PROCESSO_ADMIN",
-  "CCZ_ADMIN",
-];
+// Refinamento #6 (RBAC Etapa 1): o antigo array ROLES_GERENCIAIS continha
+// apenas papéis admin (GESTOR, REGULACAO_ADMIN, JUNTA_ADMIN, FARMACIA_ADMIN,
+// PROCESSO_ADMIN, CCZ_ADMIN — sem REGULACAO_COMUM). Verificado antes da troca:
+// requireAdminDeAlgumModulo() (GESTOR ∨ admin de qualquer módulo) preserva
+// exatamente o acesso atual, sem ampliar nem reduzir.
 
 // Converte valores BigInt (retornados por COUNT/SUM no Postgres) em Number.
 function toNumber(value) {
@@ -20,7 +16,7 @@ function toNumber(value) {
 
 export async function GET() {
   try {
-    await requireRole(ROLES_GERENCIAIS);
+    await requireAdminDeAlgumModulo();
 
     const agora = new Date();
     const em30Dias = new Date();

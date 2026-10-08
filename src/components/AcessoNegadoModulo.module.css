@@ -1,0 +1,65 @@
+/* Bloqueio de módulo renderizado DENTRO do conteúdo (não full-screen).
+   Reaproveita o visual de src/app/acesso-negado/page.module.css. */
+
+.container {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem 2rem;
+  min-height: 60vh;
+}
+
+.content {
+  background: white;
+  border-radius: 16px;
+  padding: 3rem 2rem;
+  max-width: 500px;
+  width: 100%;
+  text-align: center;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
+}
+
+.icon {
+  font-size: 5rem;
+  margin-bottom: 1rem;
+  animation: shake 0.5s ease-in-out;
+}
+
+@keyframes shake {
+  0%, 100% { transform: translateX(0); }
+  25% { transform: translateX(-10px); }
+  75% { transform: translateX(10px); }
+}
+
+.title {
+  font-size: 2rem;
+  font-weight: 700;
+  color: #1a202c;
+  margin-bottom: 1rem;
+}
+
+.message {
+  font-size: 1.125rem;
+  color: #4a5568;
+  margin-bottom: 0.5rem;
+  line-height: 1.6;
+}
+
+.message strong {
+  color: #667eea;
+  font-weight: 700;
+}
+
+@media (max-width: 640px) {
+  .content {
+    padding: 2rem 1.5rem;
+  }
+
+  .title {
+    font-size: 1.5rem;
+  }
+
+  .icon {
+    font-size: 4rem;
+  }
+}

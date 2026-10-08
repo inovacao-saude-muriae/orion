@@ -1,7 +1,7 @@
 "use server";
 
 import { prisma } from "@/lib/prisma";
-import { requireRole } from "@/lib/auth";
+import { requireAcessoPessoas } from "@/lib/auth";
 import { revalidatePath } from "next/cache";
 import {
   soDigitos,
@@ -12,15 +12,8 @@ import {
   gravarEnderecoTx,
 } from "@/lib/pessoa";
 
-// Perfis autorizados a gerenciar o cadastro central de pessoas.
-const ROLES_CADASTRO = [
-  "GESTOR",
-  "REGULACAO_ADMIN",
-  "JUNTA_ADMIN",
-  "FARMACIA_ADMIN",
-  "PROCESSO_ADMIN",
-  "CCZ_ADMIN",
-];
+// Cadastro central de pessoas: GESTOR ∨ REGULACAO/ADMIN ∨ JUNTA/ADMIN
+// (guarda "pessoas", refinamento #5 / design §5).
 
 // Formata a data (YYYY-MM-DD) usada pelos inputs type="date".
 const dataParaInput = (data) => {
@@ -54,7 +47,7 @@ const serializarPessoa = (pessoa) => {
 // Lista as UBS ativas para o dropdown "UBS de referência".
 export async function listarUbs() {
   try {
-    await requireRole(ROLES_CADASTRO);
+    await requireAcessoPessoas();
     const ubs = await prisma.ubs.findMany({
       where: { ativo: true },
       orderBy: { nome: "asc" },
@@ -73,7 +66,7 @@ export async function listarUbs() {
 // ── LISTAR / BUSCAR ────────────────────────────────────────────────────────
 export async function listarPessoas(termo = "") {
   try {
-    await requireRole(ROLES_CADASTRO);
+    await requireAcessoPessoas();
 
     const termoLimpo = termo.trim();
     const termoDigitos = soDigitos(termoLimpo);
@@ -113,7 +106,7 @@ export async function listarPessoas(termo = "") {
 // ── CRIAR ──────────────────────────────────────────────────────────────────
 export async function criarPessoa(data) {
   try {
-    await requireRole(ROLES_CADASTRO);
+    await requireAcessoPessoas();
 
     // Valida os dígitos verificadores do CPF antes de cadastrar.
     if (!validarCpf(data.cpf)) {
@@ -152,7 +145,7 @@ export async function criarPessoa(data) {
 // ── ATUALIZAR ────────────────────────────────────────────────────────────
 export async function atualizarPessoa(cpfOriginal, data) {
   try {
-    await requireRole(ROLES_CADASTRO);
+    await requireAcessoPessoas();
     const cpf = soDigitos(cpfOriginal);
 
     await prisma.$transaction(async (tx) => {
@@ -177,7 +170,7 @@ export async function atualizarPessoa(cpfOriginal, data) {
 // ── EXCLUIR ──────────────────────────────────────────────────────────────
 export async function excluirPessoa(cpf) {
   try {
-    await requireRole(ROLES_CADASTRO);
+    await requireAcessoPessoas();
     const cpfLimpo = soDigitos(cpf);
 
     await prisma.$transaction(async (tx) => {

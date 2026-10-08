@@ -10,9 +10,9 @@ import {
   servicoJuntaDoNome,
 } from "@/lib/permissions";
 
-// Valida a sessão como requireRole faz hoje (consulta Session + expiresAt) e
-// retorna o `user` COMPLETO com os vínculos (cpf/nome/role/cargo/acessos).
-// Lança {status:401} quando ausente/inválida/expirada.
+// Valida a sessão (consulta Session + expiresAt) e retorna o `user` COMPLETO
+// com os vínculos (cpf/nome/role/cargo/acessos). Lança {status:401} quando
+// ausente/inválida/expirada.
 async function carregarUsuarioSessao() {
   const token = (await cookies()).get("session_token")?.value;
   const session = token
@@ -27,19 +27,10 @@ async function carregarUsuarioSessao() {
   return session.user;
 }
 
-export async function requireRole(roles) {
-  const token = (await cookies()).get("session_token")?.value;
-  const session = token
-    ? await prisma.session.findUnique({ where: { token }, include: { user: true } })
-    : null;
-  if (!session?.user?.ativo || !session.expiresAt || new Date(session.expiresAt) <= new Date()) {
-    throw Object.assign(new Error("Sessão inválida ou expirada."), { status: 401 });
-  }
-  if (!roles.includes(session.user.role)) {
-    throw Object.assign(new Error("Acesso negado."), { status: 403 });
-  }
-  return session.user;
-}
+// NOTA (RBAC Etapa 1 / FEAT-003): a antiga requireRole(roles) foi REMOVIDA após
+// migrar todos os call sites para as guardas por vínculo abaixo. Buscas por
+// "requireRole(" e "requireRole" em src/ deram zero ocorrências fora deste
+// arquivo, então a remoção é segura (NFR-1/AC-12).
 
 // ═══════════════════════════════════════════════════════════════════════════
 // GUARDAS POR VÍNCULO (RBAC Etapa 1) — reusam src/lib/permissions.js.

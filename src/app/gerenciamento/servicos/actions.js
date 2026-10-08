@@ -1,10 +1,12 @@
 "use server";
 
-import { requireRole } from "@/lib/auth";
+import { requireAdminModulo } from "@/lib/auth";
+import { MODULOS } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
 
-const ROLES_PERMITIDAS = ["GESTOR", "REGULACAO_ADMIN"];
+// Serviços-e-Especialidades passam a pertencer à Junta (FR-3.3). Mudança
+// intencional de REGULACAO_ADMIN -> JUNTA/ADMIN (design §4.4).
 
 // Garante que exista um Serviço com o nome informado (cria se necessário)
 // ou usa o servicoId passado. Retorna o id do serviço.
@@ -82,7 +84,7 @@ export async function getServicosData() {
 // Cria um registro. Serviço obrigatório (por id ou nome novo); especialidade opcional.
 export async function createRegistro(data) {
   try {
-    await requireRole(ROLES_PERMITIDAS);
+    await requireAdminModulo(MODULOS.JUNTA);
     const servicoId = await resolverServicoId(data);
 
     const especialidadeNome = (data.especialidadeNome || "").trim();
@@ -105,7 +107,7 @@ export async function createRegistro(data) {
 // e, se informada especialidade, cria a especialidade nesse serviço.
 export async function updateRegistro(linha, data) {
   try {
-    await requireRole(ROLES_PERMITIDAS);
+    await requireAdminModulo(MODULOS.JUNTA);
     const servicoId = await resolverServicoId(data);
     const especialidadeNome = (data.especialidadeNome || "").trim();
 
@@ -140,7 +142,7 @@ export async function updateRegistro(linha, data) {
 // Serviço sozinho -> apaga o serviço.
 export async function deleteRegistro(linha) {
   try {
-    await requireRole(ROLES_PERMITIDAS);
+    await requireAdminModulo(MODULOS.JUNTA);
 
     if (linha.especialidadeId) {
       await prisma.especialidade.delete({
