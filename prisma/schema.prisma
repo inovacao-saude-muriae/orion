@@ -45,6 +45,7 @@ model User {
   updatedAt    DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
 
   sessions Session[]
+  acessos  UserAcesso[] // Vínculos de acesso configuráveis (RBAC Etapa 1)
 
   @@map("users")
 }
@@ -528,4 +529,45 @@ model Esporotricose {
   animal Animal? @relation(fields: [animalId], references: [id], onDelete: SetNull)
 
   @@map("ccz_esporotricose")
+}
+
+// ── CONTROLE DE ACESSO CONFIGURÁVEL (RBAC Etapa 1) ───────────────────────
+enum ModuloAcesso {
+  REGULACAO
+  FARMACIA
+  PROCESSOS
+  JUNTA
+  CCZ
+}
+
+enum NivelAcesso {
+  ADMIN
+  OPERADOR
+}
+
+enum ServicoJunta {
+  CAEE
+  APAE
+  AMBULATORIO
+  ESPECIALIDADES
+}
+
+// Vínculo de acesso: (userCpf, modulo, nivel, servicoJunta?).
+// Um usuário pode ter N vínculos. GESTOR NÃO depende desta tabela.
+model UserAcesso {
+  id           Int           @id @default(autoincrement())
+  userCpf      String        @map("user_cpf") @db.VarChar(11)
+  modulo       ModuloAcesso
+  nivel        NivelAcesso
+  servicoJunta ServicoJunta? @map("servico_junta") // só quando modulo = JUNTA
+  createdAt    DateTime      @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userCpf], references: [cpf], onDelete: Cascade, map: "fk_user_acesso_user")
+
+  // Impede vínculos duplicados idênticos (chave da idempotência do backfill).
+  // Postgres trata NULLs como distintos em UNIQUE; portanto duas linhas
+  // {JUNTA, OPERADOR, NULL} não colidem. O backfill cobre esse caso (ver 9.5).
+  @@unique([userCpf, modulo, nivel, servicoJunta], map: "idx_user_acesso_unico")
+  @@index([userCpf], map: "idx_user_acesso_cpf")
+  @@map("user_acessos")
 }

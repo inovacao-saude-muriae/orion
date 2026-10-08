@@ -10,6 +10,7 @@
     "db:studio": "prisma studio",
     "db:push": "prisma db push",
     "db:seed": "prisma db seed",
+    "db:backfill": "node prisma/backfill-acessos.js",
     "db:migrate": "prisma migrate dev",
     "db:generate": "prisma generate",
     "db:reset": "prisma migrate reset --force",
