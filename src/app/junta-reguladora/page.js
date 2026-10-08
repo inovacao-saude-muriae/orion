@@ -14,6 +14,8 @@ import CadastroPacienteJunta from "./views/CadastroPacienteJunta";
 import AtendimentoServico from "./components/AtendimentoServico";
 import AgendaServico from "./views/AgendaServico";
 import ProntuarioRelatorio from "./views/ProntuarioRelatorio";
+import AcessoNegadoModulo from "@/components/AcessoNegadoModulo";
+import { usePermissoesJunta } from "./PermissoesJuntaContext";
 import { useNotify } from "@/components/ConfirmDialog";
 
 import styles from "./page.module.css";
@@ -33,12 +35,23 @@ function JuntaReguladoraPageContent() {
   const searchParams = useSearchParams();
   const notify = useNotify();
 
+  // Recorte por sub-serviço (design §2.6 / FR-3.4): a entrada no módulo já é
+  // garantida pelo layout; aqui bloqueamos NO CONTEÚDO as abas de serviço que
+  // não estão vinculadas ao operador. GESTOR/JUNTA-ADMIN veem todas; fail-closed
+  // sem provider (lista vazia + ehAdminJunta false).
+  const { subServicosPermitidos, ehAdminJunta } = usePermissoesJunta();
+
   const activeTab = searchParams.get("tab") || "CADASTRO";
   const activeSubTab = searchParams.get("subTab") || "CAEE";
 
   // Nome formatado do serviço atual (Ex: "AMBULATORIO" -> "Ambulatório")
   const servicoNomeFormatado =
     MAPA_SERVICOS[activeSubTab.toUpperCase()] || activeSubTab;
+
+  // O subTab ativo (normalizado) está entre os sub-serviços permitidos?
+  const subTabAtivo = activeSubTab.toUpperCase();
+  const servicoLiberado =
+    ehAdminJunta || subServicosPermitidos.includes(subTabAtivo);
 
   const [pacientesServico, setPacientesServico] = useState([]);
   const [prontuarioData, setProntuarioData] = useState(null);
@@ -56,7 +69,10 @@ function JuntaReguladoraPageContent() {
   useEffect(() => {
     let isMounted = true;
 
-    if (activeTab === "SERVICOS") {
+    // Só busca quando a aba de serviço está liberada — evita o 403 esperado da
+    // guarda server-side para serviços não vinculados (o bloqueio visual é feito
+    // por servicoLiberado).
+    if (activeTab === "SERVICOS" && servicoLiberado) {
       // Usar queueMicrotask evita o aviso de setState síncrono no topo do Effect
       queueMicrotask(() => {
         if (isMounted) setLoadingServico(true);
@@ -83,11 +99,11 @@ function JuntaReguladoraPageContent() {
     return () => {
       isMounted = false;
     };
-  }, [activeTab, servicoNomeFormatado]);
+  }, [activeTab, servicoNomeFormatado, servicoLiberado]);
 
   // Função para recarregar lista após um cadastro ou atendimento
   const recarregarPacientes = async () => {
-    if (activeTab === "SERVICOS") {
+    if (activeTab === "SERVICOS" && servicoLiberado) {
       setLoadingServico(true);
       try {
         const res = await getPacientesPorServico(servicoNomeFormatado);
@@ -154,7 +170,14 @@ function JuntaReguladoraPageContent() {
         <CadastroPacienteJunta onCadastrar={handleCadastrarPaciente} />
       )}
 
-      {activeTab === "SERVICOS" && (
+      {activeTab === "SERVICOS" && !servicoLiberado && (
+        <AcessoNegadoModulo
+          modulo={servicoNomeFormatado}
+          mensagem="Você não tem acesso a este serviço da Junta Reguladora."
+        />
+      )}
+
+      {activeTab === "SERVICOS" && servicoLiberado && (
         <>
           {/* Alternância: Recepção/Atendimento ou Agenda */}
           <div className={styles.servicoTabs}>

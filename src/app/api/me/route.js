@@ -20,6 +20,16 @@ export async function GET() {
             nome: true,
             role: true,
             cargo: true,
+            // Ampliação ADITIVA (design §7.2): vínculos de acesso para os
+            // consumidores novos. Os campos acima permanecem para não quebrar
+            // a Sidebar e demais consumidores atuais (AC-16).
+            acessos: {
+              select: {
+                modulo: true,
+                nivel: true,
+                servicoJunta: true,
+              },
+            },
           },
         },
       },
@@ -37,6 +47,9 @@ export async function GET() {
           cpf: session.user.cpf,
           role: session.user.role,
           cargo: session.user.cargo || session.user.role,
+          // Campos ADITIVOS (design §7.2 / AC-16): não substituem os acima.
+          isGestor: session.user.role === "GESTOR",
+          acessos: session.user.acessos,
         },
       },
       { status: 200 }

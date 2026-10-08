@@ -3,6 +3,7 @@
 import { useEffect, useState } from 'react';
 import styles from './Financeiro.module.css';
 import BotaoEditar from '@/components/BotaoEditar';
+import { usePermissoesRegulacao } from '../PermissoesRegulacaoContext';
 
 const DEFAULT_MONTHS_LIST = [
   { value: "01", name: "Jan" },
@@ -103,6 +104,11 @@ export default function Financeiro({
   planejamentoCidades = [],
   handleSavePlanejamentoCidade = async () => {},
 }) {
+  // Modo só-leitura para OPERADOR da Regulação (design §6.2 / FR-8.1): a
+  // VISUALIZAÇÃO é preservada; apenas os controles de edição são desligados.
+  // Fail-closed: sem provider, podeEditarFinanceiro é false.
+  const { podeEditarFinanceiro } = usePermissoesRegulacao();
+
   const currentDate = new Date();
   const currentMonthStr = String(currentDate.getMonth() + 1).padStart(2, '0');
   const currentYearStr = String(currentDate.getFullYear());
@@ -127,6 +133,7 @@ export default function Financeiro({
   }, [planejamentoCidades]);
 
   const handleCellChange = (cidade, monthIndex, value) => {
+    if (!podeEditarFinanceiro) return; // só-leitura: no-op
     const numericValue = parseFloat(value) || 0;
     setTableData((prev) => {
       const updatedRow = [...(prev[cidade] || Array(12).fill(0))];
@@ -136,6 +143,7 @@ export default function Financeiro({
   };
 
   const handleCellBlur = async (cidade, monthIndex) => {
+    if (!podeEditarFinanceiro) return; // só-leitura: não persiste
     const valor = (tableData[cidade] || [])[monthIndex] || 0;
     const mes = String(monthIndex + 1).padStart(2, '0');
     await handleSavePlanejamentoCidade(cidade, mes, valor);
@@ -280,12 +288,14 @@ export default function Financeiro({
                     {brl(d.available)}
                   </div>
                 </div>
-                <BotaoEditar
-                  onClick={() => handleOpenDefineTetoModal(d.tipoCota, d.totalLimit)}
-                  title="Editar Teto de Gastos"
-                >
-                  Teto
-                </BotaoEditar>
+                {podeEditarFinanceiro && (
+                  <BotaoEditar
+                    onClick={() => handleOpenDefineTetoModal(d.tipoCota, d.totalLimit)}
+                    title="Editar Teto de Gastos"
+                  >
+                    Teto
+                  </BotaoEditar>
+                )}
               </div>
             </div>
           );
@@ -334,6 +344,7 @@ export default function Financeiro({
                           className={styles.cellInput}
                           value={val === 0 ? '' : val}
                           placeholder="—"
+                          readOnly={!podeEditarFinanceiro}
                           onChange={(e) => handleCellChange(cidade, idx, e.target.value)}
                           onBlur={() => handleCellBlur(cidade, idx)}
                         />

@@ -21,6 +21,13 @@ import ModalSeletorCotas from "./components/Modals/ModalSeletorCotas";
 
 import styles from "./page.module.css";
 
+// verificado: catálogo só em /gerenciamento (médicos/UBS/procedimentos). Esta
+// página expõe apenas as abas DASHBOARD/NOVO_PEDIDO/LISTA_ESPERA/LIBERADOS/
+// FINANCEIRO, sem UI de criar/editar catálogo embutida. Por isso a flag
+// podeGerenciarCatalogo (RegulacaoPermProvider) não tem consumidor aqui nesta
+// etapa — fica disponível para a Etapa 2 (design §6.2, Finding 5). O
+// enforcement das actions de catálogo já está garantido em FEAT-003.
+
 function RegulacaoPageContent() {
   const searchParams = useSearchParams();
   const router = useRouter();

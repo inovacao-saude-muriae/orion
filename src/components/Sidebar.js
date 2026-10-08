@@ -1,6 +1,6 @@
 "use client";
 
-import { Suspense, useState, useEffect } from "react";
+import { Suspense, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
@@ -33,7 +33,7 @@ const menuSections = [
   {
     items: [
       {
-        name: "Regulação de Exames",
+        name: "Regulação",
         path: "/regulacao",
         isDropdown: true,
         icon: (
@@ -97,7 +97,7 @@ const menuSections = [
             ],
           },
           {
-            name: "Processos",
+            name: "Processos Judiciais",
             tab: "PROCESSOS",
             path: "/camara-tecnica/processos",
           },
@@ -131,7 +131,7 @@ const menuSections = [
         subItems: [
           { name: "Cadastro de Paciente", tab: "CADASTRO" },
            {
-            name: "Serviços de Atendimento",
+            name: "Serviços",
             tab: "SERVICOS",
             isNestedDropdown: true,
             nestedItems: [
@@ -151,7 +151,7 @@ const menuSections = [
   {
     items: [
       {
-        name: "CCZ - Zoonoses",
+        name: "CCZ",
         path: "/ccz",
         isDropdown: true,
         icon: (
@@ -171,29 +171,33 @@ const menuSections = [
         ),
         subItems: [
           { name: "Dashboard", tab: "DASHBOARD" },
-          { name: "Cadastros", tab: "CADASTROS" },
-          { name: "Usuários", tab: "USUARIOS" },
-          { name: "Animais", tab: "ANIMAIS" },
+          { name: "Procedimentos", tab: "PROCEDIMENTOS" },
           {
-            name: "Zoonoses",
+            name: "Controle de Zoonoses",
             tab: "ZOONOSES",
             isNestedDropdown: true,
             nestedItems: [
-              { name: "Cadastrar Zoonose", subTab: "CADASTRO" },
-              { name: "Exibir Zoonoses", subTab: "EXIBIR_ZOONOSES" },
+              { name: "Zoonoses", subTab: "Zoonoses" },
+              { name: "Exibir Zoonoses", subTab: "Exibir Zoonoses" },
             ],
           },
           {
-            name: "Esporotricose",
+            name: "Controle de Esporotricose",
             tab: "ESPOROTRICOSE",
             isNestedDropdown: true,
             nestedItems: [
-              { name: "Cadastrar Esporotricose", subTab: "CADASTRO" },
-              { name: "Exibir Esporotricose", subTab: "EXIBIR_ESPOROTRICOSE" },
+              { name: "Esporotricose", subTab: "CADASTRO" },
+              { name: "Exibir Esporotricose", subTab: "Exibir Esporotricose" },
             ],
           },
-          { name: "Procedimentos", tab: "PROCEDIMENTOS" },
-          { name: "Denúncias", tab: "DENUNCIAS" },
+          
+          { name: "Cadastrar Denúncia", tab: "DENUNCIAS" },
+         
+          { name: "Tutor", tab: "TUTOR" },
+          { name: "Animal", tab: "ANIMAIS" },
+          
+          
+          
         ],
       },
     ],
@@ -295,7 +299,7 @@ function subIcon(nome = "") {
     return (
       <svg {...props}><path d="M3 3v18h18" /><path d="m19 9-5 5-4-4-3 3" /></svg>
     );
-  if (n.includes("paciente") || n.includes("pessoa") || n.includes("usuário") || n.includes("usuario"))
+  if (n.includes("paciente") || n.includes("pessoa") || n.includes("usuário") || n.includes("usuario") || n.includes("usuario"))
     return (
       <svg {...props}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /></svg>
     );
@@ -334,11 +338,11 @@ function subIcon(nome = "") {
     return (
       <svg {...props}><rect x="3" y="3" width="7" height="7" rx="1.5" /><rect x="14" y="3" width="7" height="7" rx="1.5" /><rect x="3" y="14" width="7" height="7" rx="1.5" /><rect x="14" y="14" width="7" height="7" rx="1.5" /></svg>
     );
-  if (n.includes("animal") || n.includes("animais") || n.includes("zoonose") || n.includes("esporotricose"))
+  if (n.includes("animal") || n.includes("animais"))
     return (
       <svg {...props}><circle cx="11" cy="4" r="2" /><circle cx="18" cy="8" r="2" /><circle cx="20" cy="16" r="2" /><path d="M9 10a5 5 0 0 1 5 5v3.5a3.5 3.5 0 0 1-6.84 1.045Q6.52 17.48 4.46 16.84A3.5 3.5 0 0 1 5.5 10Z" /></svg>
     );
-  if (n.includes("denúncia") || n.includes("denuncia"))
+    if (n.includes("denúncia") || n.includes("denuncia") || n.includes("zoonoses")  || n.includes("esporotricose"))
     return (
       <svg {...props}><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" /><line x1="12" y1="9" x2="12" y2="13" /><line x1="12" y1="17" x2="12.01" y2="17" /></svg>
     );
@@ -346,94 +350,27 @@ function subIcon(nome = "") {
     return (
       <svg {...props}><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><path d="M14 2v6h6" /></svg>
     );
+    if (n.includes("tutor"))
+    return (
+      <svg {...props}><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2" /><circle cx="9" cy="7" r="4" /></svg>
+    );
   // Padrão genérico (ponto).
   return (
     <svg {...props}><circle cx="12" cy="12" r="4" /></svg>
   );
 }
 
-// Roles que podem VER cada módulo no menu (espelha o middleware).
-// GESTOR vê tudo (tratado à parte).
-const VISIBILIDADE_MODULO = {
-  "/regulacao": ["REGULACAO_ADMIN", "REGULACAO_COMUM"],
-  "/camara-tecnica": ["FARMACIA_ADMIN", "PROCESSO_ADMIN"],
-  "/junta-reguladora": [
-    "JUNTA_ADMIN",
-    "JUNTA_CAEE",
-    "JUNTA_EDUCACAO",
-    "JUNTA_SAUDE",
-    "JUNTA_ASSISTENCIA",
-  ],
-  "/ccz": ["CCZ_ADMIN"],
-  "/admin/gerenciamento": [
-    "REGULACAO_ADMIN",
-    "JUNTA_ADMIN",
-    "FARMACIA_ADMIN",
-    "PROCESSO_ADMIN",
-    "CCZ_ADMIN",
-  ],
-};
-
-// Roles que podem ver cada sub-item específico (quando mais restrito que o módulo).
-// Se não listado aqui, herda a visibilidade do módulo.
-const VISIBILIDADE_SUBITEM = {
-  // Câmara Técnica: cada admin vê só o seu
-  FARMACIA_JUDICIAL: ["FARMACIA_ADMIN"],
-  PROCESSOS: ["PROCESSO_ADMIN"],
-  // Regulação: Financeiro só admin
-  FINANCEIRO: ["REGULACAO_ADMIN"],
-  // Gerenciamento: itens com acesso restrito
-  MEDICOS: ["REGULACAO_ADMIN"],
-  UBS: ["REGULACAO_ADMIN"],
-  PROCEDIMENTOS: ["REGULACAO_ADMIN"],
-  SERVICOS: ["REGULACAO_ADMIN"],
-  USUARIOS: [], // só GESTOR
-};
+// A Sidebar NÃO filtra mais por papel: todos os módulos e sub-itens são
+// exibidos para qualquer usuário autenticado (design §7.1 / AC-6). A
+// autorização de acesso é feita no servidor (layout.js por módulo), que bloqueia
+// NO CONTEÚDO via <AcessoNegadoModulo/>. Por isso não há mais chamada ao
+// endpoint de sessão nem estado de role aqui.
 
 function MenuContent() {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
-  const [userRole, setUserRole] = useState(null);
 
-  useEffect(() => {
-    let ativo = true;
-    (async () => {
-      try {
-        const res = await fetch("/api/me");
-        if (!res.ok) return;
-        const data = await res.json();
-        if (ativo) setUserRole(data?.user?.role || null);
-      } catch {
-        /* silencioso */
-      }
-    })();
-    return () => {
-      ativo = false;
-    };
-  }, []);
-
-  const carregandoRole = userRole === null;
-  const isGestor = userRole === "GESTOR";
-
-  // Pode ver o módulo (path raiz)?
-  const podeVerModulo = (path) => {
-    const roles = VISIBILIDADE_MODULO[path];
-    if (!roles) return true; // módulos sem restrição (ex.: Início)
-    // Enquanto a role carrega, oculta módulos restritos para não "piscar".
-    if (carregandoRole) return false;
-    if (isGestor) return true;
-    return roles.includes(userRole);
-  };
-
-  // Pode ver um sub-item específico?
-  const podeVerSubItem = (sub) => {
-    const roles = VISIBILIDADE_SUBITEM[sub.tab];
-    if (!roles) return true; // herda do módulo
-    if (carregandoRole) return false;
-    if (isGestor) return true;
-    return roles.includes(userRole);
-  };
   const currentTab = searchParams.get("tab") || "DASHBOARD";
   const currentSubTab = searchParams.get("subTab") || "";
 
@@ -500,8 +437,7 @@ function MenuContent() {
       <nav className={styles.menuContentList}>
         {menuSections.map((section, sIdx) => {
           const filteredItems = section.items
-            // Filtra por permissão (role) — oculta módulos que o usuário não acessa.
-            .filter((item) => podeVerModulo(item.path))
+            // Filtra apenas pelo termo de busca; sem recorte por papel (AC-6).
             .filter((item) => {
               if (!searchTerm) return true;
               const matchMain = item.name
@@ -526,11 +462,8 @@ function MenuContent() {
                   Boolean(openGroup[item.path]) || Boolean(searchTerm);
 
                 if (item.isDropdown) {
-                  // Sub-itens visíveis conforme a permissão do usuário.
-                  const subItemsVisiveis = (item.subItems || []).filter(
-                    podeVerSubItem,
-                  );
-                  // Se o módulo não tem nenhum sub-item visível, não renderiza.
+                  // Todos os sub-itens são exibidos (sem recorte por papel).
+                  const subItemsVisiveis = item.subItems || [];
                   if (subItemsVisiveis.length === 0) return null;
 
                   return (
