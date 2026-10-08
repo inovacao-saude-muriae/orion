@@ -1,0 +1,7 @@
+{
+  "task_id": "task-orion-rbac-etapa1",
+  "task_description": "Etapa 1 (fundação) do controle de acesso configurável do Orion: modelo UserAcesso em banco (enums + tabela), src/lib/permissions.js como fonte única de verdade, migração middleware->proxy (só autenticação), autorização de módulo por layout.js com bloqueio no conteúdo (AcessoNegadoModulo), Financeiro da Regulação só-leitura p/ OPERADOR, abas da Junta por sub-serviço, backfill idempotente dos papéis legados em vínculos, guardas de todas as actions/APIs (incluindo escritas hoje desprotegidas), Sidebar sem filtro por papel e /api/me ampliado. Segue design.md Revisão 3 (0 HIGH) + 6 refinamentos. NÃO inclui a tela de administração de permissões (Etapa 2).",
+  "status": "completed",
+  "feature_order": ["FEAT-001", "FEAT-002", "FEAT-003", "FEAT-004"],
+  "blocked_reason": null
+}
