@@ -7,6 +7,8 @@ import { listarPacientesJunta } from './actions';
 import { documentoPaciente } from '@/app/regulacao/constants';
 import { mascararTelefone } from '@/lib/telefone';
 import styles from './ProntuarioRelatorio.module.css';
+import { rotuloEspecialidade } from './rotuloEspecialidade';
+import { usaRelatorioFinal } from './usaRelatorioFinal';
 
 const MESES_NOMES = [
   'Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho',
@@ -82,6 +84,12 @@ export default function ProntuarioRelatorio({ prontuarioData, onBuscar }) {
 
   const handleInputChange = async (valor) => {
     setTermo(valor);
+    // Só mostra o dropdown ao começar a digitar (>= 2 caracteres).
+    if (valor.trim().length < 2) {
+      setShowDropdown(false);
+      setSugestoes([]);
+      return;
+    }
     setShowDropdown(true);
     setIsSearching(true);
     try {
@@ -335,7 +343,7 @@ export default function ProntuarioRelatorio({ prontuarioData, onBuscar }) {
         doc.setFontSize(8.5);
         doc.setTextColor(71, 85, 105);
         const servW = doc.getTextWidth(`${grupo.servico}`);
-        doc.text(`•  Especialidade: ${grupo.especialidade}`, bloqX + 4 + servW + 3, bloqTopo + 6);
+        doc.text(`•  ${rotuloEspecialidade(grupo.servico)}: ${grupo.especialidade}`, bloqX + 4 + servW + 3, bloqTopo + 6);
 
         doc.setFontSize(8);
         doc.setTextColor(100, 116, 139);
@@ -379,7 +387,7 @@ export default function ProntuarioRelatorio({ prontuarioData, onBuscar }) {
             fontSize: 7.5,
             cellPadding: { top: 2, bottom: 2.5, left: 2, right: 2 },
           },
-          head: [['Data', 'Hora', 'Frequência / Status', 'Observação']],
+          head: [['Data', 'Hora', 'Frequência / Status', usaRelatorioFinal(grupo.servico, grupo.especialidade) ? 'Relatório Final' : 'Observação']],
           body: tableBody,
           styles: { fontSize: 8, cellPadding: 2.3, textColor: [30, 41, 59] },
           // Zebra sutil nas linhas de corpo (sem bordas de grade).
@@ -461,7 +469,6 @@ export default function ProntuarioRelatorio({ prontuarioData, onBuscar }) {
             placeholder="Selecionar ou digitar nome/CPF..."
             value={termo}
             onChange={(e) => handleInputChange(e.target.value)}
-            onFocus={() => setShowDropdown(true)}
           />
           <span className={styles.arrowIcon} onClick={() => setShowDropdown((v) => !v)}>
             {showDropdown ? '▲' : '▼'}
@@ -704,7 +711,7 @@ export default function ProntuarioRelatorio({ prontuarioData, onBuscar }) {
                         SERVIÇO: {grupo.servico}
                       </span>
                       <strong style={{ fontSize: '1.05rem', color: '#1e293b' }}>
-                        Especialidade: {grupo.especialidade}
+                        {rotuloEspecialidade(grupo.servico)}: {grupo.especialidade}
                       </strong>
                     </div>
 
@@ -732,7 +739,9 @@ export default function ProntuarioRelatorio({ prontuarioData, onBuscar }) {
                         <th style={{ width: '18%' }}>Data</th>
                         <th style={{ width: '12%' }}>Hora</th>
                         <th style={{ width: '30%' }}>Frequência / Status</th>
-                        <th style={{ width: '40%' }}>Observação</th>
+                        <th style={{ width: '40%' }}>
+                          {usaRelatorioFinal(grupo.servico, grupo.especialidade) ? 'Relatório Final' : 'Observação'}
+                        </th>
                       </tr>
                     </thead>
                     <tbody>

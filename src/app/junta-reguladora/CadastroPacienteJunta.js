@@ -77,6 +77,12 @@ export default function CadastroPacienteJunta({ onCadastrar }) {
 
   const handleInputChange = async (valor) => {
     setSearchTerm(valor);
+    // Só mostra o dropdown ao começar a digitar (>= 2 caracteres).
+    if (valor.trim().length < 2) {
+      setShowDropdown(false);
+      setSearchResults([]);
+      return;
+    }
     setShowDropdown(true);
     setIsSearching(true);
     try {
@@ -173,7 +179,6 @@ export default function CadastroPacienteJunta({ onCadastrar }) {
                   placeholder="Digite nome ou CPF para buscar..."
                   value={searchTerm}
                   onChange={(e) => handleInputChange(e.target.value)}
-                  onFocus={() => setShowDropdown(true)}
                   autoComplete="off"
                 />
                 <span className={styles.arrowIcon} onClick={() => setShowDropdown(!showDropdown)}>

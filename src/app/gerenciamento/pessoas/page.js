@@ -109,12 +109,16 @@ export default function PessoasPage() {
     setTermo(valor);
     // O campo "Nome completo" é também o campo de busca: reflete o que é digitado.
     setForm((prev) => ({ ...prev, nomeCompleto: valor }));
-    if (!dropAberto) setDropAberto(true);
+    // Só mostra o dropdown ao começar a digitar (>= 2 caracteres).
     if (valor.trim().length >= 2) {
+      setDropAberto(true);
       setBuscando(true);
       const res = await listarPessoas(valor.trim());
       setPessoas(res.success ? res.data : []);
       setBuscando(false);
+    } else {
+      setDropAberto(false);
+      setPessoas([]);
     }
   };
 
@@ -285,9 +289,6 @@ export default function PessoasPage() {
                     handleBuscar(e.target.value);
                   }
                 }}
-                onFocus={() => {
-                  if (!editavel) setDropAberto(true);
-                }}
                 autoComplete="off"
                 required
               />
@@ -344,13 +345,12 @@ export default function PessoasPage() {
             )}
           </div>
           <div className={`${styles.field} ${styles.colWide}`}>
-            <label>Nome da mãe *</label>
+            <label>Nome da mãe</label>
             <input
               type="text"
               value={form.nomeMae}
               onChange={(e) => setForm({ ...form, nomeMae: e.target.value })}
               disabled={!editavel}
-              required
             />
           </div>
           <div className={styles.field}>

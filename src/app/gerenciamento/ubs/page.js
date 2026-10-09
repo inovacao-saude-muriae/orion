@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { getAuxiliaryData } from "@/app/regulacao/actions";
-import CadastroUbs from "../components/CadastroUbs";
+import CadastroUbs from "./CadastroUbs";
 import styles from "../GerenciamentoCadastro.module.css";
 
 const FORM_UBS = { nome: "", cnes: "" };

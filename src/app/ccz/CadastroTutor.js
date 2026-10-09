@@ -6,7 +6,7 @@ import { buscarCep } from "@/lib/viacep";
 import { mascararTelefone as maskTelefone } from "@/lib/telefone";
 import { documentoPaciente } from "@/app/regulacao/constants";
 import { useConfirm, useNotify } from "@/components/ConfirmDialog";
-import { buscarPessoasCCZ, salvarTutor } from "./actions";
+import { buscarPessoasCCZ, salvarTutor, listarAnimaisDoTutor } from "./actions";
 
 // ── Máscaras locais ───────────────────────────────────────────────────────
 const maskCpf = (v) =>
@@ -58,7 +58,9 @@ const pessoaParaForm = (p) => ({
   cep: maskCep(p.cep),
 });
 
-export default function CadastroTutor() {
+export default function CadastroTutor({ cpfInicial = "", onVoltarLista }) {
+  // Edição aberta a partir da aba "Lista" (quando um CPF inicial é informado).
+  const edicaoViaLista = Boolean(soDigitos(cpfInicial)) && typeof onVoltarLista === "function";
   const confirm = useConfirm();
   const notify = useNotify();
 
@@ -78,7 +80,52 @@ export default function CadastroTutor() {
   const [cepLoading, setCepLoading] = useState(false);
   const [cepErro, setCepErro] = useState("");
 
+  // Animais vinculados ao tutor selecionado (bloco de vínculos).
+  const [animais, setAnimais] = useState([]);
+  const [animaisLoading, setAnimaisLoading] = useState(false);
+
   const editavel = modo === "novo" || modo === "edicao";
+  const cpfSelecionado = soDigitos(form.cpf);
+
+  // Edição vinda da aba "Lista": carrega o tutor pelo CPF e abre em edição.
+  useEffect(() => {
+    let ativo = true;
+    const cpf = soDigitos(cpfInicial);
+    if (!cpf) return;
+    (async () => {
+      const res = await buscarPessoasCCZ(cpf);
+      if (!ativo) return;
+      const p = res.success ? res.data.find((x) => soDigitos(x.cpf) === cpf) : null;
+      if (p) {
+        setForm(pessoaParaForm(p));
+        setTermo(p.nomeCompleto || "");
+        setModo("edicao");
+      }
+    })();
+    return () => {
+      ativo = false;
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [cpfInicial]);
+
+  // Carrega os animais do tutor sempre que um tutor com CPF é selecionado
+  // (modo leitura). Em novo/edição não lista para não confundir com o cadastro.
+  useEffect(() => {
+    let ativo = true;
+    if (modo === "leitura" && cpfSelecionado) {
+      setAnimaisLoading(true);
+      listarAnimaisDoTutor(cpfSelecionado).then((res) => {
+        if (!ativo) return;
+        setAnimais(res.success ? res.data : []);
+        setAnimaisLoading(false);
+      });
+    } else {
+      setAnimais([]);
+    }
+    return () => {
+      ativo = false;
+    };
+  }, [cpfSelecionado, modo]);
 
   // Fecha o dropdown ao clicar fora.
   useEffect(() => {
@@ -159,6 +206,11 @@ export default function CadastroTutor() {
   };
 
   const cancelar = () => {
+    // Edição vinda da Lista: cancelar volta direto para a lista de tutores.
+    if (edicaoViaLista) {
+      onVoltarLista();
+      return;
+    }
     setForm(FORM_VAZIO);
     setModo("leitura");
     setTermo("");
@@ -196,6 +248,11 @@ export default function CadastroTutor() {
     if (res.success) {
       setErro("");
       await notify({ tipo: "sucesso", title: "Pronto", message: "Tutor salvo com sucesso!" });
+      // Edição vinda da Lista: ao atualizar, volta para a lista de tutores.
+      if (edicaoViaLista) {
+        onVoltarLista();
+        return;
+      }
       // Recarrega os dados gravados e volta ao modo leitura.
       const busca = await buscarPessoasCCZ(payload.cpf);
       const salvo = busca.success
@@ -307,13 +364,12 @@ export default function CadastroTutor() {
             </div>
 
             <div className={`${styles.field} ${styles.colWide}`}>
-              <label>Nome da mãe *</label>
+              <label>Nome da mãe</label>
               <input
                 type="text"
                 value={form.nomeMae}
                 onChange={(e) => setForm({ ...form, nomeMae: e.target.value })}
                 disabled={!editavel}
-                required
               />
             </div>
 
@@ -455,69 +511,6 @@ export default function CadastroTutor() {
             </div>
           </div>
 
-          <div className={styles.formSectionTitle}>Dados Complementares CCZ</div>
-          <div className={styles.grid}>
-            <div className={styles.field}>
-              <label>RG</label>
-              <input
-                type="text"
-                value={form.rg}
-                onChange={(e) => setForm({ ...form, rg: e.target.value })}
-                disabled={!editavel}
-              />
-            </div>
-            <div className={styles.field}>
-              <label>Sexo (tutor)</label>
-              <select
-                value={form.tutorSexo}
-                onChange={(e) => setForm({ ...form, tutorSexo: e.target.value })}
-                disabled={!editavel}
-              >
-                <option value="">-- Selecione --</option>
-                <option value="Masculino">Masculino</option>
-                <option value="Feminino">Feminino</option>
-              </select>
-            </div>
-            <div className={styles.field}>
-              <label>Profissão</label>
-              <input
-                type="text"
-                value={form.profissao}
-                onChange={(e) => setForm({ ...form, profissao: e.target.value })}
-                disabled={!editavel}
-              />
-            </div>
-            <div className={styles.field}>
-              <label>Telefone secundário</label>
-              <input
-                type="text"
-                value={form.telefoneSecundario}
-                onChange={(e) =>
-                  setForm({ ...form, telefoneSecundario: maskTelefone(e.target.value) })
-                }
-                placeholder="(00) 00000-0000"
-                disabled={!editavel}
-              />
-            </div>
-            <div className={`${styles.field} ${styles.colWide}`}>
-              <label>Ponto de referência</label>
-              <input
-                type="text"
-                value={form.pontoReferencia}
-                onChange={(e) => setForm({ ...form, pontoReferencia: e.target.value })}
-                disabled={!editavel}
-              />
-            </div>
-            <div className={`${styles.field} ${styles.colWide}`}>
-              <label>Observações</label>
-              <textarea
-                rows={3}
-                value={form.observacoes}
-                onChange={(e) => setForm({ ...form, observacoes: e.target.value })}
-                disabled={!editavel}
-              />
-            </div>
-          </div>
         </div>
 
         <div className={styles.formActions}>
@@ -543,6 +536,55 @@ export default function CadastroTutor() {
           )}
         </div>
       </form>
+
+      {/* BLOCO: ANIMAIS VINCULADOS AO TUTOR SELECIONADO */}
+      {modo === "leitura" && pessoaSelecionada && (
+        <div className={styles.card}>
+          <div className={styles.cardHeaderRow}>
+            <h2 className={styles.cardHeaderTitle}>
+              Animais vinculados{animais.length > 0 ? ` (${animais.length})` : ""}
+            </h2>
+          </div>
+
+          {animaisLoading ? (
+            <p className={styles.animaisVazio}>Carregando animais...</p>
+          ) : animais.length === 0 ? (
+            <p className={styles.animaisVazio}>
+              Nenhum animal vinculado a este tutor. Vincule pela aba{" "}
+              <strong>Animais</strong>.
+            </p>
+          ) : (
+            <div className={styles.tableContainerScroll}>
+              <table className={styles.animaisTable}>
+                <thead>
+                  <tr>
+                    <th>Id</th>
+                    <th>Nome</th>
+                    <th>Espécie</th>
+                    <th>Sexo</th>
+                    <th>Porte</th>
+                    <th>Idade</th>
+                    <th>Castrado</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {animais.map((a) => (
+                    <tr key={a.id}>
+                      <td>{a.id}</td>
+                      <td className={styles.boldName}>{a.nome || "Sem nome"}</td>
+                      <td>{a.especie || "-"}</td>
+                      <td>{a.sexo}</td>
+                      <td>{a.porte || "-"}</td>
+                      <td>{a.idade || "-"}</td>
+                      <td>{a.castrado}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
     </div>
   );
 }

@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useCallback } from "react";
 import { getAuxiliaryData } from "@/app/regulacao/actions";
-import CadastroMedicos from "../components/CadastroMedicos";
+import CadastroMedicos from "./CadastroMedicos";
 import styles from "../GerenciamentoCadastro.module.css";
 
 const FORM_MEDICO = {

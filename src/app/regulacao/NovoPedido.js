@@ -126,10 +126,11 @@ export default function NovoPedido({
                   placeholder="Digite nome ou CPF para buscar..."
                   value={newRequest.patientSearch || ''}
                   onChange={(e) => {
-                    setNewRequest((prev) => ({ ...prev, patientSearch: e.target.value }));
-                    if (!isOpen) setIsOpen(true);
+                    const v = e.target.value;
+                    setNewRequest((prev) => ({ ...prev, patientSearch: v }));
+                    // Só abre a lista ao começar a digitar (>= 2 caracteres).
+                    setIsOpen(v.trim().length >= 2);
                   }}
-                  onFocus={() => setIsOpen(true)}
                   className={styles.selectLikeInput}
                   autoComplete="off"
                   required
@@ -137,7 +138,6 @@ export default function NovoPedido({
                 <span className={styles.arrowIcon} onClick={() => setIsOpen(!isOpen)}>
                   {isOpen ? '▲' : '▼'}
                 </span>
-              </div>
 
               {/* DROPDOWN EM FORMATO DE TABELA ESTILIZADA */}
               {isOpen && (
@@ -185,6 +185,7 @@ export default function NovoPedido({
                   </div>
                 </div>
               )}
+              </div>
               <p className={styles.helperNote}>
                 A pessoa precisa estar cadastrada em <strong>Gerenciamento &gt; Cadastro de Pessoas</strong>.
               </p>

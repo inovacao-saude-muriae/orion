@@ -1,0 +1,387 @@
+.overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(15, 23, 42, 0.45);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 10050;
+  padding: 1.5rem;
+}
+
+.modal {
+  background-color: #ffffff;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 680px;
+  max-height: 88vh;
+  display: flex;
+  flex-direction: column;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.2);
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  padding: 1.1rem 1.4rem;
+  background-color: #4a6fa5;
+  color: #ffffff;
+}
+
+.title {
+  margin: 0;
+  font-size: 1.05rem;
+  font-weight: 800;
+}
+
+.subtitle {
+  margin: 0.15rem 0 0;
+  font-size: 0.8rem;
+  color: #e2e8f0;
+}
+
+.closeBtn {
+  background: none;
+  border: none;
+  color: #e2e8f0;
+  font-size: 1rem;
+  cursor: pointer;
+  padding: 0.25rem 0.5rem;
+  border-radius: 6px;
+}
+
+.closeBtn:hover {
+  background-color: rgba(255, 255, 255, 0.15);
+}
+
+.body {
+  padding: 1.4rem;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.info,
+.erro {
+  text-align: center;
+  font-size: 0.9rem;
+  margin: 0;
+}
+
+.erro {
+  color: #dc2626;
+}
+
+/* Identificação (foto + chips) */
+.topo {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.foto {
+  width: 96px;
+  height: 96px;
+  border-radius: 12px;
+  border: 1px solid #cbd5e1;
+  object-fit: cover;
+  background-color: #fff;
+  flex-shrink: 0;
+}
+
+.fotoVazia {
+  width: 96px;
+  height: 96px;
+  border-radius: 12px;
+  border: 1px dashed #cbd5e1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  font-size: 0.7rem;
+  background-color: #fff;
+  flex-shrink: 0;
+}
+
+.topoInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.animalNome {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.chip {
+  background-color: #f1f5f9;
+  color: #334155;
+  border: 1px solid #e2e8f0;
+  border-radius: 999px;
+  padding: 0.15rem 0.65rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+/* Seções */
+.secao {
+  border-top: 1px solid #e2e8f0;
+  padding-top: 1rem;
+}
+
+.secaoTitulo {
+  margin: 0 0 0.75rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #475569;
+}
+
+.dadosGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 0.75rem;
+}
+
+.dado {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.dadoLabel {
+  font-size: 0.68rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  color: #94a3b8;
+}
+
+.dadoValor {
+  font-size: 0.9rem;
+  color: #1e293b;
+}
+
+.semTutor {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.observacoes {
+  margin-top: 0.75rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.obsTexto {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #334155;
+  white-space: pre-wrap;
+}
+
+/* Procedimentos */
+.procLista {
+  display: flex;
+  flex-direction: column;
+  gap: 0.7rem;
+}
+
+.procItem {
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.75rem 0.9rem;
+  background-color: #f8fafc;
+}
+
+.procTopo {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+  margin-bottom: 0.35rem;
+}
+
+.procMeta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+  font-size: 0.78rem;
+  color: #64748b;
+  margin-bottom: 0.35rem;
+}
+
+.procTexto {
+  margin: 0.2rem 0 0;
+  font-size: 0.85rem;
+  color: #334155;
+  white-space: pre-wrap;
+}
+
+.statusAgendado,
+.statusRealizado,
+.statusCancelado {
+  display: inline-block;
+  padding: 0.12rem 0.55rem;
+  border-radius: 20px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.statusAgendado {
+  background-color: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+}
+
+.statusRealizado {
+  background-color: #dcfce7;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.statusCancelado {
+  background-color: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+.footer {
+  padding: 0.9rem 1.4rem;
+  border-top: 1px solid #e2e8f0;
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+}
+
+.baixarBtn {
+  background-color: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+  padding: 0.6rem 1.3rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background-color 0.15s;
+}
+
+.baixarBtn:hover {
+  background-color: #dbeafe;
+}
+
+.fecharBtn {
+  background-color: #2563eb;
+  color: #ffffff;
+  border: none;
+  padding: 0.6rem 1.4rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.fecharBtn:hover {
+  background-color: #1d4ed8;
+}
+
+/* ── Termo de internação (formulário) ─────────────────────────────────────── */
+.formGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 0.75rem;
+}
+
+.campo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.campo label {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #475569;
+}
+
+.campo input,
+.campo select {
+  padding: 0.55rem 0.75rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  color: #1e293b;
+  outline: none;
+  background-color: #fff;
+  box-sizing: border-box;
+}
+
+.campo input:focus,
+.campo select:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+}
+
+.infoTutor {
+  margin: 0 0 0.6rem;
+  font-size: 0.78rem;
+  color: #0369a1;
+  background-color: #e0f2fe;
+  border: 1px solid #bae6fd;
+  border-radius: 6px;
+  padding: 0.4rem 0.6rem;
+}
+
+.cienciaTexto {
+  margin: 0.75rem 0 0;
+  font-size: 0.85rem;
+  color: #334155;
+  background-color: #fef9c3;
+  border: 1px solid #fde68a;
+  border-radius: 8px;
+  padding: 0.75rem 0.9rem;
+  line-height: 1.5;
+  text-align: justify;
+}
+
+.assinaturaPreview {
+  margin: 1.5rem 0 0;
+  padding-top: 0.5rem;
+  border-top: 1px solid #94a3b8;
+  width: 60%;
+  text-align: center;
+  font-size: 0.82rem;
+  color: #475569;
+}
+
+.cancelarBtn {
+  background-color: #ffffff;
+  color: #475569;
+  border: 1px solid #cbd5e1;
+  padding: 0.6rem 1.3rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.cancelarBtn:hover {
+  background-color: #f1f5f9;
+}

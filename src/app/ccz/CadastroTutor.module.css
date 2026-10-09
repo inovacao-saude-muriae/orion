@@ -336,3 +336,48 @@
     grid-column: span 1;
   }
 }
+
+/* ── Bloco de animais vinculados ao tutor ─────────────────────────────────── */
+.animaisVazio {
+  font-size: 0.85rem;
+  color: #64748b;
+  padding: 1rem;
+  text-align: center;
+  background-color: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+}
+
+.animaisTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.animaisTable thead {
+  position: sticky;
+  top: 0;
+  background: #f8fafc;
+}
+
+.animaisTable th {
+  padding: 0.6rem 0.75rem;
+  color: #475569;
+  font-weight: 600;
+  text-align: left;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.animaisTable td {
+  padding: 0.6rem 0.75rem;
+  color: #334155;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.animaisTable tbody tr:hover {
+  background-color: #f8fafc;
+}

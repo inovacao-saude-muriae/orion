@@ -10,6 +10,7 @@ import {
   getEspecialidadesPorServico,
 } from './actions';
 import styles from './AgendaServico.module.css';
+import { rotuloEspecialidade } from './rotuloEspecialidade';
 
 const DIAS_SEMANA = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
 const MESES = [
@@ -27,6 +28,7 @@ const toYMD = (d) => {
 
 export default function AgendaServico({ servicoNome }) {
   const confirm = useConfirm();
+  const rotuloEsp = rotuloEspecialidade(servicoNome);
   const hoje = new Date();
 
   const [ano, setAno] = useState(hoje.getFullYear());
@@ -128,7 +130,7 @@ export default function AgendaServico({ servicoNome }) {
   const salvar = async (e) => {
     e.preventDefault();
     if (!form.pacienteJuntaId) return alert('Selecione o paciente.');
-    if (!form.especialidade) return alert('Selecione a oficina.');
+    if (!form.especialidade) return alert(`Selecione ${rotuloEsp === 'Oficina' ? 'a oficina' : 'a especialidade'}.`);
     if (!form.hora) return alert('Informe o horário.');
 
     setSalvando(true);
@@ -287,7 +289,7 @@ export default function AgendaServico({ servicoNome }) {
                 </div>
 
                 <div className={styles.fieldGroup}>
-                  <label>Especialidade / Oficina *</label>
+                  <label>{rotuloEsp} *</label>
                   <select
                     value={form.especialidade}
                     onChange={(e) => setForm({ ...form, especialidade: e.target.value })}
@@ -295,8 +297,8 @@ export default function AgendaServico({ servicoNome }) {
                   >
                     <option value="">
                       {especialidades.length > 0
-                        ? '-- Selecione a Oficina --'
-                        : 'Nenhuma oficina cadastrada'}
+                        ? `-- Selecione ${rotuloEsp === 'Oficina' ? 'a Oficina' : 'a Especialidade'} --`
+                        : `Nenhuma ${rotuloEsp === 'Oficina' ? 'oficina' : 'especialidade'} cadastrada`}
                     </option>
                     {especialidades.map((esp) => (
                       <option key={esp.id} value={esp.nome}>{esp.nome}</option>

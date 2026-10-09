@@ -191,8 +191,37 @@ const menuSections = [
           </svg>
         ),
         subItems: [
-          { name: "Tutores", tab: "TUTORES", visivelSe: "CCZ" },
-          { name: "Animais", tab: "ANIMAIS", visivelSe: "CCZ" },
+          {
+            name: "Tutor",
+            tab: "TUTORES",
+            isNestedDropdown: true,
+            visivelSe: "CCZ",
+            nestedItems: [
+              { name: "Cadastrar", subTab: "CADASTRAR", visivelSe: "CCZ" },
+              { name: "Lista", subTab: "LISTA", visivelSe: "CCZ" },
+            ],
+          },
+          {
+            name: "Animais",
+            tab: "ANIMAIS",
+            isNestedDropdown: true,
+            visivelSe: "CCZ",
+            nestedItems: [
+              { name: "Cadastrar", subTab: "CADASTRAR", visivelSe: "CCZ" },
+              { name: "Lista", subTab: "LISTA", visivelSe: "CCZ" },
+            ],
+          },
+          {
+            name: "Procedimentos",
+            tab: "PROCEDIMENTOS",
+            isNestedDropdown: true,
+            visivelSe: "CCZ",
+            nestedItems: [
+              { name: "Cadastrar", subTab: "CADASTRAR", visivelSe: "CCZ" },
+              { name: "Lista", subTab: "LISTA", visivelSe: "CCZ" },
+            ],
+          },
+          { name: "Agenda", tab: "AGENDA", visivelSe: "CCZ" },
         ],
       },
     ],
@@ -317,6 +346,10 @@ function subIcon(nome = "") {
   if (n.includes("procedimento"))
     return (
       <svg {...props}><path d="M14.5 2 9 7.5l-7 7a2.12 2.12 0 0 0 3 3l7-7L17.5 5" /><path d="m14 7 3 3" /></svg>
+    );
+  if (n.includes("agenda") || n.includes("calendário") || n.includes("calendario"))
+    return (
+      <svg {...props}><rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" /></svg>
     );
   // "Serviços de Atendimento" (Junta): grade de serviços oferecidos (CAEE, APAE, Ambulatório...).
   if (n.includes("serviços de atendimento") || n.includes("servicos de atendimento"))

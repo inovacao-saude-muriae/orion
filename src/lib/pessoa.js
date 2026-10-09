@@ -61,16 +61,14 @@ export function normalizarPessoa(data, { exigirData = true } = {}) {
   if (exigirData && !data.dataNascimento) {
     throw new Error("Data de nascimento é obrigatória.");
   }
-  if (!data.nomeMae?.trim()) {
-    throw new Error("Nome da mãe é obrigatório.");
-  }
+  // Nome da mãe é OPCIONAL (não bloqueia o cadastro).
 
   const normalizado = {
     cpf,
     nomeCompleto: data.nomeCompleto.trim().slice(0, 150),
     sexo: (data.sexo || "Masculino").slice(0, 20),
     dataNascimento: paraData(data.dataNascimento) || new Date(),
-    nomeMae: data.nomeMae.trim().slice(0, 150),
+    nomeMae: (data.nomeMae || "").trim().slice(0, 150),
     telefone: soDigitos(data.telefone).slice(0, 20),
     cns: data.cns ? soDigitos(data.cns).slice(0, 15) : null,
   };

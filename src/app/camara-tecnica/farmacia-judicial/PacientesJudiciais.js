@@ -82,6 +82,12 @@ export default function TabPacientesJudiciais({
 
   const handleInputChange = async (valor) => {
     setSearchTerm(valor);
+    // Só mostra o dropdown ao começar a digitar (>= 2 caracteres).
+    if (valor.trim().length < 2) {
+      setShowDropdown(false);
+      setSearchResults([]);
+      return;
+    }
     setShowDropdown(true);
     setIsSearching(true);
     try {
@@ -202,13 +208,11 @@ export default function TabPacientesJudiciais({
                     placeholder="Digite nome ou CPF para buscar..."
                     value={searchTerm}
                     onChange={(e) => handleInputChange(e.target.value)}
-                    onFocus={() => setShowDropdown(true)}
                     autoComplete="off"
                   />
                   <span className={styles.arrowIcon} onClick={() => setShowDropdown(!showDropdown)}>
                     {showDropdown ? '▲' : '▼'}
                   </span>
-                </div>
 
                 {showDropdown && (
                   <div className={styles.tableDropdownMenu}>
@@ -255,6 +259,7 @@ export default function TabPacientesJudiciais({
                     </div>
                   </div>
                 )}
+                </div>
                 <p className={styles.helperNote}>
                   A pessoa precisa estar cadastrada em <strong>Gerenciamento &gt; Cadastro de Pessoas</strong>.
                 </p>

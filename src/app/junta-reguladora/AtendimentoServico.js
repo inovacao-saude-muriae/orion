@@ -4,6 +4,8 @@ import { useState, useEffect, useCallback } from 'react';
 import styles from './AtendimentoServico.module.css';
 import { useConfirm, useNotify } from '@/components/ConfirmDialog';
 import { getAgendamentosDoDia } from './actions';
+import { rotuloEspecialidade } from './rotuloEspecialidade';
+import { usaRelatorioFinal } from './usaRelatorioFinal';
 
 const STATUS_OPCOES = [
   { value: 'PRESENCA', label: '✅ Presença' },
@@ -16,10 +18,13 @@ const hojeYMD = () => new Date().toISOString().split('T')[0];
 export default function AtendimentoServico({ servicoNome, onRegistrar }) {
   const confirm = useConfirm();
   const notify = useNotify();
+  const rotuloEsp = rotuloEspecialidade(servicoNome);
   const [data, setData] = useState(hojeYMD());
   const [agendamentos, setAgendamentos] = useState([]);
   const [loading, setLoading] = useState(false);
   const [registrando, setRegistrando] = useState(null); // id em processamento
+  // Modal do "Relatório Final" (campo grande de descrição da avaliação).
+  const [relatorioModal, setRelatorioModal] = useState(null); // { id } ou null
 
   // Estado por agendamento: status + observação da recepção.
   const [registros, setRegistros] = useState({});
@@ -94,6 +99,8 @@ export default function AtendimentoServico({ servicoNome, onRegistrar }) {
       [id]: { ...(prev[id] || { status: 'PRESENCA', observacao: '' }), [campo]: valor },
     }));
   };
+
+  const fecharRelatorio = () => setRelatorioModal(null);
 
   const registrar = async (ag) => {
     const reg = registros[ag.id] || { status: 'PRESENCA', observacao: '' };
@@ -173,7 +180,7 @@ export default function AtendimentoServico({ servicoNome, onRegistrar }) {
               <tr>
                 <th>Horário</th>
                 <th>Paciente</th>
-                <th>Especialidade</th>
+                <th>{rotuloEsp}</th>
                 <th>Frequência</th>
                 <th>Observação</th>
                 <th style={{ textAlign: 'center' }}>Ação</th>
@@ -204,14 +211,27 @@ export default function AtendimentoServico({ servicoNome, onRegistrar }) {
                       </select>
                     </td>
                     <td>
-                      <input
-                        type="text"
-                        className={styles.obsInput}
-                        placeholder="Opcional"
-                        value={reg.observacao}
-                        onChange={(e) => setCampo(ag.id, 'observacao', e.target.value)}
-                        disabled={foiRegistrado}
-                      />
+                      {usaRelatorioFinal(servicoNome, ag.especialidade) ? (
+                        <button
+                          type="button"
+                          className={styles.relatorioBtn}
+                          onClick={() => setRelatorioModal({ id: ag.id })}
+                          disabled={foiRegistrado}
+                        >
+                          {reg.observacao?.trim()
+                            ? '📄 Ver / editar relatório'
+                            : '📝 Escrever relatório final'}
+                        </button>
+                      ) : (
+                        <input
+                          type="text"
+                          className={styles.obsInput}
+                          placeholder="Opcional"
+                          value={reg.observacao}
+                          onChange={(e) => setCampo(ag.id, 'observacao', e.target.value)}
+                          disabled={foiRegistrado}
+                        />
+                      )}
                     </td>
                     <td style={{ textAlign: 'center' }}>
                       {foiRegistrado ? (
@@ -243,6 +263,50 @@ export default function AtendimentoServico({ servicoNome, onRegistrar }) {
           </table>
         </div>
       )}
+
+      {/* MODAL: RELATÓRIO FINAL (campo grande de descrição da avaliação) */}
+      {relatorioModal && (() => {
+        const ag = agendamentos.find((a) => a.id === relatorioModal.id);
+        if (!ag) return null;
+        const reg = registros[ag.id] || { status: 'PRESENCA', observacao: '' };
+        const bloqueado = !!registrados[ag.id];
+        return (
+          <div className={styles.modalOverlay} onClick={fecharRelatorio}>
+            <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+              <div className={styles.modalHeader}>
+                <div>
+                  <h3 className={styles.modalTitle}>Relatório Final</h3>
+                  <p className={styles.modalSubtitle}>
+                    {ag.pacienteNome} — {ag.especialidade}
+                  </p>
+                </div>
+                <button type="button" className={styles.modalClose} onClick={fecharRelatorio}>
+                  ✕
+                </button>
+              </div>
+              <div className={styles.modalBody}>
+                <label className={styles.modalLabel}>
+                  Descrição da avaliação
+                </label>
+                <textarea
+                  className={styles.relatorioTextarea}
+                  rows={12}
+                  placeholder="Descreva o resultado da avaliação..."
+                  value={reg.observacao}
+                  onChange={(e) => setCampo(ag.id, 'observacao', e.target.value)}
+                  disabled={bloqueado}
+                  autoFocus
+                />
+                <div className={styles.modalActions}>
+                  <button type="button" className={styles.cancelBtn} onClick={fecharRelatorio}>
+                    {bloqueado ? 'Fechar' : 'Concluir'}
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }

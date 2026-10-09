@@ -1,0 +1,272 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.card {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 1.1rem 1.25rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.listaHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 1rem;
+}
+
+.cardHeaderTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.buscaInput {
+  padding: 0.55rem 0.85rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  outline: none;
+  min-width: 260px;
+  box-sizing: border-box;
+}
+
+.buscaInput:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+}
+
+.vazio {
+  font-size: 0.85rem;
+  color: #64748b;
+  padding: 1.5rem;
+  text-align: center;
+  background-color: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+}
+
+.tableWrapper {
+  overflow-x: auto;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.875rem;
+}
+
+.table th {
+  background-color: #f8fafc;
+  padding: 0.7rem 0.9rem;
+  text-align: left;
+  color: #475569;
+  font-weight: 700;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.table td {
+  padding: 0.7rem 0.9rem;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+  vertical-align: middle;
+}
+
+.boldName {
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.badge {
+  display: inline-block;
+  min-width: 1.5rem;
+  text-align: center;
+  padding: 0.1rem 0.5rem;
+  background-color: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+  border-radius: 20px;
+  font-weight: 700;
+  font-size: 0.78rem;
+}
+
+.semTutor {
+  color: #94a3b8;
+  font-style: italic;
+}
+
+.btnEditar {
+  background-color: #ffffff;
+  color: #2563eb;
+  border: 1px solid #93c5fd;
+  padding: 0.4rem 0.9rem;
+  border-radius: 7px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.15s, color 0.15s;
+}
+
+.btnEditar:hover {
+  background-color: #2563eb;
+  color: #ffffff;
+}
+
+.expandBtn {
+  background: none;
+  border: none;
+  color: #64748b;
+  font-size: 0.9rem;
+  cursor: pointer;
+  padding: 0.2rem 0.3rem;
+  line-height: 1;
+}
+
+.expandBtn:hover {
+  color: #2563eb;
+}
+
+/* Sub-linha com os animais do tutor */
+.subRow td {
+  background-color: #f8fafc;
+  padding: 0.5rem 0.9rem 0.9rem;
+}
+
+.animaisLista {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.animaisTitulo {
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #475569;
+}
+
+.subTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.subTable th {
+  background-color: #f1f5f9;
+  padding: 0.5rem 0.7rem;
+  text-align: left;
+  color: #475569;
+  font-weight: 600;
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.subTable td {
+  padding: 0.5rem 0.7rem;
+  border-bottom: 1px solid #f1f5f9;
+  color: #334155;
+}
+
+/* Miniatura da foto do animal na lista */
+.fotoMini {
+  width: 72px;
+  height: 72px;
+  border-radius: 8px;
+  border: 1px solid #cbd5e1;
+  object-fit: cover;
+  background-color: #fff;
+  display: block;
+}
+
+.fotoMiniVazia {
+  width: 72px;
+  height: 72px;
+  border-radius: 8px;
+  border: 1px dashed #cbd5e1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  font-size: 0.6rem;
+  text-align: center;
+  background-color: #fff;
+}
+
+/* Texto secundário (id/tutor abaixo do nome do animal) */
+.subText {
+  font-size: 0.72rem;
+  color: #94a3b8;
+  margin-top: 2px;
+}
+
+/* Badges de status do procedimento */
+.statusAgendado,
+.statusRealizado,
+.statusCancelado {
+  display: inline-block;
+  padding: 0.15rem 0.6rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.statusAgendado {
+  background-color: #e0f2fe;
+  color: #0369a1;
+  border: 1px solid #bae6fd;
+}
+
+.statusRealizado {
+  background-color: #dcfce7;
+  color: #166534;
+  border: 1px solid #bbf7d0;
+}
+
+.statusCancelado {
+  background-color: #fee2e2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+}
+
+/* Célula de ações (Editar + Ver ficha lado a lado) */
+.acoesCell {
+  display: inline-flex;
+  gap: 0.4rem;
+  justify-content: flex-end;
+}
+
+.btnFicha {
+  background-color: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+  padding: 0.4rem 0.9rem;
+  border-radius: 7px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.15s;
+}
+
+.btnFicha:hover {
+  background-color: #dbeafe;
+}

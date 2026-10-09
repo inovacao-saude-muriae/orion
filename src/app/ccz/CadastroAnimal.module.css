@@ -80,25 +80,29 @@
   margin-top: 1rem;
 }
 
-/* GRID DE CAMPOS (6 colunas) */
+/* GRID DE CAMPOS (12 colunas) */
 .grid {
   display: grid;
-  grid-template-columns: repeat(6, 1fr);
-  gap: 0.6rem 0.75rem;
+  grid-template-columns: repeat(12, 1fr);
+  gap: 0.75rem 0.9rem;
+  align-items: start;
 }
 
 .field {
   display: flex;
   flex-direction: column;
-  gap: 0.2rem;
-  grid-column: span 2;
+  gap: 0.3rem;
+  grid-column: span 3; /* padrão */
+  min-width: 0;
 }
 
+/* Larguras proporcionais ao conteúdo */
+.colXs { grid-column: span 2; }   /* Id, selects curtos */
+.colSm { grid-column: span 3; }   /* Espécie, Sexo, Porte, Castrado, Apetite */
+.colMd { grid-column: span 4; }   /* Idade */
+.colLg { grid-column: span 6; }   /* Nome, blocos com campo ao lado */
+.colFull,
 .colWide {
-  grid-column: span 3;
-}
-
-.colFull {
   grid-column: 1 / -1;
 }
 
@@ -303,19 +307,23 @@
 
 @media (max-width: 900px) {
   .grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(6, 1fr);
   }
-  .colWide {
-    grid-column: span 2;
-  }
+  .colXs { grid-column: span 2; }
+  .colSm { grid-column: span 3; }
+  .colMd { grid-column: span 3; }
+  .colLg { grid-column: span 6; }
 }
 
 @media (max-width: 560px) {
   .grid {
     grid-template-columns: 1fr;
   }
-  .colWide {
-    grid-column: span 1;
+  .colXs,
+  .colSm,
+  .colMd,
+  .colLg {
+    grid-column: 1 / -1;
   }
   .rowComposta {
     flex-direction: column;
@@ -323,4 +331,83 @@
   .rowComposta > .colControle {
     flex: 1 1 auto;
   }
+}
+
+/* ── Dropdown de busca de tutor (pessoa) ──────────────────────────────── */
+.tableDropdownMenu {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  right: 0;
+  z-index: 50;
+  background-color: #ffffff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(15, 23, 42, 0.12);
+  overflow: hidden;
+}
+
+.tableContainerScroll {
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.patientTableDropdown {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.patientTableDropdown thead {
+  position: sticky;
+  top: 0;
+  background-color: #f8fafc;
+}
+
+.patientTableDropdown th {
+  text-align: left;
+  padding: 0.55rem 0.75rem;
+  color: #475569;
+  font-weight: 700;
+  font-size: 0.72rem;
+  border-bottom: 1px solid #e2e8f0;
+  white-space: nowrap;
+}
+
+.patientTableDropdown td {
+  padding: 0.55rem 0.75rem;
+  color: #334155;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.patientTableDropdown tbody tr {
+  cursor: pointer;
+}
+
+.patientTableDropdown tbody tr:hover {
+  background-color: #2563eb;
+}
+
+.patientTableDropdown tbody tr:hover td {
+  color: #ffffff;
+}
+
+.boldName {
+  font-weight: 600;
+}
+
+.selectedRow {
+  background-color: #eff6ff;
+}
+
+.noDataTd {
+  text-align: center;
+  padding: 1.5rem !important;
+  color: #94a3b8;
+}
+
+.noDataTd:hover,
+.patientTableDropdown tbody tr:hover .noDataTd {
+  background-color: transparent !important;
+  color: #94a3b8 !important;
 }

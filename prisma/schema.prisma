@@ -441,6 +441,7 @@ model Animal {
   zoonoses      CadastroZoonoses[]
   denuncias     DenunciaCaoAgressivo[]
   esporotricose Esporotricose[]
+  termos        TermoInternacao[]
 
   @@map("ccz_animais")
 }
@@ -457,10 +458,32 @@ model CadastroProcedimento {
   dataRetorno        DateTime? @map("data_retorno") @db.Date
   createdAt          DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  animal Animal @relation(fields: [animalId], references: [id], onDelete: Cascade)
+  animal Animal           @relation(fields: [animalId], references: [id], onDelete: Cascade)
+  termo  TermoInternacao?
 
   @@index([animalId], map: "idx_procedimento_animal")
   @@map("ccz_procedimentos")
+}
+
+// Termo de internação do animal (gerado a partir de um procedimento de Internação).
+model TermoInternacao {
+  id              String    @id @default(uuid()) @db.VarChar(50)
+  procedimentoId  String    @unique @map("procedimento_id") @db.VarChar(50)
+  animalId        String    @map("animal_id") @db.VarChar(50)
+  // Responsável/depositante: do tutor (se houver) ou informado manualmente.
+  responsavelNome String    @map("responsavel_nome") @db.VarChar(150)
+  responsavelCpf  String?   @map("responsavel_cpf") @db.VarChar(14)
+  seraAdotado     String    @default("Não") @map("sera_adotado") @db.VarChar(10)
+  dataTermo       DateTime  @map("data_termo") @db.Date
+  cidade          String    @default("Muriaé") @db.VarChar(100)
+  createdAt       DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt       DateTime? @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  procedimento CadastroProcedimento @relation(fields: [procedimentoId], references: [id], onDelete: Cascade)
+  animal       Animal               @relation(fields: [animalId], references: [id], onDelete: Cascade)
+
+  @@index([animalId], map: "idx_termo_internacao_animal")
+  @@map("ccz_termos_internacao")
 }
 
 model CadastroZoonoses {
