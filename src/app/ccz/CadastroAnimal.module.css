@@ -1,0 +1,326 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.alertErro {
+  background-color: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+}
+
+/* CARD */
+.card {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 1.1rem 1.25rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.formCard,
+.alertErro {
+  width: 100%;
+}
+
+.cardHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.cardHeaderTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.btnAdicionar {
+  background-color: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+  padding: 0.6rem 1.1rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.2s ease;
+}
+
+.btnAdicionar:hover {
+  background-color: #dbeafe;
+}
+
+.formSectionTitle {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #475569;
+  margin: 1.5rem 0 0.9rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.formSectionTitle:first-of-type {
+  margin-top: 0;
+}
+
+.camposBloco {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-top: 1rem;
+}
+
+/* GRID DE CAMPOS (6 colunas) */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0.6rem 0.75rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  grid-column: span 2;
+}
+
+.colWide {
+  grid-column: span 3;
+}
+
+.colFull {
+  grid-column: 1 / -1;
+}
+
+.field label {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #334155;
+}
+
+.field input,
+.field select,
+.field textarea {
+  padding: 0.6rem 0.85rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  background-color: #fff;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.field textarea {
+  resize: vertical;
+  min-height: 2.4rem;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+}
+
+.field input:disabled,
+.field select:disabled,
+.field textarea:disabled {
+  background-color: #f1f5f9;
+  color: #64748b;
+}
+
+/* Campo "Id" pequeno */
+.inputSmall {
+  max-width: 220px;
+}
+
+/* Linha com dropdown + campo condicional ao lado */
+.rowComposta {
+  display: flex;
+  gap: 0.6rem;
+  align-items: flex-start;
+}
+
+.rowComposta > .colControle {
+  flex: 0 0 160px;
+}
+
+.rowComposta > .colAnexo {
+  flex: 1;
+}
+
+.colControle,
+.colAnexo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+}
+
+.colControle select,
+.colAnexo input,
+.colAnexo select,
+.colAnexo textarea {
+  padding: 0.6rem 0.85rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  background-color: #fff;
+  box-sizing: border-box;
+  font-family: inherit;
+  width: 100%;
+}
+
+.colAnexo textarea {
+  resize: vertical;
+  min-height: 2.4rem;
+}
+
+.colControle select:focus,
+.colAnexo input:focus,
+.colAnexo select:focus,
+.colAnexo textarea:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+}
+
+.colControle select:disabled,
+.colAnexo input:disabled,
+.colAnexo select:disabled,
+.colAnexo textarea:disabled {
+  background-color: #f1f5f9;
+  color: #64748b;
+}
+
+.rowLabel {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #334155;
+}
+
+/* Foto do animal (upload + preview) */
+.fotoBloco {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+}
+
+.fotoPreview {
+  width: 110px;
+  height: 110px;
+  border-radius: 10px;
+  border: 1px solid #cbd5e1;
+  object-fit: cover;
+  background-color: #fff;
+}
+
+.fotoPlaceholder {
+  width: 110px;
+  height: 110px;
+  border-radius: 10px;
+  border: 1px dashed #cbd5e1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #94a3b8;
+  font-size: 0.72rem;
+  text-align: center;
+  background-color: #fff;
+}
+
+.fotoControles {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.hint {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.hintErro {
+  font-size: 0.75rem;
+  color: #dc2626;
+}
+
+/* AÇÕES DO FORM */
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 1.1rem;
+}
+
+.btnPrimary {
+  background-color: #2563eb;
+  color: #fff;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.btnPrimary:hover {
+  background-color: #1d4ed8;
+}
+
+.btnPrimary:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.btnGhost {
+  background-color: transparent;
+  color: #475569;
+  border: 1px solid #cbd5e0;
+  padding: 0.55rem 1.1rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.btnGhost:hover {
+  background-color: #f1f5f9;
+}
+
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .colWide {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 560px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  .colWide {
+    grid-column: span 1;
+  }
+  .rowComposta {
+    flex-direction: column;
+  }
+  .rowComposta > .colControle {
+    flex: 1 1 auto;
+  }
+}

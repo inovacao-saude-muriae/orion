@@ -1,0 +1,548 @@
+"use client";
+
+import { useState, useEffect, useRef } from "react";
+import styles from "./CadastroTutor.module.css";
+import { buscarCep } from "@/lib/viacep";
+import { mascararTelefone as maskTelefone } from "@/lib/telefone";
+import { documentoPaciente } from "@/app/regulacao/constants";
+import { useConfirm, useNotify } from "@/components/ConfirmDialog";
+import { buscarPessoasCCZ, salvarTutor } from "./actions";
+
+// ── Máscaras locais ───────────────────────────────────────────────────────
+const maskCpf = (v) =>
+  (v || "")
+    .replace(/\D/g, "")
+    .slice(0, 11)
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d)/, "$1.$2")
+    .replace(/(\d{3})(\d{1,2})$/, "$1-$2");
+
+const maskCep = (v) =>
+  (v || "").replace(/\D/g, "").slice(0, 8).replace(/(\d{5})(\d{1,3})$/, "$1-$2");
+
+const soDigitos = (v) => (v ? v.replace(/\D/g, "") : "");
+
+const FORM_VAZIO = {
+  // Dados pessoais (vão para a tabela `pessoa`).
+  cpf: "",
+  nomeCompleto: "",
+  sexo: "Masculino",
+  dataNascimento: "",
+  nomeMae: "",
+  telefone: "",
+  cns: "",
+  // Endereço (tabela `pessoa_endereco`).
+  cep: "",
+  logradouro: "",
+  numero: "",
+  complemento: "",
+  bairro: "",
+  cidade: "Muriaé",
+  uf: "MG",
+  // Complementares CCZ (tabela `ccz_tutores`).
+  rg: "",
+  tutorSexo: "",
+  profissao: "",
+  telefoneSecundario: "",
+  pontoReferencia: "",
+  observacoes: "",
+};
+
+// Preenche o formulário a partir de uma pessoa vinda do banco.
+const pessoaParaForm = (p) => ({
+  ...FORM_VAZIO,
+  ...p,
+  cpf: maskCpf(p.cpf),
+  telefone: maskTelefone(p.telefone),
+  telefoneSecundario: p.telefoneSecundario ? maskTelefone(p.telefoneSecundario) : "",
+  cep: maskCep(p.cep),
+});
+
+export default function CadastroTutor() {
+  const confirm = useConfirm();
+  const notify = useNotify();
+
+  const [form, setForm] = useState(FORM_VAZIO);
+  // Modos: "leitura" (busca ativa), "novo" (cadastro), "edicao" (editar).
+  const [modo, setModo] = useState("leitura");
+  const [salvando, setSalvando] = useState(false);
+  const [erro, setErro] = useState("");
+
+  // Busca (campo "Nome completo" select-like + dropdown em tabela).
+  const [termo, setTermo] = useState("");
+  const [pessoas, setPessoas] = useState([]);
+  const [buscando, setBuscando] = useState(false);
+  const [dropAberto, setDropAberto] = useState(false);
+  const dropdownRef = useRef(null);
+
+  const [cepLoading, setCepLoading] = useState(false);
+  const [cepErro, setCepErro] = useState("");
+
+  const editavel = modo === "novo" || modo === "edicao";
+
+  // Fecha o dropdown ao clicar fora.
+  useEffect(() => {
+    function handleClickOutside(e) {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target)) {
+        setDropAberto(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // ── Busca (debounce por tamanho mínimo) ───────────────────────────────────
+  const handleBuscar = async (valor) => {
+    setTermo(valor);
+    // O campo "Nome completo" também é o campo de busca em modo leitura.
+    setForm((prev) => ({ ...prev, nomeCompleto: valor }));
+    if (!dropAberto) setDropAberto(true);
+    if (valor.trim().length >= 2) {
+      setBuscando(true);
+      const res = await buscarPessoasCCZ(valor.trim());
+      setPessoas(res.success ? res.data : []);
+      setBuscando(false);
+    } else {
+      setPessoas([]);
+    }
+  };
+
+  const selecionarPessoa = (p) => {
+    setForm(pessoaParaForm(p));
+    setModo("leitura");
+    setTermo(p.nomeCompleto || "");
+    setDropAberto(false);
+    setCepErro("");
+    setErro("");
+  };
+
+  // ── ViaCEP ────────────────────────────────────────────────────────────────
+  const consultarCep = async (valor) => {
+    const digitos = soDigitos(valor);
+    if (digitos.length !== 8) return;
+    setCepErro("");
+    setCepLoading(true);
+    try {
+      const res = await buscarCep(digitos);
+      if (res.success) {
+        setForm((prev) => ({
+          ...prev,
+          logradouro: res.data.logradouro || prev.logradouro,
+          bairro: res.data.bairro || prev.bairro,
+          cidade: res.data.cidade || prev.cidade,
+          uf: res.data.uf || prev.uf,
+          complemento: res.data.complemento || prev.complemento,
+        }));
+      } else {
+        setCepErro(res.error || "CEP não encontrado.");
+      }
+    } finally {
+      setCepLoading(false);
+    }
+  };
+
+  // ── Ações ───────────────────────────────────────────────────────────────
+  const novoCadastro = () => {
+    // Preserva o nome já digitado no campo de busca ao iniciar um novo cadastro.
+    const nomeDigitado = termo.trim();
+    setForm({ ...FORM_VAZIO, nomeCompleto: nomeDigitado });
+    setModo("novo");
+    setDropAberto(false);
+    setCepErro("");
+    setErro("");
+  };
+
+  const habilitarEdicao = () => {
+    setModo("edicao");
+    setCepErro("");
+    setErro("");
+  };
+
+  const cancelar = () => {
+    setForm(FORM_VAZIO);
+    setModo("leitura");
+    setTermo("");
+    setPessoas([]);
+    setDropAberto(false);
+    setCepErro("");
+    setErro("");
+  };
+
+  const salvar = async (e) => {
+    e.preventDefault();
+    const ok = await confirm({
+      title: modo === "edicao" ? "Atualizar tutor" : "Cadastrar tutor",
+      message:
+        modo === "edicao"
+          ? "Deseja salvar as alterações deste tutor?"
+          : "Deseja confirmar o cadastro deste tutor?",
+      confirmText: modo === "edicao" ? "Atualizar" : "Cadastrar",
+    });
+    if (!ok) return;
+
+    setSalvando(true);
+    const payload = {
+      ...form,
+      cpf: soDigitos(form.cpf),
+      telefone: soDigitos(form.telefone),
+      telefoneSecundario: soDigitos(form.telefoneSecundario),
+      cep: soDigitos(form.cep),
+      cns: soDigitos(form.cns),
+    };
+
+    const res = await salvarTutor(payload);
+    setSalvando(false);
+
+    if (res.success) {
+      setErro("");
+      await notify({ tipo: "sucesso", title: "Pronto", message: "Tutor salvo com sucesso!" });
+      // Recarrega os dados gravados e volta ao modo leitura.
+      const busca = await buscarPessoasCCZ(payload.cpf);
+      const salvo = busca.success
+        ? busca.data.find((x) => soDigitos(x.cpf) === payload.cpf)
+        : null;
+      if (salvo) selecionarPessoa(salvo);
+      else cancelar();
+    } else {
+      setErro(res.error || "Não foi possível salvar o tutor.");
+    }
+  };
+
+  const pessoaSelecionada = Boolean(soDigitos(form.cpf));
+  const tituloForm =
+    modo === "novo" ? "Novo tutor" : modo === "edicao" ? "Editar tutor" : "Dados do tutor";
+
+  return (
+    <div className={styles.container}>
+      {erro && <div className={styles.alertErro}>{erro}</div>}
+
+      <form onSubmit={salvar} className={`${styles.card} ${styles.formCard}`}>
+        <div className={styles.cardHeaderRow}>
+          <h2 className={styles.cardHeaderTitle}>{tituloForm}</h2>
+          <button type="button" className={styles.btnAdicionar} onClick={novoCadastro}>
+            Cadastrar novo
+          </button>
+        </div>
+
+        <div className={styles.camposBloco}>
+          <div className={styles.formSectionTitle}>Dados pessoais</div>
+          <div className={styles.grid}>
+            <div
+              className={`${styles.field} ${styles.colWide}`}
+              style={{ position: "relative" }}
+              ref={dropdownRef}
+            >
+              <label>Nome completo *</label>
+              <div className={styles.inputWrapperWithIcon}>
+                <input
+                  type="text"
+                  value={form.nomeCompleto}
+                  placeholder={editavel ? "" : "Digite nome ou CPF para buscar..."}
+                  onChange={(e) => {
+                    if (editavel) {
+                      setForm({ ...form, nomeCompleto: e.target.value });
+                    } else {
+                      handleBuscar(e.target.value);
+                    }
+                  }}
+                  onFocus={() => {
+                    if (!editavel) setDropAberto(true);
+                  }}
+                  autoComplete="off"
+                  required
+                />
+                {!editavel && (
+                  <span className={styles.arrowIcon} onClick={() => setDropAberto(!dropAberto)}>
+                    {dropAberto ? "▲" : "▼"}
+                  </span>
+                )}
+              </div>
+              {!editavel && dropAberto && (
+                <div className={styles.tableDropdownMenu}>
+                  <div className={styles.tableContainerScroll}>
+                    <table className={styles.patientTableDropdown}>
+                      <thead>
+                        <tr>
+                          <th>CPF / CNS</th>
+                          <th>Nome</th>
+                          <th>Nome da mãe</th>
+                          <th>Data nasc.</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        {pessoas.length > 0 ? (
+                          pessoas.map((p) => (
+                            <tr
+                              key={p.cpf}
+                              onMouseDown={(e) => {
+                                e.preventDefault();
+                                selecionarPessoa(p);
+                              }}
+                              className={
+                                soDigitos(form.cpf) === soDigitos(p.cpf) ? styles.selectedRow : ""
+                              }
+                            >
+                              <td>{documentoPaciente({ cpf: p.cpf, cns: p.cns })}</td>
+                              <td className={styles.boldName}>{p.nomeCompleto}</td>
+                              <td>{p.nomeMae || "Não informada"}</td>
+                              <td>
+                                {p.dataNascimento
+                                  ? p.dataNascimento.split("-").reverse().join("/")
+                                  : "-"}
+                              </td>
+                            </tr>
+                          ))
+                        ) : (
+                          <tr>
+                            <td colSpan="4" className={styles.noDataTd}>
+                              {buscando ? "Buscando pessoas..." : "Nenhuma pessoa encontrada."}
+                            </td>
+                          </tr>
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <div className={`${styles.field} ${styles.colWide}`}>
+              <label>Nome da mãe *</label>
+              <input
+                type="text"
+                value={form.nomeMae}
+                onChange={(e) => setForm({ ...form, nomeMae: e.target.value })}
+                disabled={!editavel}
+                required
+              />
+            </div>
+
+            <div className={styles.field}>
+              <label>Data de nascimento *</label>
+              <input
+                type="date"
+                value={form.dataNascimento}
+                onChange={(e) => setForm({ ...form, dataNascimento: e.target.value })}
+                disabled={!editavel}
+                required
+              />
+            </div>
+
+            <div className={styles.field}>
+              <label>Sexo *</label>
+              <select
+                value={form.sexo}
+                onChange={(e) => setForm({ ...form, sexo: e.target.value })}
+                disabled={!editavel}
+                required
+              >
+                <option value="Masculino">Masculino</option>
+                <option value="Feminino">Feminino</option>
+              </select>
+            </div>
+
+            <div className={styles.field}>
+              <label>Telefone / WhatsApp *</label>
+              <input
+                type="text"
+                value={form.telefone}
+                onChange={(e) => setForm({ ...form, telefone: maskTelefone(e.target.value) })}
+                placeholder="(00) 00000-0000"
+                disabled={!editavel}
+              />
+            </div>
+
+            <div className={styles.field}>
+              <label>CPF *</label>
+              <input
+                type="text"
+                value={form.cpf}
+                onChange={(e) => setForm({ ...form, cpf: maskCpf(e.target.value) })}
+                placeholder="000.000.000-00"
+                disabled={modo !== "novo"}
+                required
+              />
+            </div>
+
+            <div className={styles.field}>
+              <label>CNS (Cartão SUS)</label>
+              <input
+                type="text"
+                value={form.cns}
+                onChange={(e) =>
+                  setForm({ ...form, cns: e.target.value.replace(/\D/g, "").slice(0, 15) })
+                }
+                placeholder="Opcional"
+                disabled={!editavel}
+              />
+            </div>
+          </div>
+
+          <div className={styles.formSectionTitle}>Endereço</div>
+          <div className={styles.grid}>
+            <div className={styles.field}>
+              <label>CEP</label>
+              <input
+                type="text"
+                value={form.cep}
+                onChange={(e) => {
+                  const masked = maskCep(e.target.value);
+                  setForm({ ...form, cep: masked });
+                  setCepErro("");
+                  if (soDigitos(masked).length === 8) consultarCep(masked);
+                }}
+                onBlur={(e) => consultarCep(e.target.value)}
+                placeholder="00000-000"
+                disabled={!editavel}
+              />
+              {cepLoading && <small className={styles.hint}>Buscando endereço...</small>}
+              {cepErro && <small className={styles.hintErro}>{cepErro}</small>}
+            </div>
+            <div className={styles.field}>
+              <label>Bairro</label>
+              <input
+                type="text"
+                value={form.bairro}
+                onChange={(e) => setForm({ ...form, bairro: e.target.value })}
+                disabled={!editavel}
+              />
+            </div>
+            <div className={styles.field}>
+              <label>Logradouro / Rua</label>
+              <input
+                type="text"
+                value={form.logradouro}
+                onChange={(e) => setForm({ ...form, logradouro: e.target.value })}
+                disabled={!editavel}
+              />
+            </div>
+            <div className={styles.field}>
+              <label>Número</label>
+              <input
+                type="text"
+                value={form.numero}
+                onChange={(e) => setForm({ ...form, numero: e.target.value })}
+                disabled={!editavel}
+              />
+            </div>
+            <div className={styles.field}>
+              <label>Complemento</label>
+              <input
+                type="text"
+                value={form.complemento}
+                onChange={(e) => setForm({ ...form, complemento: e.target.value })}
+                disabled={!editavel}
+              />
+            </div>
+            <div className={styles.field}>
+              <label>Cidade</label>
+              <input
+                type="text"
+                value={form.cidade}
+                onChange={(e) => setForm({ ...form, cidade: e.target.value })}
+                disabled={!editavel}
+              />
+            </div>
+            <div className={styles.field}>
+              <label>UF</label>
+              <input
+                type="text"
+                value={form.uf}
+                maxLength={2}
+                onChange={(e) => setForm({ ...form, uf: e.target.value.toUpperCase() })}
+                disabled={!editavel}
+              />
+            </div>
+          </div>
+
+          <div className={styles.formSectionTitle}>Dados Complementares CCZ</div>
+          <div className={styles.grid}>
+            <div className={styles.field}>
+              <label>RG</label>
+              <input
+                type="text"
+                value={form.rg}
+                onChange={(e) => setForm({ ...form, rg: e.target.value })}
+                disabled={!editavel}
+              />
+            </div>
+            <div className={styles.field}>
+              <label>Sexo (tutor)</label>
+              <select
+                value={form.tutorSexo}
+                onChange={(e) => setForm({ ...form, tutorSexo: e.target.value })}
+                disabled={!editavel}
+              >
+                <option value="">-- Selecione --</option>
+                <option value="Masculino">Masculino</option>
+                <option value="Feminino">Feminino</option>
+              </select>
+            </div>
+            <div className={styles.field}>
+              <label>Profissão</label>
+              <input
+                type="text"
+                value={form.profissao}
+                onChange={(e) => setForm({ ...form, profissao: e.target.value })}
+                disabled={!editavel}
+              />
+            </div>
+            <div className={styles.field}>
+              <label>Telefone secundário</label>
+              <input
+                type="text"
+                value={form.telefoneSecundario}
+                onChange={(e) =>
+                  setForm({ ...form, telefoneSecundario: maskTelefone(e.target.value) })
+                }
+                placeholder="(00) 00000-0000"
+                disabled={!editavel}
+              />
+            </div>
+            <div className={`${styles.field} ${styles.colWide}`}>
+              <label>Ponto de referência</label>
+              <input
+                type="text"
+                value={form.pontoReferencia}
+                onChange={(e) => setForm({ ...form, pontoReferencia: e.target.value })}
+                disabled={!editavel}
+              />
+            </div>
+            <div className={`${styles.field} ${styles.colWide}`}>
+              <label>Observações</label>
+              <textarea
+                rows={3}
+                value={form.observacoes}
+                onChange={(e) => setForm({ ...form, observacoes: e.target.value })}
+                disabled={!editavel}
+              />
+            </div>
+          </div>
+        </div>
+
+        <div className={styles.formActions}>
+          {modo === "leitura" && pessoaSelecionada && (
+            <button type="button" className={styles.btnGhost} onClick={habilitarEdicao}>
+              Editar
+            </button>
+          )}
+          {editavel && (
+            <button
+              type="button"
+              className={styles.btnGhost}
+              onClick={cancelar}
+              disabled={salvando}
+            >
+              Cancelar
+            </button>
+          )}
+          {editavel && (
+            <button type="submit" className={styles.btnPrimary} disabled={salvando}>
+              {salvando ? "Salvando..." : modo === "edicao" ? "Atualizar" : "Salvar"}
+            </button>
+          )}
+        </div>
+      </form>
+    </div>
+  );
+}

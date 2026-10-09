@@ -1,0 +1,338 @@
+.container {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 1rem;
+}
+
+.title {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #0f172a;
+}
+
+.subtitle {
+  font-size: 0.875rem;
+  color: #64748b;
+  margin-top: 0.25rem;
+}
+
+.alertErro {
+  background-color: #fef2f2;
+  color: #991b1b;
+  border: 1px solid #fecaca;
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  font-size: 0.875rem;
+}
+
+/* CARDS */
+.card {
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 1.1rem 1.25rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+}
+
+.header,
+.formCard,
+.alertErro {
+  width: 100%;
+}
+
+/* Cabeçalho do card do formulário (título + botão na mesma linha) */
+.cardHeaderRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 0.75rem;
+}
+
+.cardHeaderTitle {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+/* Botão "Cadastrar novo" azul clarinho */
+.btnAdicionar {
+  background-color: #eff6ff;
+  color: #2563eb;
+  border: 1px solid #bfdbfe;
+  padding: 0.6rem 1.1rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background-color 0.2s ease;
+}
+
+.btnAdicionar:hover {
+  background-color: #dbeafe;
+}
+
+/* Campo "Nome completo" como busca select-like */
+.inputWrapperWithIcon {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+}
+
+.inputWrapperWithIcon input {
+  width: 100%;
+  padding-right: 2rem;
+  box-sizing: border-box;
+}
+
+.arrowIcon {
+  position: absolute;
+  top: 50%;
+  transform: translateY(-50%);
+  right: 0.85rem;
+  color: #64748b;
+  font-size: 0.7rem;
+  cursor: pointer;
+  user-select: none;
+}
+
+.tableDropdownMenu {
+  position: absolute;
+  top: calc(100% + 0.25rem);
+  left: 0;
+  right: 0;
+  background: #fff;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
+  z-index: 30;
+  overflow: hidden;
+}
+
+.tableContainerScroll {
+  max-height: 260px;
+  overflow-y: auto;
+}
+
+.patientTableDropdown {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.82rem;
+}
+
+.patientTableDropdown thead {
+  position: sticky;
+  top: 0;
+  background: #f8fafc;
+}
+
+.patientTableDropdown th {
+  padding: 0.6rem 0.75rem;
+  color: #475569;
+  font-weight: 600;
+  text-align: left;
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.patientTableDropdown td {
+  padding: 0.6rem 0.75rem;
+  color: #334155;
+  border-bottom: 1px solid #f1f5f9;
+}
+
+.patientTableDropdown tbody tr {
+  cursor: pointer;
+}
+
+.patientTableDropdown tbody tr:hover {
+  background-color: #2563eb;
+}
+
+.patientTableDropdown tbody tr:hover td {
+  color: #ffffff;
+}
+
+.boldName {
+  font-weight: 600;
+}
+
+.selectedRow {
+  background-color: #eff6ff;
+}
+
+.noDataTd {
+  text-align: center;
+  padding: 1.5rem !important;
+  color: #94a3b8;
+}
+
+.noDataTd:hover,
+.patientTableDropdown tbody tr:hover .noDataTd {
+  background-color: transparent !important;
+  color: #94a3b8 !important;
+}
+
+.formSectionTitle {
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+  color: #475569;
+  margin: 1.5rem 0 0.9rem;
+  padding-bottom: 0.5rem;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.formSectionTitle:first-of-type {
+  margin-top: 0;
+}
+
+/* Bloco cinza que agrupa os campos */
+.camposBloco {
+  background-color: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-top: 1rem;
+}
+
+/* GRID DE CAMPOS (6 colunas) */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(6, 1fr);
+  gap: 0.6rem 0.75rem;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  grid-column: span 2;
+}
+
+.colWide {
+  grid-column: span 3;
+}
+
+.field label {
+  font-size: 0.72rem;
+  font-weight: 500;
+  color: #334155;
+}
+
+.field input,
+.field select,
+.field textarea {
+  padding: 0.6rem 0.85rem;
+  border: 1px solid #cbd5e1;
+  border-radius: 8px;
+  font-size: 0.875rem;
+  outline: none;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  background-color: #fff;
+  box-sizing: border-box;
+  font-family: inherit;
+}
+
+.field textarea {
+  resize: vertical;
+  min-height: 2.4rem;
+}
+
+.field input:focus,
+.field select:focus,
+.field textarea:focus {
+  border-color: #2563eb;
+  box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.08);
+}
+
+.field input:disabled,
+.field select:disabled,
+.field textarea:disabled {
+  background-color: #f1f5f9;
+  color: #64748b;
+}
+
+.hint {
+  font-size: 0.75rem;
+  color: #64748b;
+}
+
+.hintErro {
+  font-size: 0.75rem;
+  color: #dc2626;
+}
+
+/* AÇÕES DO FORM */
+.formActions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 0.6rem;
+  margin-top: 1.1rem;
+}
+
+/* BOTÕES */
+.btnPrimary {
+  background-color: #2563eb;
+  color: #fff;
+  border: none;
+  padding: 0.6rem 1.2rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.btnPrimary:hover {
+  background-color: #1d4ed8;
+}
+
+.btnPrimary:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.btnGhost {
+  background-color: transparent;
+  color: #475569;
+  border: 1px solid #cbd5e0;
+  padding: 0.55rem 1.1rem;
+  border-radius: 8px;
+  font-weight: 600;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+.btnGhost:hover {
+  background-color: #f1f5f9;
+}
+
+@media (max-width: 900px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  .colWide {
+    grid-column: span 2;
+  }
+}
+
+@media (max-width: 560px) {
+  .grid {
+    grid-template-columns: 1fr;
+  }
+  .colWide {
+    grid-column: span 1;
+  }
+}
