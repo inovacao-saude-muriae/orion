@@ -98,7 +98,7 @@ export async function createRegistro(data) {
       });
     }
 
-    revalidatePath("/gerenciamento/procedimentos");
+    revalidatePath("/regulacao");
     return { success: true };
   } catch (error) {
     console.error("Erro ao cadastrar registro:", error);
@@ -131,7 +131,7 @@ export async function updateRegistro(linha, data) {
       });
     }
 
-    revalidatePath("/gerenciamento/procedimentos");
+    revalidatePath("/regulacao");
     return { success: true };
   } catch (error) {
     console.error("Erro ao atualizar registro:", error);
@@ -151,7 +151,7 @@ export async function deleteRegistro(linha) {
       await prisma.tipoExame.delete({ where: { id: Number(linha.tipoExameId) } });
     }
 
-    revalidatePath("/gerenciamento/procedimentos");
+    revalidatePath("/regulacao");
     return { success: true };
   } catch (error) {
     console.error("Erro ao excluir registro:", error);

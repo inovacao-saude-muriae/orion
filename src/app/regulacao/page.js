@@ -19,6 +19,8 @@ import TelaEditarPedido from "./EditarPedido";
 import ModalTetoFinanceiro from "./Modals/ModalTetoFinanceiro";
 import ModalSeletorCotas from "./Modals/ModalSeletorCotas";
 
+import ProcedimentosTab from "./ProcedimentosTab";
+
 import styles from "./page.module.css";
 
 // verificado: catálogo só em /gerenciamento (médicos/UBS/procedimentos). Esta
@@ -278,6 +280,8 @@ function RegulacaoPageContent() {
         />
         </div>
       )}
+
+      {activeTab === "PROCEDIMENTOS" && <ProcedimentosTab />}
 
       {activeTab === "FINANCEIRO" && (
         <Financeiro

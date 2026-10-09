@@ -15,6 +15,7 @@ import AtendimentoServico from "./AtendimentoServico";
 import AgendaServico from "./AgendaServico";
 import ProntuarioRelatorio from "./ProntuarioRelatorio";
 import AcessoNegadoModulo from "@/components/AcessoNegadoModulo";
+import ServicosEspecialidadesTab from "./ServicosEspecialidadesTab";
 import { usePermissoesJunta } from "./PermissoesJuntaContext";
 import { useNotify } from "@/components/ConfirmDialog";
 
@@ -198,6 +199,8 @@ function JuntaReguladoraPageContent() {
           )}
         </>
       )}
+
+      {activeTab === "SERVICOS_ESPECIALIDADES" && <ServicosEspecialidadesTab />}
 
       {activeTab === "RELATORIO" && (
         <ProntuarioRelatorio

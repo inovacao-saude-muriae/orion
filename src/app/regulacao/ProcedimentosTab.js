@@ -1,11 +1,11 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
-import { getProcedimentosData } from "./actions";
-import CadastroProcedimentos from "../components/CadastroProcedimentos";
-import styles from "../GerenciamentoCadastro.module.css";
+import { getProcedimentosData } from "./procedimentosActions";
+import CadastroProcedimentos from "./CadastroProcedimentos";
+import styles from "@/app/gerenciamento/GerenciamentoCadastro.module.css";
 
-export default function ProcedimentosPage() {
+export default function ProcedimentosTab() {
   const [data, setData] = useState({ tiposExame: [], linhas: [] });
 
   // Mantido para o componente filho invocar após criar/editar registros

@@ -1,6 +1,6 @@
 "use server";
 
-import { requireAdminModulo } from "@/lib/auth";
+import { requireAcessoModulo } from "@/lib/auth";
 import { MODULOS } from "@/lib/permissions";
 import { prisma } from "@/lib/prisma";
 import { revalidatePath } from "next/cache";
@@ -84,7 +84,7 @@ export async function getServicosData() {
 // Cria um registro. Serviço obrigatório (por id ou nome novo); especialidade opcional.
 export async function createRegistro(data) {
   try {
-    await requireAdminModulo(MODULOS.JUNTA);
+    await requireAcessoModulo(MODULOS.JUNTA);
     const servicoId = await resolverServicoId(data);
 
     const especialidadeNome = (data.especialidadeNome || "").trim();
@@ -94,7 +94,7 @@ export async function createRegistro(data) {
       });
     }
 
-    revalidatePath("/gerenciamento/servicos");
+    revalidatePath("/junta-reguladora");
     return { success: true };
   } catch (error) {
     console.error("Erro ao cadastrar registro:", error);
@@ -107,7 +107,7 @@ export async function createRegistro(data) {
 // e, se informada especialidade, cria a especialidade nesse serviço.
 export async function updateRegistro(linha, data) {
   try {
-    await requireAdminModulo(MODULOS.JUNTA);
+    await requireAcessoModulo(MODULOS.JUNTA);
     const servicoId = await resolverServicoId(data);
     const especialidadeNome = (data.especialidadeNome || "").trim();
 
@@ -130,7 +130,7 @@ export async function updateRegistro(linha, data) {
       });
     }
 
-    revalidatePath("/gerenciamento/servicos");
+    revalidatePath("/junta-reguladora");
     return { success: true };
   } catch (error) {
     console.error("Erro ao atualizar registro:", error);
@@ -142,7 +142,7 @@ export async function updateRegistro(linha, data) {
 // Serviço sozinho -> apaga o serviço.
 export async function deleteRegistro(linha) {
   try {
-    await requireAdminModulo(MODULOS.JUNTA);
+    await requireAcessoModulo(MODULOS.JUNTA);
 
     if (linha.especialidadeId) {
       await prisma.especialidade.delete({
@@ -152,7 +152,7 @@ export async function deleteRegistro(linha) {
       await prisma.servico.delete({ where: { id: Number(linha.servicoId) } });
     }
 
-    revalidatePath("/gerenciamento/servicos");
+    revalidatePath("/junta-reguladora");
     return { success: true };
   } catch (error) {
     console.error("Erro ao excluir registro:", error);

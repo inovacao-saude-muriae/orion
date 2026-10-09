@@ -1,10 +1,20 @@
 "use client";
 
-import { Suspense, useState } from "react";
+import { Suspense, useState, useEffect, useMemo } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { usePathname, useSearchParams, useRouter } from "next/navigation";
 import styles from "./Sidebar.module.css";
+
+// Cópia local dos códigos de módulo (NÃO importar @/lib/permissions: regra da
+// DAL — Client Components não importam esse módulo). Usada só para legibilidade.
+const MODULOS_UI = {
+  REGULACAO: "REGULACAO",
+  FARMACIA: "FARMACIA",
+  PROCESSOS: "PROCESSOS",
+  JUNTA: "JUNTA",
+  CCZ: "CCZ",
+};
 
 const menuSections = [
   {
@@ -36,6 +46,7 @@ const menuSections = [
         name: "Regulação",
         path: "/regulacao",
         isDropdown: true,
+        moduloRequerido: "REGULACAO",
         icon: (
           <svg
             width="20"
@@ -51,11 +62,12 @@ const menuSections = [
           </svg>
         ),
         subItems: [
-          { name: "Dashboard", tab: "DASHBOARD" },
-          { name: "Novo Pedido", tab: "NOVO_PEDIDO" },
-          { name: "Lista de Espera", tab: "LISTA_ESPERA" },
-          { name: "Liberados", tab: "LIBERADOS" },
-          { name: "Financeiro", tab: "FINANCEIRO" },
+          { name: "Dashboard", tab: "DASHBOARD", visivelSe: "REGULACAO" },
+          { name: "Novo Pedido", tab: "NOVO_PEDIDO", visivelSe: "REGULACAO" },
+          { name: "Lista de Espera", tab: "LISTA_ESPERA", visivelSe: "REGULACAO" },
+          { name: "Liberados", tab: "LIBERADOS", visivelSe: "REGULACAO" },
+          { name: "Financeiro", tab: "FINANCEIRO", visivelSe: "REGULACAO" },
+          { name: "Procedimentos", tab: "PROCEDIMENTOS", visivelSe: "REGULACAO" },
         ],
       },
     ],
@@ -66,6 +78,7 @@ const menuSections = [
         name: "Câmara Técnica",
         path: "/camara-tecnica",
         isDropdown: true,
+        moduloRequerido: null,
         icon: (
           <svg
             width="20"
@@ -87,6 +100,7 @@ const menuSections = [
             tab: "FARMACIA_JUDICIAL",
             path: "/camara-tecnica/farmacia-judicial",
             isNestedDropdown: true,
+            visivelSe: "FARMACIA",
             nestedItems: [
               { name: "Dashboard", subTab: "DASHBOARD" },
               { name: "Pacientes", subTab: "PACIENTES" },
@@ -100,6 +114,7 @@ const menuSections = [
             name: "Processos Judiciais",
             tab: "PROCESSOS",
             path: "/camara-tecnica/processos",
+            visivelSe: "PROCESSOS",
           },
         ],
       },
@@ -111,6 +126,7 @@ const menuSections = [
         name: "Junta Reguladora",
         path: "/junta-reguladora",
         isDropdown: true,
+        moduloRequerido: "JUNTA",
         icon: (
           <svg
             width="20"
@@ -129,20 +145,22 @@ const menuSections = [
           </svg>
         ),
         subItems: [
-          { name: "Cadastro de Paciente", tab: "CADASTRO" },
+          { name: "Cadastro de Paciente", tab: "CADASTRO", visivelSe: "JUNTA" },
            {
             name: "Serviços",
             tab: "SERVICOS",
             isNestedDropdown: true,
+            visivelSe: "JUNTA",
             nestedItems: [
-              { name: "CAEE", subTab: "CAEE" },
-              { name: "APAE", subTab: "APAE" },
-              { name: "Ambulatório", subTab: "AMBULATORIO" },       
-              { name: "Centro de Especialidades", subTab: "ESPECIALIDADES" },
+              { name: "CAEE", subTab: "CAEE", visivelSe: "JUNTA_SUBSERVICO", servicoJunta: "CAEE" },
+              { name: "APAE", subTab: "APAE", visivelSe: "JUNTA_SUBSERVICO", servicoJunta: "APAE" },
+              { name: "Ambulatório", subTab: "AMBULATORIO", visivelSe: "JUNTA_SUBSERVICO", servicoJunta: "AMBULATORIO" },
+              { name: "Centro de Especialidades", subTab: "ESPECIALIDADES", visivelSe: "JUNTA_SUBSERVICO", servicoJunta: "ESPECIALIDADES" },
            
             ],
           },
-          { name: "Prontuário e Relatório", tab: "RELATORIO" },
+          { name: "Serviços e Especialidades", tab: "SERVICOS_ESPECIALIDADES", visivelSe: "JUNTA" },
+          { name: "Prontuário e Relatório", tab: "RELATORIO", visivelSe: "JUNTA_ADMIN" },
          
         ],
       },
@@ -154,6 +172,7 @@ const menuSections = [
         name: "CCZ",
         path: "/ccz",
         isDropdown: true,
+        moduloRequerido: "CCZ",
         icon: (
           <svg
             width="20"
@@ -172,8 +191,8 @@ const menuSections = [
           </svg>
         ),
         subItems: [
-          { name: "Tutores", tab: "TUTORES" },
-          { name: "Animais", tab: "ANIMAIS" },
+          { name: "Tutores", tab: "TUTORES", visivelSe: "CCZ" },
+          { name: "Animais", tab: "ANIMAIS", visivelSe: "CCZ" },
         ],
       },
     ],
@@ -184,6 +203,7 @@ const menuSections = [
         name: "Gerenciamento",
         path: "/admin/gerenciamento",
         isDropdown: true,
+        moduloRequerido: null,
         icon: (
           <svg
             width="20"
@@ -204,36 +224,31 @@ const menuSections = [
             name: "Pacientes",
             path: "/gerenciamento/pessoas",
             tab: "PESSOAS",
+            visivelSe: "TODOS",
           },
           {
             name: "Médicos",
             path: "/gerenciamento/medicos",
             tab: "MEDICOS",
+            visivelSe: "REGULACAO",
           },
           {
             name: "Unidade Básica de Saúde",
             path: "/gerenciamento/ubs",
             tab: "UBS",
-          },
-          {
-            name: "Procedimentos",
-            path: "/gerenciamento/procedimentos",
-            tab: "PROCEDIMENTOS",
-          },
-          {
-            name: "Serviços e Especialidades",
-            path: "/gerenciamento/servicos",
-            tab: "SERVICOS",
+            visivelSe: "REGULACAO",
           },
           {
             name: "Gerenciar Usuários",
             path: "/gerenciamento/usuarios",
             tab: "USUARIOS",
+            visivelSe: "GESTOR",
           },
           {
             name: "Relatórios Gerais",
             path: "/gerenciamento/relatorios",
             tab: "RELATORIOS",
+            visivelSe: "GESTOR",
           },
         ],
       },
@@ -336,13 +351,146 @@ function subIcon(nome = "") {
   );
 }
 
-// A Sidebar NÃO filtra mais por papel: todos os módulos e sub-itens são
-// exibidos para qualquer usuário autenticado (design §7.1 / AC-6). A
-// autorização de acesso é feita no servidor (layout.js por módulo), que bloqueia
-// NO CONTEÚDO via <AcessoNegadoModulo/>. Por isso não há mais chamada ao
-// endpoint de sessão nem estado de role aqui.
+// A Sidebar VOLTA a filtrar por perfil (revoga o comportamento anterior "não
+// filtra mais por papel"): o menu é recortado conforme os vínculos de `/api/me`.
+// Isso é camada de APRESENTAÇÃO — a barreira real de autorização continua no
+// servidor (layout.js por módulo), que bloqueia o CONTEÚDO via
+// <AcessoNegadoModulo/>. O filtro é FAIL-CLOSED: enquanto `/api/me` não
+// respondeu (ou falhou), só os itens universais aparecem.
+
+// ── FILTRO POR PERFIL (funções puras locais) ────────────────────────────────
+// Reimplementadas inline porque Client Components NÃO importam @/lib/permissions
+// (regra da DAL). Espelham a semântica das puras do servidor: GESTOR
+// curto-circuita; admin = vínculo nível ADMIN; operador Junta = vínculo com
+// servicoJunta. A decisão real continua no servidor.
+
+// Recorta o array estático `menuSections` conforme o perfil `me` desembrulhado
+// de /api/me ({ role, isGestor, acessos:[{ modulo, nivel, servicoJunta }] }).
+// Com `me === null` (carregando/erro) o resultado é fail-closed: só itens
+// universais (Início + Gerenciamento[Pacientes]).
+function construirMenu(me) {
+  const ehGestor = !!me?.isGestor || me?.role === "GESTOR";
+  const temModulo = (m) => ehGestor || (me?.acessos || []).some((a) => a.modulo === m);
+  const ehAdminMod = (m) =>
+    ehGestor || (me?.acessos || []).some((a) => a.modulo === m && a.nivel === "ADMIN");
+  const subServicosOperador = (me?.acessos || [])
+    .filter((a) => a.modulo === "JUNTA" && a.nivel === "OPERADOR" && a.servicoJunta)
+    .map((a) => a.servicoJunta);
+
+  // switch FAIL-CLOSED: default retorna false. Todo sub-item/nestedItem que
+  // deva aparecer PRECISA de visivelSe explícito.
+  function subItemVisivel(sub) {
+    switch (sub.visivelSe) {
+      case "TODOS":
+        return true;
+      case "REGULACAO":
+        return temModulo("REGULACAO");
+      case "JUNTA":
+        return temModulo("JUNTA");
+      case "JUNTA_ADMIN":
+        return ehGestor || ehAdminMod("JUNTA");
+      case "GESTOR":
+        return ehGestor;
+      case "FARMACIA":
+        return temModulo("FARMACIA");
+      case "CCZ":
+        return temModulo("CCZ");
+      case "PROCESSOS":
+        return temModulo("PROCESSOS");
+      case "JUNTA_SUBSERVICO":
+        return (
+          ehGestor ||
+          ehAdminMod("JUNTA") ||
+          subServicosOperador.includes(sub.servicoJunta)
+        );
+      default:
+        return false; // fail-closed
+    }
+  }
+
+  return menuSections
+    .map((section) => {
+      const items = section.items
+        .map((item) => {
+          // Itens de TOPO que NÃO são dropdown (sem subItems) são SEMPRE
+          // mantidos — não passam pelo switch nem pela poda (ex.: "Início").
+          if (!item.isDropdown) return item;
+
+          // Camada 1 — sub-itens (leaf e nested) por visivelSe.
+          let subItens = (item.subItems || []).filter((sub) => subItemVisivel(sub));
+
+          // Camada 2 — recorte de nestedItems dos nested dropdowns sobreviventes.
+          subItens = subItens.map((sub) => {
+            if (!sub.isNestedDropdown) return sub;
+            // Farmácia Judicial: nestedItems herdam a visibilidade do pai
+            // (sem regra por nestedItem) → mantidos todos.
+            if (sub.visivelSe !== "JUNTA") return sub;
+            // Grupo "Serviços" da Junta: recorta nestedItems por JUNTA_SUBSERVICO.
+            const nested = (sub.nestedItems || []).filter((n) => subItemVisivel(n));
+            return { ...sub, nestedItems: nested };
+          });
+
+          // Camada 3.1 — nested dropdown que ficou com zero nestedItems é podado.
+          subItens = subItens.filter(
+            (sub) => !sub.isNestedDropdown || (sub.nestedItems || []).length > 0,
+          );
+
+          // Camada 3.2 — gate de módulo (AND) e poda de dropdown sem sub-itens.
+          const moduloOk =
+            item.moduloRequerido == null || temModulo(item.moduloRequerido);
+          if (!moduloOk || subItens.length === 0) return null;
+
+          return { ...item, subItems: subItens };
+        })
+        .filter(Boolean);
+
+      return { ...section, items };
+    })
+    // Camada 3.3 — section sem nenhum item visível é omitida.
+    .filter((section) => section.items.length > 0);
+}
 
 function MenuContent() {
+  const [carregando, setCarregando] = useState(true);
+  const [me, setMe] = useState(null);
+
+  // Busca única de /api/me na montagem (fail-closed: só itens universais até
+  // responder). Desembrulho OBRIGATÓRIO via json.user.
+  useEffect(() => {
+    let isMounted = true;
+    async function carregarMe() {
+      try {
+        const res = await fetch("/api/me");
+        if (!res.ok) throw new Error("me indisponível");
+        const json = await res.json();
+        if (isMounted) {
+          setMe(json.user ?? null);
+          setCarregando(false);
+        }
+      } catch (err) {
+        console.error("Sidebar: falha ao carregar /api/me:", err);
+        if (isMounted) {
+          setMe(null);
+          setCarregando(false);
+        }
+      }
+    }
+    carregarMe();
+    return () => {
+      isMounted = false;
+    };
+  }, []);
+
+  // Menu recortado por perfil, memoizado. Durante carregamento (ou erro),
+  // usa-se construirMenu(null), que por construção resulta em
+  // Início + Gerenciamento[Pacientes].
+  const menuComPerfil = useMemo(() => construirMenu(me), [me]);
+  const menuAtual = carregando ? construirMenu(null) : menuComPerfil;
+
+  return <MenuRender menuSections={menuAtual} />;
+}
+
+function MenuRender({ menuSections }) {
   const pathname = usePathname();
   const searchParams = useSearchParams();
   const router = useRouter();
@@ -413,7 +561,8 @@ function MenuContent() {
       <nav className={styles.menuContentList}>
         {menuSections.map((section, sIdx) => {
           const filteredItems = section.items
-            // Filtra apenas pelo termo de busca; sem recorte por papel (AC-6).
+            // O recorte por perfil já foi aplicado por construirMenu; aqui só
+            // filtramos pelo termo de busca.
             .filter((item) => {
               if (!searchTerm) return true;
               const matchMain = item.name
@@ -438,7 +587,7 @@ function MenuContent() {
                   Boolean(openGroup[item.path]) || Boolean(searchTerm);
 
                 if (item.isDropdown) {
-                  // Todos os sub-itens são exibidos (sem recorte por papel).
+                  // Sub-itens já recortados por perfil em construirMenu.
                   const subItemsVisiveis = item.subItems || [];
                   if (subItemsVisiveis.length === 0) return null;
 
