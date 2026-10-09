@@ -817,6 +817,35 @@ export async function getAgendaProcedimentos(ano, mes) {
       }
     }
 
+    // Visitas de acompanhamento da esporotricose caindo dentro do mês. Esses
+    // eventos não têm procedimento (procedimentoId null) e, por isso, não
+    // abrem nada na agenda (o botão "Abrir" é guardado por procedimentoId).
+    const visitasEsporo = await prisma.esporotricoseVisita.findMany({
+      where: { data: { gte: inicio, lt: fim } },
+      include: {
+        esporotricose: {
+          include: { animal: { include: { tutor: { include: { pessoa: true } } } } },
+        },
+      },
+      orderBy: { data: "asc" },
+    });
+
+    for (const v of visitasEsporo) {
+      const animal = v.esporotricose?.animal || null;
+      const animalNome = animal?.nome || "";
+      const tutorNome = animal?.tutor?.pessoa?.nomeCompleto || "";
+      eventos.push({
+        procedimentoId: null,
+        tipoEvento: "ESPORO_VISITA",
+        data: dateParaYMD(v.data),
+        animalId: animal?.id || "",
+        animalNome,
+        tutorNome,
+        observacao: v.observacao || "",
+        label: `Esporotricose — acompanhamento (${animalNome || "Sem nome"})`,
+      });
+    }
+
     return { success: true, data: eventos };
   } catch (error) {
     if (error.status === 401 || error.status === 403) {
@@ -980,5 +1009,274 @@ export async function salvarTermoInternacao(dados) {
     }
     console.error("Erro ao salvar termo de internação (CCZ):", error);
     return { success: false, error: error.message || "Erro ao salvar o termo." };
+  }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════
+// ESPOROTRICOSE (ccz_esporotricose + ccz_esporotricose_visitas)
+// ─────────────────────────────────────────────────────────────────────────
+// Vistoria/notificação de esporotricose vinculada a um animal. Campos Sim/Não
+// são persistidos como string ("Sim"/"Não", default "Não"); os encaminhamentos
+// (enc*) como boolean. Os blocos "tutor-only" só fazem sentido quando o animal
+// tem tutor, mas o salvamento aceita o que vier do form. As visitas de
+// acompanhamento são salvas apenas quando o encaminhamento de acompanhamento
+// periódico pelo CCZ está marcado (padrão replace-vínculos: delete + create).
+// Retorno padrão: { success, error?, data? }.
+// ═══════════════════════════════════════════════════════════════════════════
+
+// Normaliza um Sim/Não vindo do form (default "Não").
+const simNao = (v) => (v === "Sim" ? "Sim" : "Não");
+
+// ── SALVAR ESPOROTRICOSE (cria ou atualiza) ─────────────────────────────────
+export async function salvarEsporotricose(dados) {
+  try {
+    await requireAcessoModulo(MODULOS.CCZ);
+
+    const animalId = String(dados.animalId || "").trim();
+    if (!animalId) return { success: false, error: "Selecione o animal." };
+
+    const dataVisita = ymdParaDateUTC(dados.dataVisita);
+    if (!dataVisita) return { success: false, error: "Informe a data da visita." };
+
+    // Id: usa o informado (edição) ou gera um novo.
+    const idInformado = dados.id ? String(dados.id).trim() : "";
+    const id = (idInformado || `ESP-${Date.now().toString(36)}`).toUpperCase().slice(0, 50);
+
+    // O animal precisa existir.
+    const animal = await prisma.animal.findUnique({
+      where: { id: animalId },
+      select: { id: true },
+    });
+    if (!animal) return { success: false, error: "Animal não encontrado." };
+
+    const encAcompanhamentoCcz = Boolean(dados.encAcompanhamentoCcz);
+
+    const dadosEsporo = {
+      animalId,
+      numeroProtocolo: dados.numeroProtocolo
+        ? String(dados.numeroProtocolo).slice(0, 50)
+        : null,
+      dataVisita,
+      fiscalResponsavel: dados.fiscalResponsavel
+        ? String(dados.fiscalResponsavel).slice(0, 150)
+        : null,
+      apresentaLesoes: simNao(dados.apresentaLesoes),
+      descricaoLesoes:
+        dados.apresentaLesoes === "Sim" && dados.descricaoLesoes
+          ? String(dados.descricaoLesoes)
+          : null,
+      emTratamentoVeterinario: simNao(dados.emTratamentoVeterinario),
+      descricaoTratamentoVet:
+        dados.emTratamentoVeterinario === "Sim" && dados.descricaoTratamentoVet
+          ? String(dados.descricaoTratamentoVet)
+          : null,
+      medicamentosPrescritos: dados.medicamentosPrescritos
+        ? String(dados.medicamentosPrescritos)
+        : null,
+      interrupcaoTratamento: simNao(dados.interrupcaoTratamento),
+      retornoVeterinario: simNao(dados.retornoVeterinario),
+      isolamentoDomiciliar: simNao(dados.isolamentoDomiciliar),
+      observacoesIsolamento:
+        dados.isolamentoDomiciliar === "Sim" && dados.observacoesIsolamento
+          ? String(dados.observacoesIsolamento)
+          : null,
+      acessoRua: simNao(dados.acessoRua),
+      usoEpi: simNao(dados.usoEpi),
+      quaisEpis:
+        dados.usoEpi === "Sim" && dados.quaisEpis
+          ? String(dados.quaisEpis).slice(0, 150)
+          : null,
+      higienizacaoAmbiente: dados.higienizacaoAmbiente
+        ? String(dados.higienizacaoAmbiente)
+        : null,
+      outrosAnimaisResidencia: simNao(dados.outrosAnimaisResidencia),
+      outrosAnimaisDescricao:
+        dados.outrosAnimaisResidencia === "Sim" && dados.outrosAnimaisDescricao
+          ? String(dados.outrosAnimaisDescricao)
+          : null,
+      pessoasComLesoes: simNao(dados.pessoasComLesoes),
+      pessoasLesoesDescricao: dados.pessoasLesoesDescricao
+        ? String(dados.pessoasLesoesDescricao)
+        : null,
+      cienteTratamentoContinuo: simNao(dados.cienteTratamentoContinuo),
+      cienteContencao: simNao(dados.cienteContencao),
+      cienteEpi: simNao(dados.cienteEpi),
+      cienteResiduos: simNao(dados.cienteResiduos),
+      condicoesGeraisAmbiente: dados.condicoesGeraisAmbiente
+        ? String(dados.condicoesGeraisAmbiente)
+        : null,
+      conclusaoTecnica: dados.conclusaoTecnica ? String(dados.conclusaoTecnica) : null,
+      encAcompanhamentoCcz,
+      encNotificacaoTutor: Boolean(dados.encNotificacaoTutor),
+      encMinisterioPublico: Boolean(dados.encMinisterioPublico),
+      encOutrasMedidas: Boolean(dados.encOutrasMedidas),
+      outrasMedidasDescricao: dados.outrasMedidasDescricao
+        ? String(dados.outrasMedidasDescricao)
+        : null,
+    };
+
+    // Visitas válidas (apenas as que têm data). Só persistidas quando o
+    // acompanhamento periódico pelo CCZ está marcado.
+    const visitasValidas = encAcompanhamentoCcz
+      ? (Array.isArray(dados.visitas) ? dados.visitas : [])
+          .map((v) => ({ data: ymdParaDateUTC(v.data), observacao: v.observacao || null }))
+          .filter((v) => v.data)
+      : [];
+
+    await prisma.$transaction(async (tx) => {
+      await tx.esporotricose.upsert({
+        where: { id },
+        update: dadosEsporo,
+        create: { id, ...dadosEsporo },
+      });
+
+      // Replace-vínculos: limpa e recria as visitas de acompanhamento.
+      await tx.esporotricoseVisita.deleteMany({ where: { esporotricoseId: id } });
+      if (visitasValidas.length > 0) {
+        await tx.esporotricoseVisita.createMany({
+          data: visitasValidas.map((v) => ({
+            esporotricoseId: id,
+            data: v.data,
+            observacao: v.observacao,
+          })),
+        });
+      }
+    });
+
+    revalidatePath("/ccz");
+    return { success: true, data: { id } };
+  } catch (error) {
+    if (error.status === 401 || error.status === 403) {
+      return { success: false, error: error.message };
+    }
+    if (error.code === "P2003") {
+      return { success: false, error: "Animal selecionado inválido ou inexistente." };
+    }
+    console.error("Erro ao salvar esporotricose (CCZ):", error);
+    return { success: false, error: error.message || "Erro ao salvar a esporotricose." };
+  }
+}
+
+// ── LISTAR ESPOROTRICOSE (aba Esporotricose > Lista) ────────────────────────
+export async function listarEsporotricose() {
+  try {
+    await requireAcessoModulo(MODULOS.CCZ);
+
+    const registros = await prisma.esporotricose.findMany({
+      include: {
+        animal: { include: { tutor: { include: { pessoa: true } } } },
+        _count: { select: { visitas: true } },
+      },
+      orderBy: { dataVisita: "desc" },
+    });
+
+    const data = registros.map((r) => ({
+      id: r.id,
+      animalId: r.animalId || "",
+      animalNome: r.animal?.nome || "",
+      tutorNome: r.animal?.tutor?.pessoa?.nomeCompleto || "",
+      numeroProtocolo: r.numeroProtocolo || "",
+      dataVisita: dateParaYMD(r.dataVisita),
+      apresentaLesoes: r.apresentaLesoes || "Não",
+      visitasCount: r._count?.visitas || 0,
+    }));
+
+    return { success: true, data };
+  } catch (error) {
+    if (error.status === 401 || error.status === 403) {
+      return { success: false, error: error.message };
+    }
+    console.error("Erro ao listar esporotricose (CCZ):", error);
+    return { success: false, error: "Erro ao carregar os registros de esporotricose." };
+  }
+}
+
+// ── OBTER UM REGISTRO DE ESPOROTRICOSE (edição / PDF / termo) ───────────────
+export async function obterEsporotricose(id) {
+  try {
+    await requireAcessoModulo(MODULOS.CCZ);
+
+    const regId = String(id || "").trim();
+    if (!regId) return { success: false, error: "Id não informado." };
+
+    const r = await prisma.esporotricose.findUnique({
+      where: { id: regId },
+      include: {
+        animal: { include: { tutor: { include: { pessoa: true } } } },
+        visitas: { orderBy: { data: "asc" } },
+      },
+    });
+    if (!r) return { success: false, error: "Registro de esporotricose não encontrado." };
+
+    const a = r.animal || null;
+    const tutorPessoa = a?.tutor?.pessoa || null;
+
+    const data = {
+      id: r.id,
+      animalId: r.animalId || "",
+      animalLabel: `${a?.nome?.trim() || "Sem nome"} (${r.animalId || ""})`,
+      // Dados do animal (para o relatório/termo).
+      animal: {
+        id: a?.id || "",
+        nome: a?.nome || "",
+        especie: a?.especie || "",
+        sexo: a?.sexo === "F" ? "Fêmea" : "Macho",
+        porte: a?.porte || "",
+        idade: a?.idade || "",
+      },
+      temTutor: Boolean(tutorPessoa),
+      tutorNome: tutorPessoa?.nomeCompleto || "",
+      tutor: tutorPessoa
+        ? {
+            nome: tutorPessoa.nomeCompleto || "",
+            cpf: tutorPessoa.cpf || "",
+            telefone: tutorPessoa.telefone || "",
+          }
+        : null,
+      // Campos do formulário.
+      numeroProtocolo: r.numeroProtocolo || "",
+      dataVisita: dateParaYMD(r.dataVisita),
+      fiscalResponsavel: r.fiscalResponsavel || "",
+      apresentaLesoes: r.apresentaLesoes || "Não",
+      descricaoLesoes: r.descricaoLesoes || "",
+      emTratamentoVeterinario: r.emTratamentoVeterinario || "Não",
+      descricaoTratamentoVet: r.descricaoTratamentoVet || "",
+      medicamentosPrescritos: r.medicamentosPrescritos || "",
+      interrupcaoTratamento: r.interrupcaoTratamento || "Não",
+      retornoVeterinario: r.retornoVeterinario || "Não",
+      isolamentoDomiciliar: r.isolamentoDomiciliar || "Não",
+      observacoesIsolamento: r.observacoesIsolamento || "",
+      acessoRua: r.acessoRua || "Não",
+      usoEpi: r.usoEpi || "Não",
+      quaisEpis: r.quaisEpis || "",
+      higienizacaoAmbiente: r.higienizacaoAmbiente || "",
+      outrosAnimaisResidencia: r.outrosAnimaisResidencia || "Não",
+      outrosAnimaisDescricao: r.outrosAnimaisDescricao || "",
+      pessoasComLesoes: r.pessoasComLesoes || "Não",
+      pessoasLesoesDescricao: r.pessoasLesoesDescricao || "",
+      cienteTratamentoContinuo: r.cienteTratamentoContinuo || "Não",
+      cienteContencao: r.cienteContencao || "Não",
+      cienteEpi: r.cienteEpi || "Não",
+      cienteResiduos: r.cienteResiduos || "Não",
+      condicoesGeraisAmbiente: r.condicoesGeraisAmbiente || "",
+      conclusaoTecnica: r.conclusaoTecnica || "",
+      encAcompanhamentoCcz: Boolean(r.encAcompanhamentoCcz),
+      encNotificacaoTutor: Boolean(r.encNotificacaoTutor),
+      encMinisterioPublico: Boolean(r.encMinisterioPublico),
+      encOutrasMedidas: Boolean(r.encOutrasMedidas),
+      outrasMedidasDescricao: r.outrasMedidasDescricao || "",
+      visitas: (r.visitas || []).map((v) => ({
+        data: dateParaYMD(v.data),
+        observacao: v.observacao || "",
+      })),
+    };
+
+    return { success: true, data };
+  } catch (error) {
+    if (error.status === 401 || error.status === 403) {
+      return { success: false, error: error.message };
+    }
+    console.error("Erro ao obter esporotricose (CCZ):", error);
+    return { success: false, error: "Erro ao carregar o registro de esporotricose." };
   }
 }

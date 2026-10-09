@@ -6,11 +6,13 @@ import { useSearchParams, useRouter } from "next/navigation";
 import CadastroTutor from "./CadastroTutor";
 import CadastroAnimal from "./CadastroAnimal";
 import CadastroProcedimento from "./CadastroProcedimento";
+import CadastroEsporotricose from "./CadastroEsporotricose";
 import TutoresLista from "./TutoresLista";
 import AnimaisLista from "./AnimaisLista";
 import ProcedimentosLista from "./ProcedimentosLista";
+import EsporotricoseLista from "./EsporotricoseLista";
 import AgendaCCZ from "./AgendaCCZ";
-import { obterAnimal, obterProcedimento } from "./actions";
+import { obterAnimal, obterProcedimento, obterEsporotricose } from "./actions";
 
 import styles from "./CadastroTutor.module.css";
 
@@ -27,6 +29,8 @@ function CczPageContent() {
   const [carregandoAnimal, setCarregandoAnimal] = useState(false);
   const [procedimentoEdicao, setProcedimentoEdicao] = useState(null);
   const [carregandoProcedimento, setCarregandoProcedimento] = useState(false);
+  const [esporoEdicao, setEsporoEdicao] = useState(null);
+  const [carregandoEsporo, setCarregandoEsporo] = useState(false);
 
   // Navega para uma aba/sub-aba preservando o módulo.
   const irPara = (tab, subTab) => {
@@ -39,6 +43,7 @@ function CczPageContent() {
       setCpfTutorEdicao("");
       setAnimalEdicao(null);
       setProcedimentoEdicao(null);
+      setEsporoEdicao(null);
     }
   }, [activeTab, activeSubTab]);
 
@@ -70,6 +75,17 @@ function CczPageContent() {
     }
   };
 
+  // ── Editar esporotricose: carrega o registro e vai para Esporotricose > Cadastrar ──
+  const editarEsporo = async (id) => {
+    setCarregandoEsporo(true);
+    const res = await obterEsporotricose(id);
+    setCarregandoEsporo(false);
+    if (res.success) {
+      setEsporoEdicao(res.data);
+      irPara("ESPOROTRICOSE", "CADASTRAR");
+    }
+  };
+
   // Volta para a lista correspondente após salvar/cancelar edição.
   const voltarListaTutores = () => {
     setCpfTutorEdicao("");
@@ -82,6 +98,10 @@ function CczPageContent() {
   const voltarListaProcedimentos = () => {
     setProcedimentoEdicao(null);
     irPara("PROCEDIMENTOS", "LISTA");
+  };
+  const voltarListaEsporo = () => {
+    setEsporoEdicao(null);
+    irPara("ESPOROTRICOSE", "LISTA");
   };
 
   let conteudo;
@@ -98,6 +118,20 @@ function CczPageContent() {
           key={procedimentoEdicao?.id || "novo"}
           registroInicial={procedimentoEdicao}
           onSalvo={voltarListaProcedimentos}
+        />
+      );
+    }
+  } else if (activeTab === "ESPOROTRICOSE") {
+    if (activeSubTab === "LISTA") {
+      conteudo = <EsporotricoseLista onEditar={editarEsporo} />;
+    } else if (carregandoEsporo) {
+      conteudo = <p className={styles.subtitle}>Carregando esporotricose...</p>;
+    } else {
+      conteudo = (
+        <CadastroEsporotricose
+          key={esporoEdicao?.id || "novo"}
+          registroInicial={esporoEdicao}
+          onSalvo={voltarListaEsporo}
         />
       );
     }

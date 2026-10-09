@@ -527,6 +527,8 @@ model Esporotricose {
   apresentaLesoes         String?   @default("Sim") @db.VarChar(10)
   descricaoLesoes         String?   @map("descricao_lesoes")
   emTratamentoContinuo    String?   @default("Sim") @db.VarChar(10)
+  emTratamentoVeterinario String?   @default("Não") @map("em_tratamento_veterinario") @db.VarChar(10)
+  descricaoTratamentoVet  String?   @map("descricao_tratamento_vet")
   profissionalServicoRef String?   @map("profissional_servico_ref") @db.VarChar(150)
   medicamentosPrescritos String?   @map("medicamentos_prescritos")
   interrupcaoTratamento   String?   @default("Não") @db.VarChar(10)
@@ -542,6 +544,11 @@ model Esporotricose {
   pessoasComLesoes        String?   @default("Não") @db.VarChar(10)
   pessoasLesoesDescricao  String?   @map("pessoas_lesoes_descricao")
   conclusaoTecnica        String?   @map("conclusao_tecnica")
+  condicoesGeraisAmbiente String?   @map("condicoes_gerais_ambiente")
+  cienteTratamentoContinuo String?  @default("Não") @map("ciente_tratamento_continuo") @db.VarChar(10)
+  cienteContencao         String?   @default("Não") @map("ciente_contencao") @db.VarChar(10)
+  cienteEpi               String?   @default("Não") @map("ciente_epi") @db.VarChar(10)
+  cienteResiduos          String?   @default("Não") @map("ciente_residuos") @db.VarChar(10)
   encAcompanhamentoCcz    Boolean?  @default(false) @map("enc_acompanhamento_ccz")
   encNotificacaoTutor     Boolean?  @default(false) @map("enc_notificacao_tutor")
   encMinisterioPublico    Boolean?  @default(false) @map("enc_ministerio_publico")
@@ -549,9 +556,26 @@ model Esporotricose {
   outrasMedidasDescricao  String?   @map("outras_medidas_descricao")
   createdAt               DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
 
-  animal Animal? @relation(fields: [animalId], references: [id], onDelete: SetNull)
+  animal  Animal?               @relation(fields: [animalId], references: [id], onDelete: SetNull)
+  visitas EsporotricoseVisita[]
 
   @@map("ccz_esporotricose")
+}
+
+// Visitas de acompanhamento periódico (agenda da esporotricose).
+// Persistidas apenas quando o encaminhamento "Acompanhamento periódico pelo
+// CCZ" está marcado. Alimentam a Agenda do CCZ como eventos ESPORO_VISITA.
+model EsporotricoseVisita {
+  id              String    @id @default(uuid()) @db.VarChar(50)
+  esporotricoseId String    @map("esporotricose_id") @db.VarChar(50)
+  data            DateTime  @db.Date
+  observacao      String?
+  createdAt       DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  esporotricose Esporotricose @relation(fields: [esporotricoseId], references: [id], onDelete: Cascade)
+
+  @@index([esporotricoseId], map: "idx_esporo_visita")
+  @@map("ccz_esporotricose_visitas")
 }
 
 // ── CONTROLE DE ACESSO CONFIGURÁVEL (RBAC Etapa 1) ───────────────────────

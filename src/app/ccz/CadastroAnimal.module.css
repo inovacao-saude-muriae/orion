@@ -411,3 +411,72 @@
   background-color: transparent !important;
   color: #94a3b8 !important;
 }
+
+/* ── Esporotricose: grupo de checkboxes dos encaminhamentos ───────────── */
+.checkboxGroup {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.checkboxItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #334155;
+  cursor: pointer;
+}
+
+.checkboxItem input {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+/* ── Esporotricose: mini-lista de visitas de acompanhamento (agenda) ──── */
+.visitaLista {
+  grid-column: 1 / -1;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+}
+
+.visitaItem {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  background-color: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+}
+
+.visitaData {
+  font-weight: 600;
+  color: #1e293b;
+  font-size: 0.85rem;
+  white-space: nowrap;
+}
+
+.visitaObs {
+  flex: 1;
+}
+
+.btnRemover {
+  background-color: #fef2f2;
+  color: #b91c1c;
+  border: 1px solid #fecaca;
+  padding: 0.35rem 0.75rem;
+  border-radius: 7px;
+  font-size: 0.78rem;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.btnRemover:hover {
+  background-color: #fee2e2;
+}

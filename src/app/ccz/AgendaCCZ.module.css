@@ -98,6 +98,16 @@
   border-left: 3px solid #d97706;
 }
 
+.legEsporo {
+  font-size: 0.72rem;
+  font-weight: 700;
+  padding: 0.15rem 0.6rem;
+  border-radius: 999px;
+  background: #ccfbf1;
+  color: #0f766e;
+  border-left: 3px solid #0d9488;
+}
+
 /* Cabeçalho dos dias da semana */
 .weekHeader {
   display: grid;
@@ -185,6 +195,12 @@
   background: #fef3c7;
   color: #92400e;
   border-left-color: #d97706;
+}
+
+.eventEsporo {
+  background: #ccfbf1;
+  color: #0f766e;
+  border-left-color: #0d9488;
 }
 
 .moreEvents {

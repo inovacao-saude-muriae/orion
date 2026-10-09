@@ -221,6 +221,16 @@ const menuSections = [
               { name: "Lista", subTab: "LISTA", visivelSe: "CCZ" },
             ],
           },
+          {
+            name: "Esporotricose",
+            tab: "ESPOROTRICOSE",
+            isNestedDropdown: true,
+            visivelSe: "CCZ",
+            nestedItems: [
+              { name: "Cadastrar", subTab: "CADASTRAR", visivelSe: "CCZ" },
+              { name: "Lista", subTab: "LISTA", visivelSe: "CCZ" },
+            ],
+          },
           { name: "Agenda", tab: "AGENDA", visivelSe: "CCZ" },
         ],
       },

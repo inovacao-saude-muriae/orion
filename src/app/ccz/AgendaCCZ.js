@@ -74,8 +74,19 @@ export default function AgendaCCZ({ onAbrirProcedimento }) {
 
   const ymdHoje = toYMD(hoje);
 
-  const rotuloEvento = (e) =>
-    `${e.tipoEvento === "RETORNO" ? "Retorno" : e.tipo} — ${e.animalNome || "Sem nome"}`;
+  const rotuloEvento = (e) => {
+    if (e.tipoEvento === "ESPORO_VISITA") {
+      return e.label || `Esporotricose — ${e.animalNome || "Sem nome"}`;
+    }
+    return `${e.tipoEvento === "RETORNO" ? "Retorno" : e.tipo} — ${e.animalNome || "Sem nome"}`;
+  };
+
+  // Classe de cor do evento conforme o tipo.
+  const classeEvento = (e) => {
+    if (e.tipoEvento === "RETORNO") return styles.eventRetorno;
+    if (e.tipoEvento === "ESPORO_VISITA") return styles.eventEsporo;
+    return "";
+  };
 
   const eventosDoDiaModal = diaSelecionado
     ? eventosPorDia[diaSelecionado] || []
@@ -104,6 +115,7 @@ export default function AgendaCCZ({ onAbrirProcedimento }) {
       <div className={styles.legenda}>
         <span className={styles.legProc}>Agendado</span>
         <span className={styles.legRet}>Retorno</span>
+        <span className={styles.legEsporo}>Esporotricose</span>
       </div>
 
       {/* CABEÇALHO DOS DIAS DA SEMANA */}
@@ -130,10 +142,8 @@ export default function AgendaCCZ({ onAbrirProcedimento }) {
               <div className={styles.events}>
                 {doDia.slice(0, 4).map((e, i) => (
                   <div
-                    key={`${e.procedimentoId}-${e.tipoEvento}-${i}`}
-                    className={`${styles.event} ${
-                      e.tipoEvento === "RETORNO" ? styles.eventRetorno : ""
-                    }`}
+                    key={`${e.procedimentoId || "esporo"}-${e.tipoEvento}-${i}`}
+                    className={`${styles.event} ${classeEvento(e)}`}
                     title={rotuloEvento(e)}
                   >
                     {rotuloEvento(e)}
@@ -170,22 +180,32 @@ export default function AgendaCCZ({ onAbrirProcedimento }) {
 
             <div className={styles.modalBody}>
               {eventosDoDiaModal.length === 0 ? (
-                <p className={styles.vazioModal}>Nenhum procedimento neste dia.</p>
+                <p className={styles.vazioModal}>Nenhum evento neste dia.</p>
               ) : (
                 <div className={styles.diaList}>
                   {eventosDoDiaModal.map((e, i) => (
-                    <div key={`${e.procedimentoId}-${e.tipoEvento}-${i}`} className={styles.diaItem}>
+                    <div
+                      key={`${e.procedimentoId || "esporo"}-${e.tipoEvento}-${i}`}
+                      className={styles.diaItem}
+                    >
                       <div>
                         <strong>
-                          {e.tipoEvento === "RETORNO" ? `Retorno · ${e.tipo}` : e.tipo}
+                          {e.tipoEvento === "ESPORO_VISITA"
+                            ? "Esporotricose · acompanhamento"
+                            : e.tipoEvento === "RETORNO"
+                              ? `Retorno · ${e.tipo}`
+                              : e.tipo}
                         </strong>
                         <div className={styles.diaItemSub}>
                           {e.animalNome || "Sem nome"} ({e.animalId})
                           {e.tutorNome ? ` · ${e.tutorNome}` : ""}
                           {e.veterinario ? ` · Vet.: ${e.veterinario}` : ""}
+                          {e.tipoEvento === "ESPORO_VISITA" && e.observacao
+                            ? ` · ${e.observacao}`
+                            : ""}
                         </div>
                       </div>
-                      {onAbrirProcedimento && (
+                      {onAbrirProcedimento && e.procedimentoId && (
                         <button
                           type="button"
                           className={styles.verBtn}
