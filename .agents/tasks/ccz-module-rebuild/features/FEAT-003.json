@@ -1,0 +1,23 @@
+{
+  "id": "FEAT-003",
+  "type": "feat",
+  "description": "Religar o módulo CCZ na navegação: adicionar o item 'CCZ' no Sidebar apontando para /ccz com sub-abas Tutores (?tab=TUTORES) e Animais (?tab=ANIMAIS). Depende de FEAT-002 (as rotas de abas precisam existir). O subIcon do Sidebar já cobre 'tutor' e 'animal'.",
+  "status": "completed",
+  "steps": [
+    "Em src/components/Sidebar.js, adicionar uma nova seção ao array menuSections (seguindo o formato das seções existentes, ex.: a de 'Junta Reguladora'): um item com name: 'CCZ', path: '/ccz', isDropdown: true, icon: um SVG inline (pode reutilizar um ícone de animal/pata ou similar no mesmo estilo stroke dos outros), e subItems: [ { name: 'Tutores', tab: 'TUTORES' }, { name: 'Animais', tab: 'ANIMAIS' } ].",
+    "Confirmar que a navegação do Sidebar monta os links corretamente: para subItems sem path próprio, o componente usa `${item.path}?tab=${sub.tab}` (ver subLink em MenuContent) e urlAbaInicial usa o primeiro subItem — portanto Tutores (TUTORES) será a aba inicial ao abrir o módulo. Nenhuma mudança extra necessária além do item.",
+    "Garantir que os nomes dos subItems ('Tutores', 'Animais') acionam ícones adequados em subIcon() — já há casos para 'tutor' e 'animal'/'animais'; nenhum ajuste no subIcon é obrigatório."
+  ],
+  "acceptance_criteria": [
+    "src/components/Sidebar.js contém um item de menu 'CCZ' com path '/ccz', isDropdown true e subItems Tutores (tab TUTORES) e Animais (tab ANIMAIS).",
+    "Ao abrir o módulo CCZ no menu, navega para /ccz?tab=TUTORES; clicar em Animais navega para /ccz?tab=ANIMAIS.",
+    "`npm run build` compila sem erros com o Sidebar alterado."
+  ],
+  "verification": [
+    "Rodar `npm run build` em c:\\Users\\Jefinny\\Documents\\orion e confirmar sucesso.",
+    "Rodar `npx eslint src/components/Sidebar.js` e confirmar ausência de novos erros.",
+    "Verificação manual (npm run dev): o item CCZ aparece na barra lateral, expande em Tutores/Animais e os links levam às abas corretas."
+  ],
+  "blocked_reason": null,
+  "findings": "Adicionada a seção 'CCZ' ao array menuSections em src/components/Sidebar.js, inserida entre 'Junta Reguladora' e 'Gerenciamento', seguindo o formato de seção com dropdown. Item: name 'CCZ', path '/ccz', isDropdown true, ícone SVG inline (pata/animal, mesmo estilo stroke/viewBox 0 0 24 24 dos demais), subItems [{name:'Tutores', tab:'TUTORES'}, {name:'Animais', tab:'ANIMAIS'}]. Como os subItems não têm path próprio, urlAbaInicial monta `/ccz?tab=TUTORES` (Tutores vira a aba inicial) e os links usam `${item.path}?tab=${sub.tab}` em MenuContent. subIcon() já cobre 'tutor' e 'animal'/'animais', portanto nenhum ajuste no subIcon foi necessário. Verificação: `npm run build` concluiu com sucesso (rota /ccz presente no output) e `npx eslint src/components/Sidebar.js` sem erros. prisma/schema.prisma não foi alterado."
+}
